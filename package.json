@@ -13,6 +13,7 @@
     "radar": "node src/collect.mjs --only-games",
     "report": "node src/report.mjs",
     "export": "node src/report.mjs --csv",
-    "serve": "node src/serve.mjs"
+    "serve": "node src/serve.mjs",
+    "doctor": "node src/doctor.mjs"
   }
 }
