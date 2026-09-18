@@ -7,11 +7,15 @@ import { matchWatch } from "./detect.mjs";
 
 const keyOf = (q) => q.trim().toLowerCase();
 
+/** 类型优先级：热搜词 > 游戏攻略词 > 一般相关词 */
+const KIND_RANK = { trending: 2, game: 1, related: 0 };
+
 /**
  * @param {Array} fresh 本轮热搜条目 [{q,geo,vol,growth,cats,noise,rel[]}]
  * @param {object} cfg
+ * @param {Array} [gameKw] 游戏雷达产出的攻略词 [{q,parents,geo}]，kind 记为 "game"
  */
-export function buildKeywordPool(fresh, cfg) {
+export function buildKeywordPool(fresh, cfg, gameKw = []) {
   const file = dataPath(cfg, "keywords.json");
   const prev = readJson(file) || { items: [] };
   const map = new Map();
@@ -36,7 +40,8 @@ export function buildKeywordPool(fresh, cfg) {
     cur.last = now;
     if (patch.vol > (cur.vol || 0)) cur.vol = patch.vol;
     if (patch.growth > (cur.growth || 0)) cur.growth = patch.growth;
-    if (patch.kind === "trending") cur.kind = "trending";
+    // 类型只在优先级更高时升级（热搜词 > 游戏攻略词 > 一般相关词）
+    if ((KIND_RANK[patch.kind] ?? -1) > (KIND_RANK[cur.kind] ?? -1)) cur.kind = patch.kind;
     if (patch.noise && !cur.noise) cur.noise = patch.noise;
     for (const g of patch.geo || []) if (g && cur.geo.length < 20 && !cur.geo.includes(g)) cur.geo.push(g);
     for (const c of patch.cats || []) if (!cur.cats.includes(c)) cur.cats.push(c);
@@ -58,12 +63,18 @@ export function buildKeywordPool(fresh, cfg) {
     }
   }
 
+  // 游戏雷达产出的攻略词（xxx codes / tier list …）：这是"可直接起标题"的词
+  for (const g of gameKw) {
+    if (!g || !g.q) continue;
+    bump(g.q, { kind: "game", count: g.count || 1, parents: g.parents || [], geo: g.geo || [] });
+  }
+
   let items = Array.from(map.values()).filter((it) => nowMs - new Date(it.last).getTime() <= keepMs);
   for (const it of items) {
     it.parents = (it.parents || []).slice(0, 5);
     it.geo = (it.geo || []).slice(0, 8);
   }
-  const rank = (it) => (it.kind === "trending" ? 1 : 0);
+  const rank = (it) => KIND_RANK[it.kind] ?? 0;
   items.sort((a, b) => rank(b) - rank(a) || (b.count || 0) - (a.count || 0) || (b.vol || 0) - (a.vol || 0));
 
   const CAP = cfg.pool?.maxItems || 20000;
@@ -71,5 +82,9 @@ export function buildKeywordPool(fresh, cfg) {
   items = items.slice(0, CAP);
 
   writeJson(file, { updated: now, total: items.length, truncated, items });
-  return { total: items.length, related: items.filter((x) => x.kind === "related").length };
+  return {
+    total: items.length,
+    related: items.filter((x) => x.kind === "related").length,
+    game: items.filter((x) => x.kind === "game").length,
+  };
 }

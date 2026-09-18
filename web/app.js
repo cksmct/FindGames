@@ -71,13 +71,21 @@
   };
   var trends = null, history = null, games = null, pool = null, poolIndex = null;
   var CATS = {}, GEOS = [];
+  // 对比基准词：来自 config.json 的 trendsCompare，由 trends.json 透出
+  // 所有点出去的 Google Trends 链接都会带上它，形成"该词 vs 基准词"的对比图
+  var COMPARE = "";
+
+  function exploreUrl(term, geo) {
+    var q = encodeURIComponent(term) + (COMPARE ? "," + encodeURIComponent(COMPARE) : "");
+    return "https://trends.google.com/trends/explore?date=now%207-d&q=" + q +
+      (geo && geo !== "ALL" ? "&geo=" + geo : "");
+  }
 
   function catNames(ids) {
     return (ids || []).map(function (c) { return CATS[c]; }).filter(Boolean).slice(0, 2).join(" · ");
   }
   function trendsLink(q, g) {
-    return "https://trends.google.com/trends/explore?date=now%207-d&q=" +
-      encodeURIComponent(q) + (g && g !== "ALL" ? "&geo=" + g : "");
+    return exploreUrl(q, g);
   }
   function pass(r, v, g) {
     if (state.noise && r.noise) return false;
@@ -263,13 +271,27 @@
         : '<div class="nochart">' + (age < 7 ? "曲线采集中…" : "暂无曲线") + "</div>";
       var times = "首次发现 " + rel(g.first) + (g.last !== g.first ? " · 最新信号 " + rel(g.last) : "") +
         ((g.sightings || 1) > 1 ? " · 上榜 ×" + g.sightings : "");
+      // 攻略词：每个词点出去都是「该词 vs 基准词」的对比图
+      // （单个新词/长尾词单独看几乎是一条平线，配上基准词才有可比性）
+      var hot = {};
+      (g.rising || []).forEach(function (w) { hot[w] = 1; });
+      var words = (g.words || g.rising || []).slice(0, 10);
+      var tipBase = COMPARE ? "在 Google Trends 上与「" + esc(COMPARE) + "」对比" : "在 Google Trends 查看趋势";
+      var kwHtml = words.length
+        ? '<div class="kwrow"><span class="kwlabel">可做页面的词</span>' +
+          words.map(function (w) {
+            return '<a class="kwchip' + (hot[w] ? " up" : "") + '" target="_blank" rel="noopener" title="' +
+              tipBase + (hot[w] ? "（上升词）" : "") + '" href="' + exploreUrl(w) + '">' +
+              (hot[w] ? "🔥 " : "") + esc(w) + "</a>";
+          }).join("") + "</div>"
+        : "";
       return '<div class="gcard"><div class="ghead"><h3>' + esc(g.name) + "</h3>" +
         '<span class="score">score ' + (g.score || 0) + "</span></div>" +
         '<div class="gmeta">' + times + (g.reason ? " · " + esc(g.reason) : "") +
         (g.chart_geo ? " · 曲线地区 " + esc(g.chart_geo) : "") + "</div>" +
-        chart +
-        '<div class="gmeta"><a href="https://trends.google.com/trends/explore?date=now%207-d&q=' +
-        encodeURIComponent(g.name) + '" target="_blank" rel="noopener">查看趋势 →</a></div></div>';
+        chart + kwHtml +
+        '<div class="gmeta"><a href="' + exploreUrl(g.name) + '" target="_blank" rel="noopener">查看趋势' +
+        (COMPARE ? "（vs " + esc(COMPARE) + "）" : "") + " →</a></div></div>";
     }).join("") || '<p class="empty">还没发现新游戏，多跑几轮采集</p>';
     if (sorted.length > state.rowsShown) {
       el.innerHTML += '<button class="more" id="games-more">显示更多（共 ' + sorted.length + " 个）</button>";
@@ -295,7 +317,8 @@
       items.slice(0, state.rowsShown).map(function (x, i) {
         return "<tr><td class=\"num dim\">" + (i + 1) + "</td>" +
           "<td>" + (x.watch && x.watch.length ? "★ " : "") + esc(x.q) + "</td>" +
-          '<td class="dim">' + (x.kind === "trending" ? "热搜词" : "相关词") + "</td>" +
+          '<td class="dim">' +
+            (x.kind === "trending" ? "热搜词" : x.kind === "game" ? "🎮 攻略词" : "相关词") + "</td>" +
           '<td class="num">' + (x.count || 0) + "</td>" +
           '<td class="dim hide-sm">' + esc((x.parents || []).slice(0, 3).join(", ") || "—") + "</td>" +
           '<td class="num">' + fmtVol(x.vol) + "</td>" +
@@ -424,6 +447,7 @@
     trends = d;
     CATS = d.cats || {};
     GEOS = d.geos || Object.keys(d.items || {});
+    COMPARE = d.compareWith || "";
     $("updated").textContent = "更新于 " + rel(d.updated);
     buildBars();
     renderHot();

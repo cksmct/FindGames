@@ -132,6 +132,7 @@ export/                  CSV 导出
 | 关键词池 | 无 | 6k+ 词（7 天滚动累积），可按监控词过滤，一键导 CSV |
 | 业务相关度标注 | 无 | config `watch` 词表，命中打 ★（做站的人只关心自己的领域） |
 | 新游戏识别 | 黑盒 | 白盒规则：Games 分类 / 平台词 / 游戏意图词，显式剔除体育、影视、**彩票博彩**（Google 把彩票归到 Games 分类） |
+| 新游戏的可做页面词 | 只有游戏名 | 每个游戏附带 **Rising + Top 相关查询（攻略词）**，点出去是与游戏名的对比图，并汇入词池可导出 |
 | 打分 | 黑盒 | 可解释：搜索量分 + 涨幅分 + 起飞分 + 发现权重 |
 | 噪音 | 黑盒 | 白盒规则表，可直接改 `src/lib/detect.mjs` |
 | 数据出口 | 只能看网页 | 终端报表 + 4 张 CSV |
@@ -174,21 +175,40 @@ node src/report.mjs --watch --top 40         # 只看命中监控词的
 // data/games.json
 { "updated": "...", "items": [ { "name": "brawl stars", "series": [7, 11, ...],
     "chart_at": "...", "chart_geo": "BR", "first": "...", "last": "...",
-    "sightings": 1, "hype": 0.83, "score": 23, "reason": "Games分类+游戏平台词" } ] }
+    "sightings": 1, "hype": 0.83, "score": 23, "reason": "Games分类+游戏平台词",
+    "rising": ["brawl stars tier list", "..."],   // 上升相关查询（已做相关性过滤）
+    "words":  ["brawl stars tier list", "..."]    // rising + top 合并去重后可直接用的词
+} ] }
 ```
 
 ### 看板怎么用 · 游戏雷达的三个关键认知
 
-**① 它给的是「游戏名」，不是「攻略词」**
+**① 每张卡片同时给「游戏名」和「可做页面的词」**
 
-游戏雷达抓的是**作品本体**：`Slop Tower Defense`、`Defeat Anime RNG`、`Poly Loot`、`Slayers 2`、`BloxNote`…… 用途是**告诉你「有个新游戏正在起量，该建站了」**，而不是直接给你页面标题。
+游戏雷达抓的主体是**作品本体**（`Slop Tower Defense`、`Slayers 2`、`BloxNote`……），用途是**告诉你「有个新游戏正在起量，该建站了」**。
 
-拿来做页面标题的攻略词（`xxx codes`、`xxx tier list`、`xxx wiki`）在 **「关键词池」** 标签页 —— 那里是从每条热搜自带的相关搜索词聚出来的真实搜索需求。
+每张卡片下方还有一行 **「可做页面的词」** —— 同一个游戏在 Google Trends 上的相关查询。以 GTA VI 为例（实测输出）：
+
+```
+🔥 grand theft auto vi ps5 gamepad    grand theft auto vi car physics
+   grand theft auto vi album preorder  characters in grand theft auto vi
+```
+
+- **🔥 = 上升词**（Rising），正在起量，最值得抢
+- 无 🔥 = 最热门相关查询（Top），搜索量已经稳定
+- **点任意一个词 → 打开 Google Trends 的「该词 vs 基准词」对比图**。为什么不直接看单词？因为新词和长尾词单独看几乎是一条平线，配上一个基准词才有可比性。基准词由 `config.json` 的 **`trendsCompare`** 决定（当前是 `GPTs`），热搜表的「趋势」链接同样会带上它
+- 这些词同时汇入 **「关键词池」**（标记为 🎮 攻略词），可统一筛选、导出 CSV
 
 | 你的动作 | 看哪里 |
 |---|---|
 | 发现新游戏（**选题**） | 🎮 新游戏雷达 |
-| 找到该游戏的真实搜索词（**起标题**） | 🔑 关键词池 + `config.watch` 监控词 |
+| 拿该游戏的可做页面词（**起标题**） | 卡片下方的「可做页面的词」 |
+| 跨游戏批量找词 / 导出 | 🔑 关键词池（筛 🎮 攻略词） |
+
+两个已知边界（**都是 Google 侧限制，不是 bug**）：
+
+1. **搜索量太低的词没有相关查询**：实测 17 个游戏里有 6 个（多为日语生僻新词）返回 HTTP 200 但 `rankedList` 是空的。这类游戏只保留曲线，没有词。
+2. **Rising 列表会混入同期爆红的无关词**：实测 GTA VI 的 rising 里出现了 `kroger`、`helldivers`、`brain eating amoeba`。已加**相关性过滤**（相关词必须含游戏名里的一个实词，过滤后 GTA VI 的 8 个 rising 全部与游戏相关）；但 **Top 列表不过滤**，否则会误删 `gta` 这类缩写词。
 
 **② 它不分国家（和原站一致）**
 
@@ -213,11 +233,12 @@ node src/report.mjs --watch --top 40         # 只看命中监控词的
 | `geos` | 国家列表，默认 38 个 |
 | `hours` | 请求时间窗口，**默认 24（与原站一致）** |
 | `minVol` | 热搜入库门槛，默认 0（与原站一致，不过滤） |
+| `trendsCompare` | **对比基准词**，默认 `"GPTs"`。所有点出去的 Google Trends 链接都会变成「该词 vs 基准词」的对比图（热搜表、游戏卡片、攻略词都是）。设为 `""` 即关闭对比、只看单词 |
 | `watch` | 业务监控词，命中打 ★。做 Roblox 站就填 `roblox` / `codes` / `tier list` 等 |
 | `pool.minParentVol` | 只有搜索量 ≥ 该值的热搜，其相关词才进词池（防长尾灌爆） |
 | `historyDays` / `historyChunkSize` | 留档窗口与分片大小 |
 | `concurrency` / `delayMs` | 并发与间隔（采集热搜用） |
-| `games.*` | 游戏雷达：目标市场、每轮取多少条曲线、曲线抽样间隔、刷新间隔 |
+| `games.*` | 游戏雷达：目标市场（`geos`）、每轮取多少条曲线（`maxCurvesPerRun`）、曲线抽样间隔（`sampleEveryHours`）、刷新间隔（`refreshHours`）、收录门槛（`minVol`）、每个游戏留多少攻略词（`relatedWords`）、请求间隔（`delayMs`） |
 
 ### 定时运行
 
@@ -343,7 +364,7 @@ Linux / macOS（crontab）：
 
 1. **Google Trends 没有官方 API**。本系统用的是网页内部接口，Google 可能随时改动字段或加验证。`src/lib/trends.mjs` 已把结构解析集中在 `normalizeItem()` 一处，接口变动时只改这里。
 2. **限流真实存在**。热搜接口（i0OFE）在 38 国并发 3 下稳定；曲线接口（multiline）限流严格得多，已改为**串行 + 1.2s 间隔 + 4 次退避重试**，仍可能个别失败（会记为 warn 并跳过，不影响整轮）。
-3. **不要提高采集频率**。每小时一次是原站的做法，也是安全区间。频率过高会被封。
+3. **不要提高采集频率，也不要反复手动重跑**。每小时一次是原站的做法，也是安全区间。实测连续密集调试（十几轮采集 + 五十多次曲线请求）会把当前 IP 打进 429，需要等一段时间才恢复；生产上按小时跑完全够用。频率过高会被封。
 4. **搜索量/涨幅是官方分桶相对值**，不是绝对搜索量。所有决策请按「桶位」理解，不要当成精确数字。
 5. **模型/规则类字段（noise、gameCandidate、score）是我们自建的**，与原站数值不一致，也不追求一致；它们是白盒规则，可直接按自己业务改 `src/lib/detect.mjs`。
 6. 本项目只做**数据采集与展示**，不包含任何抓取非公开数据的行为；请自行遵守目标站点的使用条款。

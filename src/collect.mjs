@@ -17,7 +17,7 @@
 import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, dataPath } from "./lib/util.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio } from "./lib/interest.mjs";
-import { noiseLabel, gameCandidate, scoreKeyword, matchWatch } from "./lib/detect.mjs";
+import { noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo } from "./lib/detect.mjs";
 import {
   loadHistory, mergeHistory, writeHistory, writeTrends,
   loadGames, writeGames, readState, writeState,
@@ -41,6 +41,7 @@ log("info", `会话就绪 ${session.cookie ? "(已获取 cookie)" : "(无 cookie
 // ── 1. 采集热搜 ──
 let fresh = [];
 const failures = [];
+const gameKw = []; // 游戏雷达挖出的攻略词，最后汇入关键词池
 
 if (!cfg._onlyGames) {
   log("info", `开始采集 ${cfg.geos.length} 个国家的实时上升热搜…`);
@@ -130,11 +131,9 @@ if (!cfg._onlyGames) {
     geos: cfg.geos,
     cats: cfg.catLabels || {},
     items,
+    compareWith: cfg.trendsCompare || "",
   });
   log("ok", `输出 data/trends.json`);
-
-  const pool = buildKeywordPool(fresh, cfg);
-  log("ok", `输出 data/keywords.json（词池 ${pool.total} 个，其中相关词 ${pool.related}）`);
 }
 
 // ── 3. 新游戏雷达 ──
@@ -178,20 +177,38 @@ if (cfg.games.enabled) {
   log("info", `游戏雷达：候选 ${cands.length} 个（新 ${cands.filter((c) => !c.tracked).length}），本轮取曲线 ${todo.length} 个`);
 
   let added = 0;
-  // 曲线接口限流严格：串行 + 间隔，避免 429
+  let kwAdded = 0;
+  const maxWords = cfg.games.relatedWords ?? 12;
+
+  // 曲线 / 相关查询接口限流严格：串行 + 间隔，避免 429
   for (const c of todo) {
     const geo = prefGeos.has(c.geo) ? c.geo : (cfg.games.geos || ["US"])[0];
+    const key = c.q.toLowerCase();
+    const prev = known.get(key);
+    // 已归档且已有关联词的，不再重复取相关查询（省一次请求）
+    const needRelated = !(prev?.words?.length);
     await sleep(cfg.games.delayMs ?? 2500);
     try {
       const curve = await fetchInterest(session, c.q, geo, {
         timeframe: cfg.games.timeframe || "now 7-d",
         sampleEveryHours: cfg.games.sampleEveryHours || 4,
+        withRelated: needRelated,
       });
       if (!curve || curve.series.length < 2 || curve.peak <= 0) continue; // 零信号不要
       const hype = hypeRatio(curve.series);
       const score = scoreKeyword({ vol: c.vol, growth: c.growth, hype, weight: c.weight });
-      const prev = known.get(c.q.toLowerCase());
-      known.set(c.q.toLowerCase(), {
+      // Rising 先做相关性过滤（剔除同期爆红的无关词），Top 本身质量高、不过滤
+      const nameTokens = tokensOf(c.q);
+      const rising = (curve.rising || []).filter((w) => relevantTo(w, nameTokens)).slice(0, maxWords);
+      const top = (curve.top || []).slice(0, maxWords);
+      // 优先收「上升」词，不足再用「最热门」词补齐 ——
+      // 实测很多词只有 top、rising 是空的（如 wordle hints / xbox game pass）
+      const words = [];
+      for (const w of [...rising, ...top]) {
+        if (words.length >= maxWords) break;
+        if (!words.includes(w)) words.push(w);
+      }
+      known.set(key, {
         name: c.q,
         series: curve.series,
         chart_at: iso(),
@@ -201,12 +218,17 @@ if (cfg.games.enabled) {
         sightings: (prev?.sightings || 0) + 1,
         hype,
         score,
-        reason: c.reason,
+        reason: prev?.reason || c.reason,
         cats: c.cats,
         geos: Array.from(new Set([...(prev?.geos || []), c.geo])).slice(0, 8),
+        rising: rising.length ? rising : prev?.rising || [],
+        words: words.length ? words : prev?.words || [],
       });
+      // 这些就是可直接起标题的攻略词，一并汇入关键词池
+      for (const w of words) gameKw.push({ q: w, parents: [c.q], geo: [c.geo] });
+      kwAdded += words.length;
       added++;
-      log("ok", `  🎮 ${c.q} (${geo}) score=${score} hype=${hype} 峰值=${curve.peak}`);
+      log("ok", `  🎮 ${c.q} (${geo}) score=${score} hype=${hype} 峰值=${curve.peak} 攻略词=${words.length}`);
     } catch (e) {
       log("warn", `  ${c.q} 曲线失败: ${e.message}`);
     }
@@ -217,10 +239,15 @@ if (cfg.games.enabled) {
   list = list.filter((g) => new Date(g.first).getTime() >= cutoff);
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
   writeGames(cfg, list);
-  log("ok", `输出 data/games.json（${list.length} 个，本轮新增 ${added}）`);
+  log("ok", `输出 data/games.json（${list.length} 个，本轮新增 ${added}，挖到攻略词 ${kwAdded} 个）`);
 }
 
-// ── 4. 状态与汇总 ──
+// ── 4. 关键词池：热搜的相关词 + 游戏雷达挖出的攻略词 ──
+// --only-games 模式下 fresh 来自上一轮 trends.json，若再喂进词池会让 count 重复累加，故传空数组
+const pool = buildKeywordPool(cfg._onlyGames ? [] : fresh, cfg, gameKw);
+log("ok", `输出 data/keywords.json（词池 ${pool.total} 个：相关词 ${pool.related}，游戏攻略词 ${pool.game}）`);
+
+// ── 5. 状态与汇总 ──
 const state = readState(cfg);
 writeState(cfg, {
   runs: (state.runs || 0) + 1,

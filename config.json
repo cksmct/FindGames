@@ -6,6 +6,7 @@
     "BR", "MX", "AR", "CO", "CL", "PE",
     "SA", "NG", "ZA", "KE", "PK", "BD"
   ],
+  "trendsCompare": "GPTs",
   "hours": 24,
   "minVol": 0,
   "maxRelated": 15,
@@ -32,7 +33,8 @@
     "sampleEveryHours": 4,
     "minVol": 1000,
     "refreshHours": 6,
-    "delayMs": 2500
+    "delayMs": 2500,
+    "relatedWords": 12
   },
   "geoLabels": {
     "US": "美国", "GB": "英国", "CA": "加拿大", "AU": "澳大利亚", "NZ": "新西兰", "IE": "爱尔兰",

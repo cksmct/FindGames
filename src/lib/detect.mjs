@@ -98,6 +98,27 @@ export function scoreKeyword({ vol = 0, growth = 0, hype = 0, weight = 0 }) {
   return Math.round(volScore + growthScore + hypeScore + weight * 2);
 }
 
+// ── 相关查询的相关性过滤 ──
+// Google 的 Rising 列表有已知问题：会混入同期爆红的**无关**词
+// （实测 GTA VI 的 rising 里有 kroger / helldivers / brain eating amoeba）。
+// Top 列表（最热门相关查询）质量高得多，所以只过滤 Rising，不动 Top。
+const STOP = new Set(["the", "and", "of", "for", "with", "vs", "de", "la", "el", "le", "les", "des", "und", "der"]);
+
+/** 把游戏名切成实词（长度 ≥3，去停用词；CJK 按空格切也一样work） */
+export function tokensOf(name) {
+  return String(name || "")
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length >= 3 && !STOP.has(t));
+}
+
+/** 相关词是否至少含游戏名里的一个实词 */
+export function relevantTo(word, tokens) {
+  if (!tokens || !tokens.length) return true; // 名字没有可用实词（如纯符号/短名），不过滤
+  const w = String(word || "").toLowerCase();
+  return tokens.some((t) => w.includes(t));
+}
+
 /** 判断是否命中"与我相关"监控词 */
 export function matchWatch(q, watch = []) {
   const low = q.toLowerCase();

@@ -115,8 +115,15 @@ export function writeHistory(cfg, items) {
   return chunks;
 }
 
-export function writeTrends(cfg, { geos, cats, items, updated }) {
-  writeJson(dataPath(cfg, "trends.json"), { updated, geos, cats, items });
+export function writeTrends(cfg, { geos, cats, items, updated, compareWith }) {
+  // compareWith 会透出到前端：所有点出去的 Google Trends 链接都带上它做对比基准词
+  writeJson(dataPath(cfg, "trends.json"), {
+    updated,
+    geos,
+    cats,
+    items,
+    ...(compareWith ? { compareWith } : {}),
+  });
 }
 
 export function loadGames(cfg) {
