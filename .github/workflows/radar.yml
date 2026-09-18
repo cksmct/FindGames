@@ -1,9 +1,12 @@
 name: Keyword Radar
 
-# ── 什么时候跑什么 ──────────────────────────────────────────────
-#   schedule（每小时 :23）   → 采集 + 发布
-#   workflow_dispatch（手动）→ 采集 + 发布（可指定国家）
-#   push 到 main（改动了 web/ src/ config.json 等）→ 只「重新发布」，不采集
+# ── 三种触发，都走同一条路：采集 → 存留档 → 发布 ──────────────
+#   schedule（每小时 :23）    → 采集 + 发布
+#   workflow_dispatch（手动） → 采集 + 发布（geos 可指定国家，留空 = 全部）
+#   push 到 main（改动 web/ src/ config.json 等）→ 采集 + 发布
+#
+# 「采集」是 continue-on-error 的尽力而为：即使 Google 限流导致采集失败，
+# 也会用已有留档继续把界面发布出去 —— 不会因为你改前端而卡在采集上。
 #
 # 7 天留档状态保存在专用分支 radar-data（每次单提交 force push 覆盖，仓库体积恒定）。
 # 发布目标由仓库变量 DEPLOY_TARGET 控制（Settings → Secrets and variables → Actions → Variables）：
@@ -22,7 +25,7 @@ on:
   schedule:
     # 用 UTC。刻意避开整点：GitHub 官方说「每小时整点」是高负载时段，schedule 会被明显延迟。
     # 想更新更勤可改成 "23,53 * * * *"（每 30 分钟）——采集是全量 24h 窗口 + 去重 + 峰值合并，
-    # 多跑不会产生重复数据，曲线取用还有 refreshHours 节流，不会额外消耗曲线配额。
+    # 多跑不会产生重复数据。
     - cron: "23 * * * *"
   workflow_dispatch:
     inputs:
@@ -72,9 +75,8 @@ jobs:
             echo "无历史留档，按首次运行处理（稍后采集会生成）"
           fi
 
-      # push 触发的运行没有输入参数，也不该重新采集（那会白打一遍 Google 接口）
       - name: 采集
-        if: github.event_name != 'push'
+        continue-on-error: true   # 尽力而为：采集失败也不阻塞发布
         run: |
           ARGS=""
           if [ -n "${{ github.event.inputs.geos }}" ]; then ARGS="$ARGS --geos ${{ github.event.inputs.geos }}"; fi
@@ -83,9 +85,9 @@ jobs:
 
       # 先存状态：即使发布环节没配好，数据也不会丢
       - name: 回写留档状态到 radar-data 分支
-        if: github.event_name != 'push'
         run: |
           set -e
+          if [ ! -d data ]; then echo "没有 data 目录（采集未产出），跳过存留档"; exit 0; fi
           mkdir -p /tmp/state
           cp -r data /tmp/state/data
           cd /tmp/state
@@ -103,13 +105,15 @@ jobs:
           mkdir -p data dist/data
           # 没有数据时宁可跳过发布，也不要用空目录覆盖掉线上正常的看板
           if ! ls data/*.json >/dev/null 2>&1; then
-            echo "::warning::没有可用数据（radar-data 分支可能还不存在），跳过本次发布，等下一次定时采集"
+            echo "::warning::没有可用数据（radar-data 分支可能还不存在），跳过本次发布，等下一次采集"
             echo "skip=1" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           cp -r web/. dist/
           # 显式排除 .state.json 等点文件：不同 shell 对 * 是否匹配点文件行为不一致，不靠 glob 语义
           find data -maxdepth 1 -type f -name '*.json' -not -name '.*' -exec cp -t dist/data/ {} +
+          # 把 config.json 一起发布：改 trendsCompare 这类"只影响界面"的配置时能立刻生效
+          cp config.json dist/data/config.json
           touch dist/.nojekyll
           du -sh dist
 

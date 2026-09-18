@@ -154,9 +154,22 @@ if (cfg.games.enabled) {
     if (!gc.ok) continue;
     const key = it.q.toLowerCase();
     const cur = known.get(key);
-    const chartAge = cur?.chart_at ? Date.now() - new Date(cur.chart_at).getTime() : Infinity;
-    if (chartAge < refreshMs) continue; // 曲线还新，本轮不重复取
-    const cand = { ...it, weight: gc.weight, reason: gc.reason, tracked: !!cur };
+    // 曲线与「攻略词」必须分别判新鲜度。
+    // 只看 chart_at 会出现这个坑：曲线刚取过但当时还没写词（或当时取词失败），
+    // 该游戏就会被整个跳过 6 小时，词永远补不上。所以单独记 related_at。
+    const ageOf = (t) => (t ? Date.now() - new Date(t).getTime() : Infinity);
+    const chartFresh = ageOf(cur?.chart_at) < refreshMs;
+    const relatedFresh = cur?.related_at
+      ? ageOf(cur.related_at) < refreshMs
+      : (cur?.words?.length || 0) > 0; // 旧数据没有 related_at：已有词就当新鲜，没有就得补
+    if (chartFresh && relatedFresh) continue; // 两者都新，本轮跳过
+    const cand = {
+      ...it,
+      weight: gc.weight,
+      reason: gc.reason,
+      tracked: !!cur,
+      needRelated: !relatedFresh,
+    };
     const prev = candMap.get(key);
     if (!prev) { candMap.set(key, cand); continue; }
     const better =
@@ -166,9 +179,11 @@ if (cfg.games.enabled) {
   }
   const cands = Array.from(candMap.values());
 
-  // 新发现优先 → 目标市场优先 → 搜索量高优先
+  // 优先级：全新游戏(0) > 老游戏补攻略词(1) > 单纯刷曲线(2)；
+  // 同级再看目标市场 → 搜索量 → 识别权重
+  const prio = (c) => (c.tracked ? (c.needRelated ? 1 : 2) : 0);
   cands.sort((a, b) =>
-    (a.tracked ? 1 : 0) - (b.tracked ? 1 : 0) ||
+    prio(a) - prio(b) ||
     (prefGeos.has(b.geo) ? 1 : 0) - (prefGeos.has(a.geo) ? 1 : 0) ||
     (b.vol || 0) - (a.vol || 0) ||
     b.weight - a.weight
@@ -185,8 +200,7 @@ if (cfg.games.enabled) {
     const geo = prefGeos.has(c.geo) ? c.geo : (cfg.games.geos || ["US"])[0];
     const key = c.q.toLowerCase();
     const prev = known.get(key);
-    // 已归档且已有关联词的，不再重复取相关查询（省一次请求）
-    const needRelated = !(prev?.words?.length);
+    const needRelated = !!c.needRelated; // 已由候选筛选阶段判定
     await sleep(cfg.games.delayMs ?? 2500);
     try {
       const curve = await fetchInterest(session, c.q, geo, {
@@ -212,6 +226,7 @@ if (cfg.games.enabled) {
         name: c.q,
         series: curve.series,
         chart_at: iso(),
+        related_at: needRelated ? iso() : prev?.related_at || iso(),
         chart_geo: geo,
         first: prev?.first || iso(),
         last: iso(),

@@ -61,6 +61,12 @@ const GAMBLING_I18N =
 // 主机/外设本身不是"新游戏"
 const HARDWARE_ONLY =
   /^(playstation( ?[3-5])?|ps ?[3-5]|xbox( series [xs])?|nintendo( switch( ?2)?)?|switch ?2|steam deck|graphics card|gpu)$/i;
+// 应用商店/发行平台本身不是游戏（Google 把它们归进 Games 分类，实测 "google play" 会被误收）
+const STORE_ONLY =
+  /^(google play( ?store)?|play store|app ?store|microsoft store|steam( store)?|epic games( store)?|nintendo e?shop|itch\.io)$/i;
+// 泛化的游戏类词，没有具体指向
+const GENERIC_WORD =
+  /^(multi ?joueur|multiplayer|jeux|juegos|jogo|jogos|spiel|giochi|oyun|games?|gameplay|video ?game|videojuegos|gaming)$/i;
 // 明确不是游戏的身份类词 / 平台类词（不是"新游戏"）
 const NOT_GAME_EXTRA =
   /\b(vtuber|virtual youtuber|バーチャルyoutuber|youtuber|influencer|streamer|celebrity|twitch|discord|reddit|tiktok|instagram|facebook|spotify)\b/i;
@@ -76,6 +82,8 @@ export function gameCandidate(item) {
   if (!q || NOT_GAME.test(q) || NOT_GAME_EXTRA.test(q)) return { ok: false, reason: "非游戏实体", weight: 0 };
   if (GAMBLING.test(q) || GAMBLING_I18N.test(q)) return { ok: false, reason: "博彩/彩票", weight: 0 };
   if (HARDWARE_ONLY.test(q.trim())) return { ok: false, reason: "主机硬件", weight: 0 };
+  if (STORE_ONLY.test(q.trim())) return { ok: false, reason: "应用商店", weight: 0 };
+  if (GENERIC_WORD.test(q.trim())) return { ok: false, reason: "泛化词", weight: 0 };
   const inGameCat = cats.includes(CAT.GAMES);
   const platform = GAME_PLATFORMS.test(q);
   const signal = GAME_SIGNALS.test(q);

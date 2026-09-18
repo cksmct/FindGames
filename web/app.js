@@ -81,6 +81,16 @@
       (geo && geo !== "ALL" ? "&geo=" + geo : "");
   }
 
+  /** config.json 会一起发布，所以改 trendsCompare 不必等下一轮采集 */
+  function applyCompare(v) {
+    if (v === undefined || v === null) return;
+    var next = String(v || "");
+    if (next === COMPARE) return;
+    COMPARE = next;
+    if (state.tab === "hot") renderHot();
+    else if (state.tab === "games") renderGames();
+  }
+
   function catNames(ids) {
     return (ids || []).map(function (c) { return CATS[c]; }).filter(Boolean).slice(0, 2).join(" · ");
   }
@@ -448,6 +458,8 @@
     CATS = d.cats || {};
     GEOS = d.geos || Object.keys(d.items || {});
     COMPARE = d.compareWith || "";
+    // config.json 会跟产物一起发布，优先用它（改配置 push 即生效，不必等下一轮采集）
+    fetchJson("data/config.json").then(function (c) { applyCompare(c && c.trendsCompare); }).catch(function () {});
     $("updated").textContent = "更新于 " + rel(d.updated);
     buildBars();
     renderHot();
