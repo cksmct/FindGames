@@ -1,0 +1,18 @@
+{
+  "name": "keyword-radar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "自建全球热词与新游戏雷达：Google Trends 实时上升热搜 + 7天留档 + 新游戏曲线",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "collect": "node src/collect.mjs",
+    "collect:quick": "node src/collect.mjs --geos US,GB,JP,KR,TW --no-games",
+    "radar": "node src/collect.mjs --only-games",
+    "report": "node src/report.mjs",
+    "export": "node src/report.mjs --csv",
+    "serve": "node src/serve.mjs"
+  }
+}

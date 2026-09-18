@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Keyword Radar · 全球热词与新游戏雷达</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#g)"/>
+      <path d="M10 46 C30 46 38 38 44 26 C47 20 49 17 54 13" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="54" cy="13" r="5" fill="#fff"/>
+      <circle cx="54" cy="13" r="10" fill="none" stroke="#fff" stroke-width="1.6" opacity=".5"/>
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#4f9cf9"/><stop offset="1" stop-color="#7a5cf0"/>
+      </linearGradient></defs>
+    </svg>
+    <div>
+      <h1>Keyword Radar</h1>
+      <p class="tag">全球热词 · 7 天留档 · 新游戏雷达 · 关键词池</p>
+    </div>
+  </div>
+  <div class="meta"><span id="updated">加载中…</span></div>
+</header>
+
+<nav id="tabs">
+  <button data-tab="hot" class="on">🔥 实时热词</button>
+  <button data-tab="hist">🗓 7 天留档</button>
+  <button data-tab="games">🎮 新游戏雷达</button>
+  <button data-tab="pool">🔑 关键词池</button>
+</nav>
+
+<main>
+  <!-- 热词 / 留档 共用的筛选区 -->
+  <section id="filters">
+    <div class="fbar" id="geo-bar"></div>
+    <div class="fbar" id="cat-bar"></div>
+    <div class="fbar">
+      <span class="group" id="vol-bar"></span>
+      <span class="group" id="growth-bar"></span>
+      <input id="search" type="search" placeholder="搜索词…" />
+      <button id="watch-btn" class="toggle">★ 只要监控词</button>
+      <button id="noise-btn" class="toggle">🔇 隐藏噪音</button>
+      <button id="csv-btn" class="ghost">导出当前 CSV</button>
+    </div>
+  </section>
+
+  <section id="panel-hot">
+    <p class="hint">Google Trends 实时「上升热搜」，按国家聚合。点击行可展开该词带出的相关搜索词。</p>
+    <div id="hot-table"></div>
+  </section>
+
+  <section id="panel-hist" hidden>
+    <p class="hint">近 7 天滚动留档：同一个词只保留峰值搜索量与峰值涨幅，按峰值降序。</p>
+    <div id="hist-table"></div>
+  </section>
+
+  <section id="panel-games" hidden>
+    <p class="hint">识别到的新游戏候选。曲线是该游戏<b>被发现时点</b>的 7 天搜索热度快照（相对值 0-100），之后的走势需点「查看趋势」。</p>
+    <div id="game-cards"></div>
+  </section>
+
+  <section id="panel-pool" hidden>
+    <p class="hint">把每条热搜自带的相关搜索词汇总成词池。<b>这是找词的主力区</b>：被越多热搜带出、越是真实需求。</p>
+    <div class="fbar">
+      <input id="pool-search" type="search" placeholder="筛选词池…" />
+      <button id="pool-csv" class="ghost">导出词池 CSV</button>
+      <span class="meta" id="pool-meta"></span>
+    </div>
+    <div id="pool-table"></div>
+  </section>
+</main>
+
+<footer>
+  <p>数据每小时自动更新 · 来源 Google Trends 实时上升热搜 · 搜索量/涨幅为官方分桶相对值</p>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

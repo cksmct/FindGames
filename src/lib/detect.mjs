@@ -1,0 +1,105 @@
+/**
+ * 加工层：噪音标注、新游戏识别、可解释打分
+ *
+ * 说明：原站(FindNews)的 noise/游戏识别/score 具体规则无法从产物反推（只有结果没有规则），
+ * 这里是我们自建的一套白盒规则，全部可读可改。
+ */
+
+// 官方分类 ID
+export const CAT = {
+  AUTOS: 1, BEAUTY: 2, BIZ: 3, ENT: 4, FOOD: 5, GAMES: 6, HEALTH: 7, HOBBIES: 8,
+  JOBS: 9, LAW: 10, OTHER: 11, PETS: 13, POLITICS: 14, SCIENCE: 15, SHOPPING: 16,
+  SPORTS: 17, TECH: 18, TRAVEL: 19, CLIMATE: 20,
+};
+
+// ── 噪音规则：给出"为什么这条对做站点的人没用"的短标签 ──
+const ADULT = /\b(porn|xxx|sex|nude|escort|onlyfans|xnxx|xvideos)\b/i;
+const WEATHER_WORDS = /\b(weather|rain|storm|typhoon|hurricane|monsoon|temperature|forecast|snow|flood|cyclone|heatwave)\b/i;
+const RE_ONE_TOKEN = /^[\p{L}\p{N}][\p{L}\p{N}'-]*$/u;
+
+const NOISE_RULES = [
+  { label: "敏感", test: (q) => ADULT.test(q) },
+  { label: "天气", test: (q, cats) => cats.includes(CAT.CLIMATE) || WEATHER_WORDS.test(q) },
+  { label: "体育", test: (q, cats) => cats.length > 0 && cats.every((c) => c === CAT.SPORTS) },
+  { label: "政治", test: (q, cats) => cats.includes(CAT.POLITICS) },
+  { label: "纯人名词", test: (q, cats) => {
+      const words = q.trim().split(/\s+/);
+      return cats.includes(CAT.ENT) && words.length <= 3 && words.every((w) => /^[A-Z]/.test(w));
+    } },
+  { label: "单字泛词", test: (q) => {
+      const words = q.trim().split(/\s+/);
+      return words.length === 1 && RE_ONE_TOKEN.test(q) && q.length <= 8 && q === q.toLowerCase();
+    } },
+];
+
+/** 返回噪音标签，空字符串表示非噪音 */
+export function noiseLabel(q, cats = []) {
+  for (const r of NOISE_RULES) {
+    try {
+      if (r.test(q, cats)) return r.label;
+    } catch {
+      /* 单条规则异常不影响整体 */
+    }
+  }
+  return "";
+}
+
+// ── 新游戏识别 ──
+const GAME_PLATFORMS =
+  /\b(roblox|minecraft|fortnite|steam|xbox|playstation|ps5|nintendo|switch|epic games|gta|valorant|genshin|honkai|wuthering|zelda|pokemon|pokémon|among us|stardew|terraria|rust|dota|league of legends|overwatch|apex|call of duty|pubg|free fire|mobile legends|clash|brawl stars|genshin impact)\b/i;
+const GAME_SIGNALS =
+  /\b(game|gameplay|release date|early access|beta|demo|trailer|update|patch|codes|tier list|roblox|wiki|steam deck|playstation|xbox|switch 2|mobile)\b/i;
+// 明确不是游戏的常见实体（避免把体育/影视续作/博彩当游戏）
+const NOT_GAME =
+  /\b(vs|nfl|nba|mlb|nhl|ufc|f1|premier league|netflix|hulu|disney\+|episode|season \d|box office|election|senate|congress)\b/i;
+// Google 把"彩票/博彩"归到 Games 分类，必须显式剔除
+// 注意：非 ASCII 词（xổ số 等）不能用 \b 包裹 —— JS 的 \b 只认 \w，越南语字母不算词字符，加了 \b 会永不匹配
+const GAMBLING =
+  /\b(lottery|sambad|kerala|jackpot|casino|betting|bet|slots?|lotto|poker|rummy|dear lottery|sikkim|nagaland|powerball|mega millions|tambola|matka|satta|result[s]? (?:today|yesterday))\b/i;
+const GAMBLING_I18N =
+  /(xổ số|kết quả xổ|xs(mb|mn|mt)|ngày \d{1,2} tháng|หวย|ロト|当選番号|toto|loto|sorteio|lotofácil|lotomania|quina|primitiva|sorteo|loter[ií]a|mega ?sena|timemania|大樂透|威力彩|六合彩|双色球|大乐透|로또|복권|福彩|體彩|당첨)/i;
+// 主机/外设本身不是"新游戏"
+const HARDWARE_ONLY =
+  /^(playstation( ?[3-5])?|ps ?[3-5]|xbox( series [xs])?|nintendo( switch( ?2)?)?|switch ?2|steam deck|graphics card|gpu)$/i;
+// 明确不是游戏的身份类词 / 平台类词（不是"新游戏"）
+const NOT_GAME_EXTRA =
+  /\b(vtuber|virtual youtuber|バーチャルyoutuber|youtuber|influencer|streamer|celebrity|twitch|discord|reddit|tiktok|instagram|facebook|spotify)\b/i;
+
+/**
+ * 判断一条热搜是否"可能是新游戏"
+ * @param {{q:string,cats:number[]}} item
+ * @returns {{ok:boolean, reason:string, weight:number}}
+ */
+export function gameCandidate(item) {
+  const q = item.q || "";
+  const cats = item.cats || [];
+  if (!q || NOT_GAME.test(q) || NOT_GAME_EXTRA.test(q)) return { ok: false, reason: "非游戏实体", weight: 0 };
+  if (GAMBLING.test(q) || GAMBLING_I18N.test(q)) return { ok: false, reason: "博彩/彩票", weight: 0 };
+  if (HARDWARE_ONLY.test(q.trim())) return { ok: false, reason: "主机硬件", weight: 0 };
+  const inGameCat = cats.includes(CAT.GAMES);
+  const platform = GAME_PLATFORMS.test(q);
+  const signal = GAME_SIGNALS.test(q);
+  if (!inGameCat && !platform && !signal) return { ok: false, reason: "无游戏信号", weight: 0 };
+  let weight = 0;
+  if (inGameCat) weight += 2;
+  if (platform) weight += 2;
+  if (signal) weight += 1;
+  return { ok: true, reason: [inGameCat && "Games分类", platform && "游戏平台词", signal && "游戏意图词"].filter(Boolean).join("+"), weight };
+}
+
+/**
+ * 可解释打分：搜索量分 + 涨幅分 + 起飞分 + 发现权重
+ * 与原站 score 数值不追求一致（其算法未知），仅保证越大越值得做。
+ */
+export function scoreKeyword({ vol = 0, growth = 0, hype = 0, weight = 0 }) {
+  const volScore = vol > 0 ? Math.log2(vol / 1000) * 2 : 0; // 2万≈8.6, 200万≈22
+  const growthScore = growth / 100;                          // 1000% → 10
+  const hypeScore = hype >= 99 ? 8 : hype >= 3 ? 5 : hype >= 1.5 ? 2 : 0;
+  return Math.round(volScore + growthScore + hypeScore + weight * 2);
+}
+
+/** 判断是否命中"与我相关"监控词 */
+export function matchWatch(q, watch = []) {
+  const low = q.toLowerCase();
+  return watch.filter((w) => w && low.includes(String(w).toLowerCase()));
+}

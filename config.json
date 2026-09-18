@@ -1,0 +1,52 @@
+{
+  "geos": [
+    "US", "GB", "CA", "AU", "NZ", "IE",
+    "JP", "KR", "TW", "HK", "SG", "MY", "PH", "ID", "TH", "VN", "IN",
+    "DE", "FR", "IT", "ES", "NL", "PL", "SE", "PT", "TR",
+    "BR", "MX", "AR", "CO", "CL", "PE",
+    "SA", "NG", "ZA", "KE", "PK", "BD"
+  ],
+  "hours": 24,
+  "minVol": 0,
+  "maxRelated": 15,
+  "pool": {
+    "minParentVol": 5000,
+    "maxItems": 20000
+  },
+  "historyDays": 7,
+  "historyChunkSize": 3000,
+  "concurrency": 3,
+  "delayMs": 500,
+  "retries": 3,
+  "dataDir": "data",
+  "translate": false,
+  "watch": [
+    "roblox", "codes", "tier list", "update", "release date", "new game",
+    "best", "guide", "wiki", "how to"
+  ],
+  "games": {
+    "enabled": true,
+    "geos": ["US", "GB", "JP", "KR", "TW", "DE", "FR", "BR", "IN"],
+    "maxCurvesPerRun": 25,
+    "timeframe": "now 7-d",
+    "sampleEveryHours": 4,
+    "minVol": 1000,
+    "refreshHours": 6,
+    "delayMs": 2500
+  },
+  "geoLabels": {
+    "US": "美国", "GB": "英国", "CA": "加拿大", "AU": "澳大利亚", "NZ": "新西兰", "IE": "爱尔兰",
+    "JP": "日本", "KR": "韩国", "TW": "台湾", "HK": "香港", "SG": "新加坡", "MY": "马来西亚",
+    "PH": "菲律宾", "ID": "印尼", "TH": "泰国", "VN": "越南", "IN": "印度",
+    "DE": "德国", "FR": "法国", "IT": "意大利", "ES": "西班牙", "NL": "荷兰", "PL": "波兰",
+    "SE": "瑞典", "PT": "葡萄牙", "TR": "土耳其",
+    "BR": "巴西", "MX": "墨西哥", "AR": "阿根廷", "CO": "哥伦比亚", "CL": "智利", "PE": "秘鲁",
+    "SA": "沙特", "NG": "尼日利亚", "ZA": "南非", "KE": "肯尼亚", "PK": "巴基斯坦", "BD": "孟加拉国"
+  },
+  "catLabels": {
+    "1": "汽车交通", "2": "美容健身", "3": "商业财经", "4": "娱乐", "5": "饮食酒水",
+    "6": "游戏", "7": "健康", "8": "兴趣休闲", "9": "工作教育", "10": "法律政府",
+    "11": "其他", "13": "宠物动物", "14": "政治", "15": "科学", "16": "购物",
+    "17": "体育", "18": "科技", "19": "旅游", "20": "气候天气"
+  }
+}
