@@ -67,7 +67,7 @@
   // ── 状态 ──
   var state = {
     tab: "hot", geo: "ALL", cat: "all", vol: 0, growth: 0,
-    noise: false, watch: false, q: "", rowsShown: 200, poolQ: "",
+    noise: false, watch: false, q: "", rowsShown: 200, poolQ: "", gameSort: "first",
   };
   var trends = null, history = null, games = null, pool = null, poolIndex = null;
   var CATS = {}, GEOS = [];
@@ -239,10 +239,22 @@
   }
 
   // ── 新游戏雷达 ──
+  // 原站是按「最新信号」倒序（实测 388 条里只有 last 是单调键）；
+  // 我们默认按「最新发现」，因为目的是一时间发现新游戏；两种都放开给用户切。
+  var GAME_SORTS = {
+    first: function (a, b) { return new Date(b.first) - new Date(a.first); },
+    last: function (a, b) { return new Date(b.last || b.first) - new Date(a.last || a.first); },
+    score: function (a, b) { return (b.score || 0) - (a.score || 0) || new Date(b.first) - new Date(a.first); },
+  };
+  var GAME_SORT_LABEL = { first: "最新发现", last: "最新信号", score: "分数" };
+
   function renderGames() {
     var el = $("game-cards");
     if (!games) { el.innerHTML = '<p class="empty">加载中…</p>'; return; }
-    var items = (games.items || []).slice(0, state.rowsShown);
+    var sorted = (games.items || []).slice().sort(GAME_SORTS[state.gameSort] || GAME_SORTS.first);
+    var items = sorted.slice(0, state.rowsShown);
+    var meta = $("game-meta");
+    if (meta) meta.textContent = "共 " + sorted.length + " 个 · 排序：" + (GAME_SORT_LABEL[state.gameSort] || "最新发现");
     el.innerHTML = items.map(function (g) {
       var age = (Date.now() - new Date(g.first).getTime()) / 864e5;
       var chart = (g.series || []).length > 1
@@ -259,8 +271,8 @@
         '<div class="gmeta"><a href="https://trends.google.com/trends/explore?date=now%207-d&q=' +
         encodeURIComponent(g.name) + '" target="_blank" rel="noopener">查看趋势 →</a></div></div>';
     }).join("") || '<p class="empty">还没发现新游戏，多跑几轮采集</p>';
-    if ((games.items || []).length > state.rowsShown) {
-      el.innerHTML += '<button class="more" id="games-more">显示更多</button>';
+    if (sorted.length > state.rowsShown) {
+      el.innerHTML += '<button class="more" id="games-more">显示更多（共 ' + sorted.length + " 个）</button>";
       $("games-more").onclick = function () { state.rowsShown += 60; renderGames(); };
     }
   }
@@ -382,6 +394,14 @@
   }, 180));
   $("csv-btn").addEventListener("click", function () {
     downloadCsv("hot-keywords.csv", currentHotRows(), ["q", "geo", "vol", "growth", "cats", "noise", "watch", "is_new"]);
+  });
+  $("game-sort").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-sort]");
+    if (!b) return;
+    state.gameSort = b.dataset.sort;
+    state.rowsShown = 200;
+    Array.prototype.forEach.call(this.querySelectorAll("button"), function (x) { x.classList.toggle("on", x === b); });
+    renderGames();
   });
   $("pool-csv").addEventListener("click", function () {
     if (!pool) return;

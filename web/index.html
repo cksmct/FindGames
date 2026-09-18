@@ -59,7 +59,16 @@
   </section>
 
   <section id="panel-games" hidden>
-    <p class="hint">识别到的新游戏候选。曲线是该游戏<b>被发现时点</b>的 7 天搜索热度快照（相对值 0-100），之后的走势需点「查看趋势」。</p>
+    <p class="hint">识别到的是<b>新游戏名（作品本体）</b>，不是攻略词。曲线是该游戏<b>被发现时点</b>的 7 天搜索热度快照（相对值 0-100）。
+      想找可做页面的攻略词（xxx codes / tier list 之类），请去<b>「关键词池」</b>。</p>
+    <div class="fbar" id="game-sort">
+      <span class="group">
+        <button data-sort="first" class="on">🆕 最新发现</button>
+        <button data-sort="last">📡 最新信号</button>
+        <button data-sort="score">🔥 分数</button>
+      </span>
+      <span class="meta" id="game-meta"></span>
+    </div>
     <div id="game-cards"></div>
   </section>
 

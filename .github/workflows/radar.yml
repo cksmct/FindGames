@@ -1,23 +1,33 @@
 name: Keyword Radar
 
-# 每小时采集一次 Google Trends 实时上升热搜，组装静态看板并发布。
-# 7 天留档状态保存在专用分支 radar-data（单次提交，每次 force push 覆盖，不会撑大仓库）。
+# ── 什么时候跑什么 ──────────────────────────────────────────────
+#   schedule（每小时 :23）   → 采集 + 发布
+#   workflow_dispatch（手动）→ 采集 + 发布（可指定国家）
+#   push 到 main（改动了 web/ src/ config.json 等）→ 只「重新发布」，不采集
 #
+# 7 天留档状态保存在专用分支 radar-data（每次单提交 force push 覆盖，仓库体积恒定）。
 # 发布目标由仓库变量 DEPLOY_TARGET 控制（Settings → Secrets and variables → Actions → Variables）：
 #   github-pages      （默认）发布到 GitHub Pages，零额外配置
 #   cloudflare-pages  用 wrangler 直传 Cloudflare Pages（需要 2 个 Secret + 2 个 Variable）
 #   none              只采集并存留档，不发布
 on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "src/**"
+      - "config.json"
+      - "package.json"
+      - ".github/workflows/radar.yml"
   schedule:
-    # 用 UTC。刻意避开整点：GitHub 官方明确说「每小时整点」是高负载时段，schedule 会被明显延迟。
-    # 想更新更勤可改成 "23,53 * * * *"（每 30 分钟）——
-    # 因为采集是全量 24h 窗口 + (词,地区) 去重 + 峰值合并，多跑不会产生重复数据，
-    # 曲线取用还有 refreshHours 节流，不会额外消耗曲线配额。
+    # 用 UTC。刻意避开整点：GitHub 官方说「每小时整点」是高负载时段，schedule 会被明显延迟。
+    # 想更新更勤可改成 "23,53 * * * *"（每 30 分钟）——采集是全量 24h 窗口 + 去重 + 峰值合并，
+    # 多跑不会产生重复数据，曲线取用还有 refreshHours 节流，不会额外消耗曲线配额。
     - cron: "23 * * * *"
   workflow_dispatch:
     inputs:
       geos:
-        description: "只跑指定国家（逗号分隔，如 US,GB,JP）；留空=全部"
+        description: "只跑指定国家（逗号分隔，如 US,GB,JP）；留空 = 全部"
         required: false
         default: ""
       skip_games:
@@ -41,11 +51,12 @@ jobs:
     environment:
       name: ${{ vars.DEPLOY_TARGET == 'cloudflare-pages' && 'cloudflare-pages' || 'github-pages' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          # 跟随最新 LTS：Node 20 已 EOL；我们只用 fetch / ESM / fs 等稳定 API，不挑版本
+          node-version: "lts/*"
 
       # 用 git archive 还原留档状态：不经 index，完全不受 .gitignore 影响；
       # 首次运行时 radar-data 分支还不存在，各步失败都无害，最后靠 [ -d data ] 判断
@@ -58,10 +69,12 @@ jobs:
             echo "已恢复留档状态："
             ls -la data
           else
-            echo "无历史留档，按首次运行处理"
+            echo "无历史留档，按首次运行处理（稍后采集会生成）"
           fi
 
+      # push 触发的运行没有输入参数，也不该重新采集（那会白打一遍 Google 接口）
       - name: 采集
+        if: github.event_name != 'push'
         run: |
           ARGS=""
           if [ -n "${{ github.event.inputs.geos }}" ]; then ARGS="$ARGS --geos ${{ github.event.inputs.geos }}"; fi
@@ -70,6 +83,7 @@ jobs:
 
       # 先存状态：即使发布环节没配好，数据也不会丢
       - name: 回写留档状态到 radar-data 分支
+        if: github.event_name != 'push'
         run: |
           set -e
           mkdir -p /tmp/state
@@ -84,17 +98,24 @@ jobs:
           git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:radar-data
 
       - name: 组装静态站点
+        id: build
         run: |
-          mkdir -p dist/data
+          mkdir -p data dist/data
+          # 没有数据时宁可跳过发布，也不要用空目录覆盖掉线上正常的看板
+          if ! ls data/*.json >/dev/null 2>&1; then
+            echo "::warning::没有可用数据（radar-data 分支可能还不存在），跳过本次发布，等下一次定时采集"
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           cp -r web/. dist/
-          # 显式排除 .state.json 等点文件：不同 shell 对 * 是否匹配点文件的行为不一致，不靠 glob 语义
+          # 显式排除 .state.json 等点文件：不同 shell 对 * 是否匹配点文件行为不一致，不靠 glob 语义
           find data -maxdepth 1 -type f -name '*.json' -not -name '.*' -exec cp -t dist/data/ {} +
           touch dist/.nojekyll
           du -sh dist
 
       # ── 方案 A：Cloudflare Pages（wrangler 直传，不占用 500 次/月的构建额度）──
       - name: 发布到 Cloudflare Pages
-        if: vars.DEPLOY_TARGET == 'cloudflare-pages'
+        if: steps.build.outputs.skip != '1' && vars.DEPLOY_TARGET == 'cloudflare-pages'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -105,16 +126,16 @@ jobs:
 
       # ── 方案 B：GitHub Pages（默认）──
       - name: 配置 GitHub Pages
-        if: vars.DEPLOY_TARGET != 'cloudflare-pages' && vars.DEPLOY_TARGET != 'none'
-        uses: actions/configure-pages@v5
+        if: steps.build.outputs.skip != '1' && vars.DEPLOY_TARGET != 'cloudflare-pages' && vars.DEPLOY_TARGET != 'none'
+        uses: actions/configure-pages@v6
 
       - name: 上传 Pages 产物
-        if: vars.DEPLOY_TARGET != 'cloudflare-pages' && vars.DEPLOY_TARGET != 'none'
-        uses: actions/upload-pages-artifact@v3
+        if: steps.build.outputs.skip != '1' && vars.DEPLOY_TARGET != 'cloudflare-pages' && vars.DEPLOY_TARGET != 'none'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
       - name: 发布到 GitHub Pages
-        if: vars.DEPLOY_TARGET != 'cloudflare-pages' && vars.DEPLOY_TARGET != 'none'
+        if: steps.build.outputs.skip != '1' && vars.DEPLOY_TARGET != 'cloudflare-pages' && vars.DEPLOY_TARGET != 'none'
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
