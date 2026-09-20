@@ -115,10 +115,13 @@ jobs:
             exit 0
           fi
           cp -r web/. dist/
-          # 显式排除 .state.json 等点文件：不同 shell 对 * 是否匹配点文件行为不一致，不靠 glob 语义
+          # 显式排除 .state.json 等点文件：不同 shell 对 * 是否匹配点文件行为不一致，不靠 glob 语义。
+          # data/config.json（collect 产出的【脱敏】子集）也在这里被一起复制过去。
           find data -maxdepth 1 -type f -name '*.json' -not -name '.*' -exec cp -t dist/data/ {} +
-          # 把 config.json 一起发布：改 trendsCompare 这类"只影响界面"的配置时能立刻生效
-          cp config.json dist/data/config.json
+          # 🛑 这里原先有一行 `cp config.json dist/data/config.json` —— 已删除。
+          #    它会【整份】发布 config.json，一旦有人把 judge.apiKey 写进配置，
+          #    密钥就会随公开站点泄漏。现在改由 src/collect.mjs 按白名单输出脱敏子集到
+          #    data/config.json，由上面的 find 自动带上（白名单制，新增敏感字段也不会误发）。
           touch dist/.nojekyll
           du -sh dist
 

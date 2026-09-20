@@ -14,10 +14,13 @@
  *   node src/collect.mjs --no-games              跳过游戏雷达
  *   node src/collect.mjs --only-games            只跑游戏雷达
  */
-import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, dataPath } from "./lib/util.mjs";
+import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, writeJson, dataPath } from "./lib/util.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio } from "./lib/interest.mjs";
-import { noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo } from "./lib/detect.mjs";
+import {
+  noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo,
+  feedbackVerdict, FEEDBACK_BOOST_PTS,
+} from "./lib/detect.mjs";
 import { judgeCandidates } from "./lib/judge.mjs";
 import {
   loadHistory, mergeHistory, writeHistory, writeTrends,
@@ -133,8 +136,21 @@ if (!cfg._onlyGames) {
     cats: cfg.catLabels || {},
     items,
     compareWith: cfg.trendsCompare || "",
+    // 看板点"查看趋势"时 geo 的缺省值（"全部地区"视图用）。缺 geo 会退回全球口径，
+    // 与"从某个地区榜单点进来"的上下文不符，所以必须给一个确定值。
+    defaultGeo: cfg.trendsDefaultGeo || "US",
   });
   log("ok", `输出 data/trends.json`);
+
+  // 向前端发布一份【脱敏】的 config.json：
+  //  ① 只放"只影响界面"的字段 —— 看板改 trendsCompare / trendsDefaultGeo 能立刻生效，不必等下一轮采集
+  //  ② 🛑 绝不能整份 config.json 直接发布：judge.apiKey 这类字段一旦被写进配置，
+  //     会随静态站点公开（工作流原先是 `cp config.json dist/data/config.json`，有泄漏风险）。
+  //     白名单制而不是黑名单制 —— 以后新增敏感字段也不会误发。
+  const PUBLIC_CFG = ["trendsCompare", "trendsDefaultGeo", "watch", "geos", "catLabels", "geoLabels", "feedback"];
+  const publicCfg = {};
+  for (const k of PUBLIC_CFG) if (cfg[k] !== undefined) publicCfg[k] = cfg[k];
+  writeJson(dataPath(cfg, "config.json"), publicCfg);
 }
 
 // ── 3. 新游戏雷达 ──
@@ -154,11 +170,15 @@ if (cfg.games.enabled) {
   const lowBelow = cfg.games.strongSignal?.belowVol ?? 1000;
   const lowMinWeight = cfg.games.strongSignal?.minWeight ?? 3;
 
+  const excludeAAA = cfg.games.excludeAAA === true;
+
   for (const it of fresh) {
     if (it.noise) continue;
+    // 你的明确判断优先于任何启发式规则：feedback.block 里的词直接不进雷达
+    if (feedbackVerdict(it.q, cfg.feedback) === "block") continue;
     const vol = it.vol || 0;
     if (vol < (cfg.games.minVol ?? 0)) continue;
-    const gc = gameCandidate(it, { latinOnly });
+    const gc = gameCandidate(it, { latinOnly, excludeAAA });
     if (!gc.ok) continue;
     // 低量区（刚冒头的新游戏就在这里）只放行"强信号"候选：
     // 实测 32 个 vol<1000 的候选里，权重≥3 的全是真游戏；
@@ -246,7 +266,11 @@ if (cfg.games.enabled) {
       });
       if (!curve || curve.series.length < 2 || curve.peak <= 0) continue; // 零信号不要
       const hype = hypeRatio(curve.series);
-      const score = scoreKeyword({ vol: c.vol, growth: c.growth, hype, weight: c.weight });
+      const score = scoreKeyword({
+        vol: c.vol, growth: c.growth, hype, weight: c.weight,
+        // feedback.boost 里的词加分：你判断值得做的，让它排前面
+        feedbackBoost: feedbackVerdict(c.q, cfg.feedback) === "boost" ? FEEDBACK_BOOST_PTS : 0,
+      });
       // Rising 先做相关性过滤（剔除同期爆红的无关词），Top 本身质量高、不过滤
       const nameTokens = tokensOf(c.q);
       const rising = (curve.rising || []).filter((w) => relevantTo(w, nameTokens)).slice(0, maxWords);
@@ -300,7 +324,9 @@ if (cfg.games.enabled) {
     if (noiseLabel(g.name, cats)) return false;
     // LLM 终审否决过的同样要清掉，否则它进了库就永远留着（同一个坑的第二遍）
     if (verdicts.get(String(g.name).toLowerCase().trim())?.game === false) return false;
-    return gameCandidate({ q: g.name, cats }, { latinOnly }).ok;
+    // 你的反馈同样能清存量：把词加进 feedback.block，下一轮它就从列表里消失
+    if (feedbackVerdict(g.name, cfg.feedback) === "block") return false;
+    return gameCandidate({ q: g.name, cats }, { latinOnly, excludeAAA }).ok;
   });
   if (list.length < ruleFiltered) log("dim", `  按当前规则清掉 ${ruleFiltered - list.length} 个不再符合条件的旧条目`);
   list.sort((a, b) => new Date(b.first) - new Date(a.first));

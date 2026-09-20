@@ -3,7 +3,7 @@
  * 这是原站没有利用、但对做内容站最有价值的部分。
  */
 import { iso, readJson, writeJson, dataPath } from "./util.mjs";
-import { matchWatch } from "./detect.mjs";
+import { matchWatch, feedbackVerdict } from "./detect.mjs";
 
 const keyOf = (q) => q.trim().toLowerCase();
 
@@ -70,6 +70,9 @@ export function buildKeywordPool(fresh, cfg, gameKw = []) {
   }
 
   let items = Array.from(map.values()).filter((it) => nowMs - new Date(it.last).getTime() <= keepMs);
+  // 你的反馈优先：feedback.block 里的词不进词池。
+  // 必须在这里过滤而不是只在 bump 里拦 —— 存量条目是从上一轮读进来的，不在这里清就会一直留着。
+  items = items.filter((it) => feedbackVerdict(it.q, cfg.feedback) !== "block");
   for (const it of items) {
     it.parents = (it.parents || []).slice(0, 5);
     it.geo = (it.geo || []).slice(0, 8);

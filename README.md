@@ -435,6 +435,64 @@ Gemini / Groq / Cerebras 都有免费额度且**不需要信用卡**，注册后
 
 **缓存文件**：`data/.judge-cache.json`（与 `data/` 一起随 `radar-data` 分支持久化）。它以 `.` 开头，因此**不会**被工作流的 `find ... -not -name '.*'` 打包进静态站点，不会泄漏到 `dist/`。
 
+### 用户反馈闭环（`feedback`）
+
+启发式规则只能靠"猜词形"，而**人看一眼就知道该不该做**。反馈是**确定性信号**，优先级高于任何规则。
+
+```jsonc
+// config.json
+"feedback": {
+  "block": ["leslie benzies", "once hoy"],   // 永久否决：我说了不要，就别再推给我
+  "boost": ["horizon forbidden west"]        // 加分：我认为值得做，排前面
+}
+```
+
+生效范围（**三处都会生效**，改完 push 即可，下一轮采集自动清理存量）：
+
+| 位置 | block 的作用 | boost 的作用 |
+|---|---|---|
+| 游戏雷达候选 | 直接不进雷达 | — |
+| `games.json` 存量重筛 | 下一轮从列表里清掉 | — |
+| 关键词池 `keywords.json` | 从词池清掉 | — |
+| 打分 | — | **score +6**（能显著提前，但压不过"全新游戏"的优先级） |
+
+两条刻意的设计：
+
+- **精确匹配**（忽略大小写与首尾空格），**刻意不做模糊匹配**。写 `leslie` 不会误伤含 `leslie` 的真游戏 —— 模糊匹配在这种场景下弊大于利。
+- **存量也要清**。只在入队时拦是不够的：已经从上一轮读进来的条目会一直留着。`pool.mjs` 和雷达重筛都做了二次过滤（踩过两次同样的坑）。
+
+实测（隔离目录、注入 `block: ["gta v","fifa 27"]`）：
+
+```
+按当前规则清掉 7 个不再符合条件的旧条目
+games.json: 23 → 16 条
+block 词是否已清掉: ✅ 已清
+boost 词 aion 2 是否保留: ✅   score=7（feedbackBoost 贡献 +6）
+词池里的 block 词: ✅ 已清
+```
+
+### AAA 大作黑名单（`games.excludeAAA`，默认关）
+
+**这是「能不能做」的维度，不是「是不是新游戏」的维度。**
+
+`gta 6` / `fifa 27` / `roblox` / `fortnite` 确实是新游戏、也确实火 —— 但对做内容站的人是**纯噪音**：官方站权重极高、攻略站多如牛毛，**你根本排不上去**。它们出现在雷达里只会浪费取曲线的配额。
+
+```jsonc
+"games": { "excludeAAA": true }   // 默认 false，不改动现有行为
+```
+
+实测开关前后（同一份 38 国样本）：
+
+```
+候选：关 AAA 35 个 → 开 AAA 25 个（砍掉 10 个）
+AAA 砍掉的词：grand theft auto vi, brawl stars, fifa 27, ea sports fc 27,
+              grand theft auto online, roblox, fortnite, gta 6, gta, gta5
+```
+
+**为什么默认关**：也有人想用它看大盘热度。**回归测试确认自建 IP 续作不误伤**（`aion 2` / `fire emblem` / `wow forever beta` 全部保留）—— 名字是**锚定匹配**（`^...$`），不会把 `roblox something` 这类真游戏名一起砍掉。
+
+名单是"起步集"，覆盖不到的（如 `fc 27` 这种缩写）用 `feedback.block` 补 —— 这正是反馈闭环存在的意义。
+
 ### 定时运行
 
 Windows（任务计划程序，每小时）：

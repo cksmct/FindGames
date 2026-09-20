@@ -7,6 +7,7 @@
     "SA", "NG", "ZA", "KE", "PK", "BD"
   ],
   "trendsCompare": "GPTs",
+  "trendsDefaultGeo": "US",
   "hours": 24,
   "minVol": 0,
   "maxRelated": 15,
@@ -39,7 +40,12 @@
     },
     "refreshHours": 6,
     "delayMs": 2500,
-    "relatedWords": 12
+    "relatedWords": 12,
+    "excludeAAA": false
+  },
+  "feedback": {
+    "block": [],
+    "boost": []
   },
   "judge": {
     "enabled": true,

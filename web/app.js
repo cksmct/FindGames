@@ -74,11 +74,28 @@
   // 对比基准词：来自 config.json 的 trendsCompare，由 trends.json 透出
   // 所有点出去的 Google Trends 链接都会带上它，形成"该词 vs 基准词"的对比图
   var COMPARE = "";
+  // 链接里 geo 的缺省值（config.json 的 trendsDefaultGeo），用于"全部地区"视图
+  var DEFAULT_GEO = "US";
 
+  /**
+   * 构造 Google Trends 链接。
+   *
+   * ⚠️ 必须用新路径 `/explore`，不能用旧的 `/trends/explore`：
+   *    实测（同一时刻交替请求、连测两轮结果一致）旧路径对非浏览器客户端稳定返回 429，
+   *    新路径稳定返回 200。且新 UI 的相关词面板能看到的词更多。
+   *
+   * 参数顺序与 Google 自己的链接完全一致：date → geo → q。
+   * geo 恒有值 —— 缺 geo 会退回全球口径，与"从某个地区榜单点进来"的上下文不符。
+   * q 整体 encodeURIComponent，逗号会编码成 %2C —— 与 Google 自己生成的链接格式一致。
+   */
   function exploreUrl(term, geo) {
-    var q = encodeURIComponent(term) + (COMPARE ? "," + encodeURIComponent(COMPARE) : "");
-    return "https://trends.google.com/trends/explore?date=now%207-d&q=" + q +
-      (geo && geo !== "ALL" ? "&geo=" + geo : "");
+    var t = String(term == null ? "" : term).trim();
+    if (!t) return "https://trends.google.com/explore";
+    var g = geo && geo !== "ALL" ? geo : DEFAULT_GEO;
+    // 带上对比基准词；同时避免自比（term 本身就是基准词时）出现 "GPTs,GPTs"
+    var q = COMPARE && COMPARE.toLowerCase() !== t.toLowerCase() ? t + "," + COMPARE : t;
+    return "https://trends.google.com/explore?date=now%207-d&geo=" + encodeURIComponent(g) +
+      "&q=" + encodeURIComponent(q);
   }
 
   /** config.json 会一起发布，所以改 trendsCompare 不必等下一轮采集 */
@@ -89,6 +106,14 @@
     COMPARE = next;
     if (state.tab === "hot") renderHot();
     else if (state.tab === "games") renderGames();
+  }
+
+  /** 一次性应用 config.json 里与 Trends 链接相关的配置 */
+  function applyTrendsConfig(cfg) {
+    if (!cfg) return;
+    var g = String(cfg.trendsDefaultGeo || "").trim().toUpperCase();
+    if (g && g !== DEFAULT_GEO) DEFAULT_GEO = g;
+    applyCompare(cfg.trendsCompare);
   }
 
   function catNames(ids) {
@@ -291,7 +316,7 @@
         ? '<div class="kwrow"><span class="kwlabel">可做页面的词</span>' +
           words.map(function (w) {
             return '<a class="kwchip' + (hot[w] ? " up" : "") + '" target="_blank" rel="noopener" title="' +
-              tipBase + (hot[w] ? "（上升词）" : "") + '" href="' + exploreUrl(w) + '">' +
+              tipBase + (hot[w] ? "（上升词）" : "") + '" href="' + exploreUrl(w, g.chart_geo) + '">' +
               (hot[w] ? "🔥 " : "") + esc(w) + "</a>";
           }).join("") + "</div>"
         : "";
@@ -300,7 +325,7 @@
         '<div class="gmeta">' + times + (g.reason ? " · " + esc(g.reason) : "") +
         (g.chart_geo ? " · 曲线地区 " + esc(g.chart_geo) : "") + "</div>" +
         chart + kwHtml +
-        '<div class="gmeta"><a href="' + exploreUrl(g.name) + '" target="_blank" rel="noopener">查看趋势' +
+        '<div class="gmeta"><a href="' + exploreUrl(g.name, g.chart_geo) + '" target="_blank" rel="noopener">查看趋势' +
         (COMPARE ? "（vs " + esc(COMPARE) + "）" : "") + " →</a></div></div>";
     }).join("") || '<p class="empty">还没发现新游戏，多跑几轮采集</p>';
     if (sorted.length > state.rowsShown) {
@@ -458,8 +483,9 @@
     CATS = d.cats || {};
     GEOS = d.geos || Object.keys(d.items || {});
     COMPARE = d.compareWith || "";
+    if (d.defaultGeo) DEFAULT_GEO = String(d.defaultGeo).toUpperCase();
     // config.json 会跟产物一起发布，优先用它（改配置 push 即生效，不必等下一轮采集）
-    fetchJson("data/config.json").then(function (c) { applyCompare(c && c.trendsCompare); }).catch(function () {});
+    fetchJson("data/config.json").then(applyTrendsConfig).catch(function () {});
     $("updated").textContent = "更新于 " + rel(d.updated);
     buildBars();
     renderHot();

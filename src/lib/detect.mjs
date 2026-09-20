@@ -169,6 +169,15 @@ const NOT_GAME_EXTRA =
 const NON_LATIN =
   /[^\p{Script=Latin}\p{N}\p{P}\p{S}\p{Z}]/u; // 以下为废弃的旧列举法（有 typo）：\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Arabic}\p{Script=Thai}\p{Script{Cyrillic}\p{Script{Hebrew}\p{Script{Devanagari}\p{Script{Bengali}\p{Script{Tamil}\p{Script{Telugu}\p{Script{Khmer}\p{Script{Lao}\p{Script{Myanmar}\p{Script{Georgian}\p{Script{Armenian}]/u;
 
+// ── AAA 大作 / 饱和品牌 ───────────────────────────────────────
+// 这些不是"新游戏该不该建站"的问题，而是"**根本不可能排上去**"的问题。
+// `gta 6` / `fifa 27` / `roblox` 这类词，攻略站多如牛毛、且官方站权重极高，
+// 对做内容站的人是纯噪音 —— 出现在雷达里只会浪费取曲线的配额。
+// 注意：默认**关闭**（`games.excludeAAA`），因为也有人想拿它看大盘热度。
+// 自建 IP 续作不在名单里（那种恰恰是能做的新赛道）。
+const AAA_FRANCHISES =
+  /^(fortnite|minecraft|gta|gta ?[0-9iv]+|grand theft auto.*|call of duty|cod|warzone|valorant|apex legends|overwatch|league of legends|lol|roblox|genshin impact|honkai.*|counter[- ]strike|cs ?2|csgo|fifa.*|ea sports fc.*|nba ?2k.*|pubg|brawl stars|clash royale|clash of clans|mobile legends|free fire|honor of kings|pubg mobile|pokémon go|pokemon go|candy crush|among us)$/i;
+
 /**
  * 判断一条热搜是否"可能是新游戏"
  * @param {{q:string,cats:number[]}} item
@@ -179,6 +188,8 @@ export function gameCandidate(item, opts = {}) {
   const q = item.q || "";
   const cats = item.cats || [];
   if (opts.latinOnly && NON_LATIN.test(q)) return { ok: false, reason: "非英文名", weight: 0 };
+  // AAA 大作 / 饱和品牌：可选开关（games.excludeAAA），默认关
+  if (opts.excludeAAA && AAA_FRANCHISES.test(q.trim())) return { ok: false, reason: "AAA大作(不可做)", weight: 0 };
   if (!q || NOT_GAME.test(q) || NOT_GAME_EXTRA.test(q)) return { ok: false, reason: "非游戏实体", weight: 0 };
   // 体育分类 + 赛事词形 = 比赛/盘口，不是游戏作品
   if (cats.includes(CAT.SPORTS) && FIXTURE_FORM.test(q)) return { ok: false, reason: "体育赛事/盘口", weight: 0 };
@@ -210,12 +221,35 @@ export function gameCandidate(item, opts = {}) {
  * 可解释打分：搜索量分 + 涨幅分 + 起飞分 + 发现权重
  * 与原站 score 数值不追求一致（其算法未知），仅保证越大越值得做。
  */
-export function scoreKeyword({ vol = 0, growth = 0, hype = 0, weight = 0 }) {
+export function scoreKeyword({ vol = 0, growth = 0, hype = 0, weight = 0, feedbackBoost = 0 }) {
   const volScore = vol > 0 ? Math.log2(vol / 1000) * 2 : 0; // 2万≈8.6, 200万≈22
   const growthScore = growth / 100;                          // 1000% → 10
   const hypeScore = hype >= 99 ? 8 : hype >= 3 ? 5 : hype >= 1.5 ? 2 : 0;
-  return Math.round(volScore + growthScore + hypeScore + weight * 2);
+  return Math.round(volScore + growthScore + hypeScore + weight * 2 + feedbackBoost);
 }
+
+/**
+ * 用户反馈：block = 永久否决（"我说了不要就别再推"）；boost = 加分（"我认为值得做"）。
+ *
+ * 为什么加这个：噪音过滤规则只能靠"猜词形"，而人看一眼就知道该不该做。
+ * 反馈是**确定性信号**，优先级高于任何启发式规则。
+ * 精确匹配（忽略大小写与首尾空格），刻意不做模糊匹配 —— 模糊会连带误伤相似的真词。
+ *
+ * @param {string} q
+ * @param {{block?:string[], boost?:string[]}} [fb]
+ * @returns {""|"block"|"boost"}
+ */
+export function feedbackVerdict(q, fb) {
+  if (!fb) return "";
+  const k = String(q || "").trim().toLowerCase();
+  if (!k) return "";
+  for (const b of fb.block || []) if (String(b).trim().toLowerCase() === k) return "block";
+  for (const b of fb.boost || []) if (String(b).trim().toLowerCase() === k) return "boost";
+  return "";
+}
+
+/** 反馈加分的分值：够大能显著提前，但不至于盖过"全新游戏"的优先级 */
+export const FEEDBACK_BOOST_PTS = 6;
 
 // ── 相关查询的相关性过滤 ──
 // Google 的 Rising 列表有已知问题：会混入同期爆红的**无关**词

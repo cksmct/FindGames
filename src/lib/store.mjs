@@ -115,14 +115,18 @@ export function writeHistory(cfg, items) {
   return chunks;
 }
 
-export function writeTrends(cfg, { geos, cats, items, updated, compareWith }) {
+export function writeTrends(cfg, { geos, cats, items, updated, compareWith, defaultGeo }) {
   // compareWith 会透出到前端：所有点出去的 Google Trends 链接都带上它做对比基准词
+  // defaultGeo 同理：看板点"查看趋势"时 geo 的缺省值（"全部地区"视图用）。
+  // ⚠️ 这两个字段必须在解构参数里显式列出 —— 曾经漏了 defaultGeo，
+  //    调用方传了值却被静默丢弃，产物里查不到、也不报错，排查起来很费时间。
   writeJson(dataPath(cfg, "trends.json"), {
     updated,
     geos,
     cats,
     items,
     ...(compareWith ? { compareWith } : {}),
+    ...(defaultGeo ? { defaultGeo } : {}),
   });
 }
 
