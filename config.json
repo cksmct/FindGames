@@ -27,11 +27,16 @@
   ],
   "games": {
     "enabled": true,
-    "geos": ["US", "GB", "JP", "KR", "TW", "DE", "FR", "BR", "IN"],
-    "maxCurvesPerRun": 25,
+    "geos": ["US", "GB", "CA", "AU", "NZ", "IE"],
+    "latinOnly": true,
+    "maxCurvesPerRun": 30,
     "timeframe": "now 7-d",
     "sampleEveryHours": 4,
-    "minVol": 1000,
+    "minVol": 200,
+    "strongSignal": {
+      "belowVol": 1000,
+      "minWeight": 3
+    },
     "refreshHours": 6,
     "delayMs": 2500,
     "relatedWords": 12

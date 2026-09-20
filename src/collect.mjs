@@ -142,16 +142,28 @@ if (cfg.games.enabled) {
   const known = new Map(gamesDoc.items.map((g) => [g.name.toLowerCase(), g]));
   const prefGeos = new Set(cfg.games.geos || []);
   const refreshMs = (cfg.games.refreshHours || 6) * 3600_000;
+  // 默认只收拉丁字母名（做英文站的推荐配置）；config 里显式写 false 才放开
+  const latinOnly = cfg.games.latinOnly !== false;
 
   // 候选：来自本轮热搜
   // 同一个游戏常常同时出现在多个国家的榜单上，必须按游戏名去重，
   // 否则会给同一个游戏重复取多次曲线（白白多耗配额、更容易被限流）
   const candMap = new Map();
+  // 分层门槛：低量区必须有多重识别信号
+  const lowBelow = cfg.games.strongSignal?.belowVol ?? 1000;
+  const lowMinWeight = cfg.games.strongSignal?.minWeight ?? 3;
+
   for (const it of fresh) {
     if (it.noise) continue;
-    if ((it.vol || 0) < (cfg.games.minVol || 0)) continue;
-    const gc = gameCandidate(it);
+    const vol = it.vol || 0;
+    if (vol < (cfg.games.minVol ?? 0)) continue;
+    const gc = gameCandidate(it, { latinOnly });
     if (!gc.ok) continue;
+    // 低量区（刚冒头的新游戏就在这里）只放行"强信号"候选：
+    // 实测 32 个 vol<1000 的候选里，权重≥3 的全是真游戏；
+    // 而人名类噪音（bill skarsgård / don lee / truls möregårdh）全部落在权重=2。
+    // 所以"权重"比"搜索量"更能区分"早期真游戏"和"低量噪音"。
+    if (vol < lowBelow && gc.weight < lowMinWeight) continue;
     const key = it.q.toLowerCase();
     const cur = known.get(key);
     // 曲线与「攻略词」必须分别判新鲜度。
@@ -179,14 +191,24 @@ if (cfg.games.enabled) {
   }
   const cands = Array.from(candMap.values());
 
-  // 优先级：全新游戏(0) > 老游戏补攻略词(1) > 单纯刷曲线(2)；
-  // 同级再看目标市场 → 搜索量 → 识别权重
+  // 优先级：全新游戏(0) > 老游戏补攻略词(1) > 单纯刷曲线(2)
+  // 同级排序：目标市场 →【识别权重】→ 涨幅 → 搜索量
+  //
+  // 为什么这么排（实测依据，不要随手改回按搜索量排）：
+  //  · 雷达的目的是"尽早发现新游戏"，而新游戏刚冒头时量必然小 ——
+  //    实测 50 个候选里 32 个（64%）落在 vol≤500 桶。若按搜索量排序，
+  //    配额会被"量大但已不新"的词吃光，恰好漏掉最新的那批。
+  //  · 但也不能只按涨幅排：低量噪音（人名，如 bill skarsgård / truls möregårdh）
+  //    涨幅反而最高（+300%~+900%）。而"识别权重"能有效区分 ——
+  //    实测权重 ≥3（分类+平台词/意图词）的几乎全是真游戏，人名噪音全挤在权重=2。
+  //  · 所以顺序是：先权重（精度）→ 再涨幅（新鲜度）→ 最后才看搜索量。
   const prio = (c) => (c.tracked ? (c.needRelated ? 1 : 2) : 0);
   cands.sort((a, b) =>
     prio(a) - prio(b) ||
     (prefGeos.has(b.geo) ? 1 : 0) - (prefGeos.has(a.geo) ? 1 : 0) ||
-    (b.vol || 0) - (a.vol || 0) ||
-    b.weight - a.weight
+    b.weight - a.weight ||
+    (b.growth || 0) - (a.growth || 0) ||
+    (b.vol || 0) - (a.vol || 0)
   );
   const todo = cands.slice(0, cfg.games.maxCurvesPerRun || 12);
   log("info", `游戏雷达：候选 ${cands.length} 个（新 ${cands.filter((c) => !c.tracked).length}），本轮取曲线 ${todo.length} 个`);
@@ -252,6 +274,11 @@ if (cfg.games.enabled) {
   let list = Array.from(known.values());
   const cutoff = Date.now() - 30 * 86400_000;
   list = list.filter((g) => new Date(g.first).getTime() >= cutoff);
+  // 规则可能已经改过（比如新开了 latinOnly、补了排除词）：按【当前规则】再筛一遍，
+  // 否则旧条目会一直留在列表里直到 30 天过期 —— 改了配置却看不到变化
+  const ruleFiltered = list.length;
+  list = list.filter((g) => gameCandidate({ q: g.name, cats: g.cats || [] }, { latinOnly }).ok);
+  if (list.length < ruleFiltered) log("dim", `  按当前规则清掉 ${ruleFiltered - list.length} 个不再符合条件的旧条目`);
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
   writeGames(cfg, list);
   log("ok", `输出 data/games.json（${list.length} 个，本轮新增 ${added}，挖到攻略词 ${kwAdded} 个）`);

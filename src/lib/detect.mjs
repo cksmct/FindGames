@@ -57,7 +57,11 @@ const NOT_GAME =
 const GAMBLING =
   /\b(lottery|sambad|kerala|jackpot|casino|betting|bet|slots?|lotto|poker|rummy|dear lottery|sikkim|nagaland|powerball|mega millions|tambola|matka|satta|result[s]? (?:today|yesterday))\b/i;
 const GAMBLING_I18N =
-  /(xổ số|kết quả xổ|xs(mb|mn|mt)|ngày \d{1,2} tháng|หวย|ロト|当選番号|toto|loto|sorteio|lotofácil|lotomania|quina|primitiva|sorteo|loter[ií]a|mega ?sena|timemania|大樂透|威力彩|六合彩|双色球|大乐透|로또|복권|福彩|體彩|당첨)/i;
+  /(xổ số|kết quả xổ|xs(mb|mn|mt)|ngày \d{1,2} tháng|หวย|ロト|当選番号|toto|loto|sorteio|lotofácil|lotomania|quina|primitiva|sorteo|loter[ií]a|mega ?sena|timemania|melate|quiniela|大樂透|威力彩|六合彩|双色球|大乐透|로또|복권|福彩|體彩|당첨)/i;
+// 赛事查询不是游戏作品："celtic game today" 是赛程，不是游戏名
+const FIXTURE = /\b(game|match|fixture|kickoff)s? (today|tonight|live|score|result|on tv|time|channel)\b/i;
+// 赛马 / 赛事（Google 有时归到 Games 分类）
+const HORSE_RACING = /\b(horse racing|racing disqualification|grand national|kentucky derby|race card|chess olympiad|olympiad 20\d\d)\b/i;
 // 主机/外设本身不是"新游戏"
 const HARDWARE_ONLY =
   /^(playstation( ?[3-5])?|ps ?[3-5]|xbox( series [xs])?|nintendo( switch( ?2)?)?|switch ?2|steam deck|graphics card|gpu)$/i;
@@ -71,15 +75,26 @@ const GENERIC_WORD =
 const NOT_GAME_EXTRA =
   /\b(vtuber|virtual youtuber|バーチャルyoutuber|youtuber|influencer|streamer|celebrity|twitch|discord|reddit|tiktok|instagram|facebook|spotify)\b/i;
 
+// 非拉丁文字体系（做英文站时，这些词不可能是你要的页面标题）
+// 用白名单：只放行拉丁字母/数字/标点/符号/空格，其余文字体系一律否决。
+// 比"列举非拉丁脚本"可靠 —— 列举法一定会漏语种（藏文、蒙文、僧伽罗文、缅甸文……）
+// 注意 \p{Script=Latin} 含变音符号，所以 "New Pokémon Snap" 能正常通过
+const NON_LATIN =
+  /[^\p{Script=Latin}\p{N}\p{P}\p{S}\p{Z}]/u; // 以下为废弃的旧列举法（有 typo）：\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Arabic}\p{Script=Thai}\p{Script{Cyrillic}\p{Script{Hebrew}\p{Script{Devanagari}\p{Script{Bengali}\p{Script{Tamil}\p{Script{Telugu}\p{Script{Khmer}\p{Script{Lao}\p{Script{Myanmar}\p{Script{Georgian}\p{Script{Armenian}]/u;
+
 /**
  * 判断一条热搜是否"可能是新游戏"
  * @param {{q:string,cats:number[]}} item
+ * @param {{latinOnly?:boolean}} [opts] latinOnly=true 时只收拉丁字母名（做英文站的推荐配置）
  * @returns {{ok:boolean, reason:string, weight:number}}
  */
-export function gameCandidate(item) {
+export function gameCandidate(item, opts = {}) {
   const q = item.q || "";
   const cats = item.cats || [];
+  if (opts.latinOnly && NON_LATIN.test(q)) return { ok: false, reason: "非英文名", weight: 0 };
   if (!q || NOT_GAME.test(q) || NOT_GAME_EXTRA.test(q)) return { ok: false, reason: "非游戏实体", weight: 0 };
+  if (FIXTURE.test(q)) return { ok: false, reason: "赛事查询", weight: 0 };
+  if (HORSE_RACING.test(q)) return { ok: false, reason: "赛马", weight: 0 };
   if (GAMBLING.test(q) || GAMBLING_I18N.test(q)) return { ok: false, reason: "博彩/彩票", weight: 0 };
   if (HARDWARE_ONLY.test(q.trim())) return { ok: false, reason: "主机硬件", weight: 0 };
   if (STORE_ONLY.test(q.trim())) return { ok: false, reason: "应用商店", weight: 0 };
