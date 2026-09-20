@@ -18,6 +18,7 @@ import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, dataPath } from
 import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio } from "./lib/interest.mjs";
 import { noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo } from "./lib/detect.mjs";
+import { judgeCandidates } from "./lib/judge.mjs";
 import {
   loadHistory, mergeHistory, writeHistory, writeTrends,
   loadGames, writeGames, readState, writeState,
@@ -191,6 +192,19 @@ if (cfg.games.enabled) {
   }
   const cands = Array.from(candMap.values());
 
+  // ── LLM 终审 ──
+  // 必须放在"取曲线"之前：曲线接口限流最严、配额最贵，不能浪费在非游戏上。
+  // 它只做否决（人名/赛事/博彩/影视/卡牌/硬件/服务/泛化词），不会新增候选。
+  // 必须把"已追踪的游戏名"一并送审：cands 只在新鲜度过滤之后构建，
+  // 存量脏词（人名等）不会出现在 cands 里，只送审新词就永远清不掉它们。
+  const judged = await judgeCandidates(cands, cfg, Array.from(known.values()).map((g) => g.name));
+  const candsOk = judged.kept;
+  if (judged.stats.mode === "on") {
+    log("info", `终审：送审 ${judged.stats.judged} · 缓存命中 ${judged.stats.cached} · 否决 ${judged.stats.dropped}（模型 ${judged.stats.model}）`);
+    for (const d of judged.dropped.slice(0, 10)) log("dim", `    ✕ ${d.q}  [${d.judgeKind}] ${d.judgeWhy}`);
+    if (judged.dropped.length > 10) log("dim", `    …还有 ${judged.dropped.length - 10} 个`);
+  }
+
   // 优先级：全新游戏(0) > 老游戏补攻略词(1) > 单纯刷曲线(2)
   // 同级排序：目标市场 →【识别权重】→ 涨幅 → 搜索量
   //
@@ -203,15 +217,15 @@ if (cfg.games.enabled) {
   //    实测权重 ≥3（分类+平台词/意图词）的几乎全是真游戏，人名噪音全挤在权重=2。
   //  · 所以顺序是：先权重（精度）→ 再涨幅（新鲜度）→ 最后才看搜索量。
   const prio = (c) => (c.tracked ? (c.needRelated ? 1 : 2) : 0);
-  cands.sort((a, b) =>
+  candsOk.sort((a, b) =>
     prio(a) - prio(b) ||
     (prefGeos.has(b.geo) ? 1 : 0) - (prefGeos.has(a.geo) ? 1 : 0) ||
     b.weight - a.weight ||
     (b.growth || 0) - (a.growth || 0) ||
     (b.vol || 0) - (a.vol || 0)
   );
-  const todo = cands.slice(0, cfg.games.maxCurvesPerRun || 12);
-  log("info", `游戏雷达：候选 ${cands.length} 个（新 ${cands.filter((c) => !c.tracked).length}），本轮取曲线 ${todo.length} 个`);
+  const todo = candsOk.slice(0, cfg.games.maxCurvesPerRun || 12);
+  log("info", `游戏雷达：候选 ${candsOk.length} 个（新 ${candsOk.filter((c) => !c.tracked).length}），本轮取曲线 ${todo.length} 个`);
 
   let added = 0;
   let kwAdded = 0;
@@ -277,7 +291,17 @@ if (cfg.games.enabled) {
   // 规则可能已经改过（比如新开了 latinOnly、补了排除词）：按【当前规则】再筛一遍，
   // 否则旧条目会一直留在列表里直到 30 天过期 —— 改了配置却看不到变化
   const ruleFiltered = list.length;
-  list = list.filter((g) => gameCandidate({ q: g.name, cats: g.cats || [] }, { latinOnly }).ok);
+  // 用本轮终审的判定（含缓存命中）清存量，而不是另读一次缓存文件 —— 口径保持一致
+  const verdicts = judged.verdicts;
+  list = list.filter((g) => {
+    const cats = g.cats || [];
+    // 噪音规则也必须重跑：只重跑 gameCandidate 的话，
+    // 靠 noise 才被挡住的脏条目（如体育赛事）一旦入了库就再也清不掉，要等 30 天过期。
+    if (noiseLabel(g.name, cats)) return false;
+    // LLM 终审否决过的同样要清掉，否则它进了库就永远留着（同一个坑的第二遍）
+    if (verdicts.get(String(g.name).toLowerCase().trim())?.game === false) return false;
+    return gameCandidate({ q: g.name, cats }, { latinOnly }).ok;
+  });
   if (list.length < ruleFiltered) log("dim", `  按当前规则清掉 ${ruleFiltered - list.length} 个不再符合条件的旧条目`);
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
   writeGames(cfg, list);

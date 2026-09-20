@@ -265,7 +265,7 @@ node src/report.mjs --watch --top 40         # 只看命中监控词的
 "geos": ["US", "GB", "CA", "AU", "NZ", "IE"]
 ```
 
-### 新游戏的门槛（7 道）
+### 新游戏的门槛（8 道）
 
 | 道 | 条件 | 参数 | 实测存活 |
 |---|---|---|---|
@@ -275,7 +275,8 @@ node src/report.mjs --watch --top 40         # 只看命中监控词的
 | ④ | 搜索量 ≥ `games.minVol` | **200** | 38 |
 | ⑤ | **分层门槛** | `vol < 1000` 时要求 `weight ≥ 3` | **24** |
 | ⑥ | 去重 + 单轮上限 | `maxCurvesPerRun: 30` | — |
-| ⑦ | 曲线有效 | 7 天曲线 ≥2 点 且 峰值 >0 | 再淘汰约 25% |
+| ⑦ | **LLM 终审（只否决）** | `judge.enabled` | 实测 29 → 16 |
+| ⑧ | 曲线有效 | 7 天曲线 ≥2 点 且 峰值 >0 | 再淘汰约 25% |
 
 **为什么要"分层门槛"（这一层是实测调出来的，别随手删）**
 
@@ -299,6 +300,140 @@ node src/report.mjs --watch --top 40         # 只看命中监控词的
 ```
 
 注意**搜索量排在最后**：按量排序会让配额被"量大但已不新"的词吃光，恰好漏掉最新的那批。
+
+### LLM 终审（第 ⑦ 道门槛）
+
+**为什么需要它**：正则能挡住体育赛事、博彩、订阅服务，但**挡不住人名** —— 实测 `games.json` 29 条里有 7 条是人名（`leslie benzies` / `diogo morgado` / `don lee` / `bruce straley` / `bill skarsgård` / `mia ristic`），占 **24%**。
+
+关键在于人名和真游戏**词形完全同形**：
+
+```
+人名：  Leslie Benzies   Don Lee      Mia Ristic      Bruce Straley
+真游戏：Poly Loot        Blox Fruits  Rat Lab         Slayers 2
+```
+
+都是 2~3 个首字母大写的词。再加正则一定会误伤右边那一列，所以只能靠语义判断。
+
+**五条设计原则（不要随手改）**
+
+| # | 原则 | 原因 |
+|---|---|---|
+| ① | 正则先粗筛，只把**已通过正则**的词送审 | 送审量从 2253 降到 30，省 98% token |
+| ② | 全部词**打成一个请求** | 不是每个词一次调用；实测 30 个词 = 1 次调用 |
+| ③ | 判定结果**持久化缓存** 30 天 | 同一个热词每小时都会再出现，不缓存等于每小时烧一次钱。有缓存后大部分轮次**根本不调用** |
+| ④ | 任何失败都**退回正则结果** | 超时 / 未配 key / 输出不合规 / 接口 400 —— 一律不中断采集 |
+| ⑤ | 模型**只有否决权，没有录用权** | 只允许它把候选踢掉，不允许它新增。防幻觉把无关词塞进雷达（实测会丢出 1 个幻觉词） |
+
+**额外一个重要细节**：终审必须同时送审**已追踪的游戏名**，不能只送新候选。因为候选列表是在"新鲜度过滤"之后才构建的 —— 曲线还新的存量脏词根本不会出现在候选里。**实测只送新词时，13 个存量人名一个都清不掉**；一并送审后 29 → 16。
+
+**配置**
+
+```jsonc
+// config.json
+"judge": {
+  "enabled": true,
+  "provider": "deepseek",   // 见下表
+  "model": "",              // 留空用服务商默认
+  "baseUrl": "",            // 留空用服务商默认
+  "apiKeyEnv": "",          // 留空则按 JUDGE_API_KEY → 服务商默认变量 顺序找
+  "maxPerRun": 80,
+  "cacheDays": 30,
+  "cacheMax": 5000,
+  "timeoutMs": 60000,
+  "jsonMode": true
+}
+```
+
+**GitHub Actions 上只需加一个 Secret**（`Settings → Secrets and variables → Actions`）：
+
+```
+JUDGE_API_KEY = <你的密钥>
+```
+
+再改 `config.json` 的 `judge.provider` 选择服务商。全部走 OpenAI 兼容协议，所以一套实现通吃：
+
+| `provider` | 默认模型 | 密钥环境变量 | 免费？ |
+|---|---|---|---|
+| `deepseek`（默认） | `deepseek-chat` | `DEEPSEEK_API_KEY` | 付费（很便宜） |
+| `gemini` | `gemini-2.5-flash` | `GEMINI_API_KEY` | ✅ 免费、**不用绑卡** |
+| `groq` | `llama-3.3-70b-versatile` | `GROQ_API_KEY` | ✅ 免费、**不用绑卡** |
+| `cerebras` | `llama-3.3-70b` | `CEREBRAS_API_KEY` | ✅ 免费、**不用绑卡** |
+| `openrouter` | `openai/gpt-4o-mini` | `OPENROUTER_API_KEY` | ✅ 有免费模型 |
+| `zhipu` | `glm-4-flash` | `ZHIPU_API_KEY` | ✅ 有免费额度 |
+| `siliconflow` | `Qwen/Qwen2.5-7B-Instruct` | `SILICONFLOW_API_KEY` | ✅ 有免费额度 |
+| `openai` | `gpt-4o-mini` | `OPENAI_API_KEY` | 付费 |
+| `moonshot` | `moonshot-v1-8k` | `MOONSHOT_API_KEY` | 付费 |
+| `ollama` | `qwen2.5:7b` | **不需要密钥** | ✅ 完全免费（仅本地） |
+
+> 模型名会随时间变动。若报 `model not found / 404`，去服务商控制台复制当前可用模型名填到 `judge.model`。
+
+也支持用环境变量临时覆盖，方便本地调试：`JUDGE_BASE_URL`、`JUDGE_MODEL`、`JUDGE_API_KEY`。
+
+**不配密钥会怎样**：不会报错，会打印一行 `LLM 终审未启用（未找到 JUDGE_API_KEY），沿用规则结果`，采集照常完成。
+
+#### 没有 API Key 怎么办（三条路）
+
+| 路线 | 要密钥吗 | 能跑在哪 | 实测效果 |
+|---|---|---|---|
+| **① 零依赖人名层**（**已内置、默认开启**） | ❌ 不要 | Actions 和本地都行 | 干掉最大的一类噪音（人名）：候选 48 → 40，**零误伤** |
+| **② 本地 Ollama** | ❌ 不要 | **仅本地**（Actions 跑不了） | 完整的 LLM 终审 |
+| **③ 免费云服务商**（Gemini / Groq / Cerebras / OpenRouter） | ✅ 要，但**免费且不用绑卡** | Actions 和本地都行 | 完整的 LLM 终审 |
+
+**① 零依赖人名层（`src/lib/detect.mjs` 的 `looksLikePerson()`）**
+
+它解决的是**没有人名规则就完全无解**的那一类：人名与真游戏**词形完全同形**，正则区分不了。
+
+```
+人名：  leslie benzies   don lee      mia ristic     bill skarsgård   diogo morgado
+真游戏：poly loot        blox fruits  rat lab        sword warriors   infant god
+```
+
+做法：内置 **945 个常见教名**词典（英/西/葡/法/德/意/北欧/印度/日本/阿拉伯），配合词形规则（2~3 个纯字母词 + 无数字 + 首词是常见教名）。实测：
+
+| 指标 | 结果 |
+|---|---|
+| 净收益 | 候选 **48 → 40** |
+| 拦下的 8 个 | 全部是真人名（`leslie benzies` / `diogo morgado` / `don lee` / `mia ristic` / `bill skarsgård` / `bruce straley` / `mark allen` / `matthew mayich update`） |
+| 真作品误伤 | **0 / 27**（`gta 6` / `slayers 2` / `poly loot` / `blox fruits` / `rat lab` / `fire emblem` / `wordle hints` …全过） |
+| `games.json` 清理 | 精确清掉 6 个人名，29 → 23 |
+
+两条**刻意的保守设计**，不要改掉：
+
+- **只在"仅靠 Google 分类"这一条证据时才启用**（`weight ≤ 2` 且无平台词）。有平台词/意图词（`weight ≥ 3`）的候选实测几乎全是真游戏，判人名会误伤。
+- **词形判断不能要求"首字母大写"**。这里踩过坑：Google 热搜词**全是小写**（`leslie benzies` 而非 `Leslie Benzies`），第一版写成要求首字母大写，结果实测命中 **0 个**。现在改为只校验"是不是纯字母拉丁词"，比较教名时统一转小写。
+
+**诚实边界**：它覆盖不了非西方人名，也不如 LLM 灵活。实测漏掉的是 `physint hideo kojima`（首词不是教名）。它只是"没有 key 时也能用"的兜底，**不是 LLM 的等价替代** —— 剩下的 `caribeña noche` / `sinuano noche` / `once hoy`（西语节目）、`pokemon cards`（实体卡）、`companion app fc 27`（配套 App）仍需要 LLM 才能可靠判掉。
+
+**② 本地 Ollama（不要任何密钥）**
+
+```bash
+ollama pull qwen2.5:7b
+# config.json 里把 judge.provider 改成 "ollama"（keyEnv 为 null，不需要任何密钥）
+node src/collect.mjs --only-games
+```
+
+代价：只能在**你自己的机器**上跑 —— GitHub Actions 的免费 runner 没有 GPU，每次拉模型也不现实。
+
+**③ 免费云服务商（推荐，最省事）**
+
+Gemini / Groq / Cerebras 都有免费额度且**不需要信用卡**，注册后 1 分钟就能拿到 key。按 `judge.cacheDays: 30` 的缓存策略，一轮只在新词冒头时才调用，**免费额度绰绰有余**。步骤：注册 → 拿 key → 存成仓库 Secret `JUDGE_API_KEY` → 把 `config.json` 的 `judge.provider` 改成对应值。
+
+**⚠️ 一个已经失效的路子（网上很多教程还在写）**
+
+曾经有个「零成本在 CI 里免 key 调 LLM」的方案：GitHub Models + Actions 自动注入的 `GITHUB_TOKEN`（配合 `permissions: models: read`）。**该服务已于 2026-07-30 全面退役** —— playground、模型目录、Inference API、BYOK 全部关停。实测：
+
+```
+410 Gone  https://models.github.ai/inference/chat/completions
+000       https://models.inference.ai.azure.com/chat/completions
+```
+
+代码里已把 `github-models` / `github` 两个 provider 名列入"已退役"名单，误填会直接打印退役原因和可选列表，而不是静默按别的服务商跑。
+
+**成本**：一轮送审约 30~40 个词（1 次调用，约 2k token）。因为有 30 天缓存，**大部分轮次一个词都不送审、完全不调用**；只有新词冒头时才打一次。按主流平价模型估算，一个月成本在**几分钱到几毛钱**量级。
+
+**关闭方式**：`judge.enabled` 设为 `false`，或干脆不加 `JUDGE_API_KEY`。
+
+**缓存文件**：`data/.judge-cache.json`（与 `data/` 一起随 `radar-data` 分支持久化）。它以 `.` 开头，因此**不会**被工作流的 `find ... -not -name '.*'` 打包进静态站点，不会泄漏到 `dist/`。
 
 ### 定时运行
 

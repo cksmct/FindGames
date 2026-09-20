@@ -41,6 +41,18 @@
     "delayMs": 2500,
     "relatedWords": 12
   },
+  "judge": {
+    "enabled": true,
+    "provider": "deepseek",
+    "model": "",
+    "baseUrl": "",
+    "apiKeyEnv": "",
+    "maxPerRun": 80,
+    "cacheDays": 30,
+    "cacheMax": 5000,
+    "timeoutMs": 60000,
+    "jsonMode": true
+  },
   "geoLabels": {
     "US": "美国", "GB": "英国", "CA": "加拿大", "AU": "澳大利亚", "NZ": "新西兰", "IE": "爱尔兰",
     "JP": "日本", "KR": "韩国", "TW": "台湾", "HK": "香港", "SG": "新加坡", "MY": "马来西亚",

@@ -46,20 +46,44 @@ export function noiseLabel(q, cats = []) {
 
 // ── 新游戏识别 ──
 const GAME_PLATFORMS =
-  /\b(roblox|minecraft|fortnite|steam|xbox|playstation|ps5|nintendo|switch|epic games|gta|valorant|genshin|honkai|wuthering|zelda|pokemon|pokémon|among us|stardew|terraria|rust|dota|league of legends|overwatch|apex|call of duty|pubg|free fire|mobile legends|clash|brawl stars|genshin impact)\b/i;
+  /\b(roblox|minecraft|fortnite|steam|xbox|playstation|ps5|nintendo|switch|epic games|gta|grand theft auto|valorant|genshin|honkai|wuthering|zelda|pokemon|pokémon|among us|stardew|terraria|dota|league of legends|overwatch|apex|call of duty|pubg|free fire|mobile legends|clash|brawl stars|genshin impact)\b/i;
+// 🛑 曾经把这个词表里的 \bgame\b 当成"游戏意图"证据，是严重设计错误：
+//    英文里 "<队名> game"（chivas game / padres game / yankees game）语义恰恰是**比赛**，与游戏相反。
+//    实测仅这一个词就让 4 条体育赛事通过。赛事语义改由 FIXTURE_FORM 单独处理。
 const GAME_SIGNALS =
-  /\b(game|gameplay|release date|early access|beta|demo|trailer|update|patch|codes|tier list|roblox|wiki|steam deck|playstation|xbox|switch 2|mobile)\b/i;
+  /\b(gameplay|release date|early access|playtest|beta|demo|trailer|update|patch|codes|tier list|roblox|wiki|steam deck|playstation|xbox|switch 2|mobile)\b/i;
 // 明确不是游戏的常见实体（避免把体育/影视续作/博彩当游戏）
 const NOT_GAME =
-  /\b(vs|nfl|nba|mlb|nhl|ufc|f1|premier league|netflix|hulu|disney\+|episode|season \d|box office|election|senate|congress)\b/i;
+  /\b(vs|nfl|nba|mlb|nhl|ufc|f1|premier league|netflix|hulu|disney\+|episode|season \d|box office|election|senate|congress|movie|film|pel[ií]cula|cinema)\b/i;
 // Google 把"彩票/博彩"归到 Games 分类，必须显式剔除
 // 注意：非 ASCII 词（xổ số 等）不能用 \b 包裹 —— JS 的 \b 只认 \w，越南语字母不算词字符，加了 \b 会永不匹配
 const GAMBLING =
-  /\b(lottery|sambad|kerala|jackpot|casino|betting|bet|slots?|lotto|poker|rummy|dear lottery|sikkim|nagaland|powerball|mega millions|tambola|matka|satta|result[s]? (?:today|yesterday))\b/i;
+  /\b(lottery|lotteries|lotto\w*|sambad|kerala|jackpot|casino|betting|bet|slots?|poker|rummy|dear lottery|sikkim|nagaland|powerball|mega millions|tambola|matka|satta|win5|result[s]? (?:today|yesterday))\b/i;
+// 博彩品牌 / 比分站：它们的分类**含 Games(6)**，所以"纯体育=噪音"的规则拦不住，必须单独列。
+// 实测漏网：betmgm[17,6]、draftkings sportsbook[6,17]、livescore[6,17]
+const BETTING_BRAND =
+  /\b(draftkings|fanduel|betmgm|bet365|william ?hill|pokerstars|bovada|caesars|pointsbet|betano|betway|1xbet|melbet|pin-?up|betfair|livescore|flashscore|sofascore)\b/i;
+// 体育媒体 / 联赛组织 —— 不是"新游戏作品"（实测漏网：cpbl[6,17,18]）
+const SPORTS_MEDIA =
+  /\b(espn|ncaa|cpbl|npb|kbo|premier league|la ?liga|serie a|bundesliga|eredivisie|mls|uefa|fifa ranking)\b/i;
+// 技术组件 / 评测媒体 —— 不是作品本体（实测漏网：denuvo[6]、gamestar[6]）
+// tcg/trading card 是实体集换卡（"pokemon cards" 类的热搜是买卡不是玩游戏）
+const NOT_A_WORK = /\b(denuvo|gamestar|ign|gamespot|polygon|kotaku|eurogamer|unreal engine|unity engine|dlss|fsr|ray ?tracing|tcg|trading card)\b/i;
 const GAMBLING_I18N =
-  /(xổ số|kết quả xổ|xs(mb|mn|mt)|ngày \d{1,2} tháng|หวย|ロト|当選番号|toto|loto|sorteio|lotofácil|lotomania|quina|primitiva|sorteo|loter[ií]a|mega ?sena|timemania|melate|quiniela|大樂透|威力彩|六合彩|双色球|大乐透|로또|복권|福彩|體彩|당첨)/i;
+  /(xổ số|kết quả xổ|xs(mb|mn|mt)|ngày \d{1,2} tháng|หวย|ロト|当選番号|toto|loto|sorteio|lotofácil|lotomania|quina|primitiva|sorteo|loter[ií]a|mega ?sena|loteria|caixa|timemania|melate|quiniela|bol[ãa]o|大樂透|威力彩|今彩|六合彩|双色球|大乐透|福利彩票|ロト7|로또|복권|福彩|體彩|당첨|\b539\b)/i;
 // 赛事查询不是游戏作品："celtic game today" 是赛程，不是游戏名
+// （只覆盖 "<赛事> + 时间词"；裸的 "<队名> game" 由 FIXTURE_FORM 覆盖）
 const FIXTURE = /\b(game|match|fixture|kickoff)s? (today|tonight|live|score|result|on tv|time|channel)\b/i;
+// 赛事 / 盘口词形。**必须与 Sports 分类(17)同时出现**才判定为赛事 ——
+// 因为单个 "game" 太泛。这是修 chivas game 类误判的主力：
+// Google 把球赛标为 [17]，但把博彩站标成 [6,17]（同时含 Games 分类），
+// 所以"纯体育就判噪音"的规则拦不住博彩站，必须在这里拦。
+const FIXTURE_FORM =
+  /\b(game|games|match|fixture|kickoff|vs|versus|odds|sportsbook|standings|scoreboard|result|results|highlights|lineup|lineups|live stream|injur(?:y|ies)|transfer|transfers|squad|halftime|full ?time|recap|preview)\b/i;
+// 订阅服务 / 云游戏平台 —— 是服务，不是"新游戏作品"。
+// 实测 "xbox game pass" 会被收录，且它的分类是 [18,6]（不含 17），躲过了赛事规则。
+const SERVICE_ONLY =
+  /\b(xbox game ?pass|game ?pass|ps ?plus|playstation plus|nintendo switch online|switch online|ea play|geforce now|stadia|amazon luna)\b/i;
 // 赛马 / 赛事（Google 有时归到 Games 分类）
 const HORSE_RACING = /\b(horse racing|racing disqualification|grand national|kentucky derby|race card|chess olympiad|olympiad 20\d\d)\b/i;
 // 主机/外设本身不是"新游戏"
@@ -68,9 +92,72 @@ const HARDWARE_ONLY =
 // 应用商店/发行平台本身不是游戏（Google 把它们归进 Games 分类，实测 "google play" 会被误收）
 const STORE_ONLY =
   /^(google play( ?store)?|play store|app ?store|microsoft store|steam( store)?|epic games( store)?|nintendo e?shop|itch\.io)$/i;
+// ── 人名检测（零依赖，无需任何 API key）─────────────────────────
+// 为什么需要：人名与真游戏【词形完全同形】，正则区分不了 ——
+//   Leslie Benzies / Don Lee / Mia Ristic / Bruce Straley / Bill Skarsgård / Diogo Morgado
+//   Poly Loot     / Blox Fruits / Rat Lab / Slayers 2 / Infant God / Sword Warriors
+// 词典能让"首词是不是常见教名"成为区分信号，覆盖实测 24% 的人名噪音，且不联网、不花钱。
+//
+// 边界（诚实交代）：
+//  · 覆盖不了非西方人名，也不如 LLM —— 它只是"没有 key 时也能用"的兜底，不是等价替代
+//  · 只在"仅靠 Google 分类这一条证据"时才启用（见 gameCandidate 里的调用），
+//    有平台词/意图词（weight≥3）的候选实测几乎全是真游戏，不能误伤
+const GIVEN_NAMES = new Set(
+  (
+    // 英语
+    "aaron adam adrian alan albert alex alexander alfred alice alicia allen alvin amanda amber amy andrea andrew angela angelo anita ann anna anne anthony antonio april arnold arthur ashley aubrey audrey barbara barry benjamin bernard bernie beth betty beverly bill billy blake bob bobby bonnie brad bradley brandon brenda brent brett brian bruce bryan caleb calvin cameron carl carla carlos carmen carol caroline carrie catherine cathy chad charles charlie charlotte chase chelsea cheryl chris christian christina christine christopher cindy claire clara clarence claude clifford clint clyde cody colin connie connor conrad corey courtney craig crystal curtis cynthia daisy dale dallas dana dan dana daniel danielle danny darlene darrell darren daryl dave david dawn dean deborah debra denise dennis derek derrick desmond diana diane diego dolores dominic don donald donna dora doris dorothy douglas duncan dustin dwayne dwight dylan earl ed eddie edgar edith edward edwin eileen elaine eleanor elena elias elizabeth ella ellen elmer eloise elsa elsie emily emma eric erica erik erin ernest esther eugene eva evan evelyn everett felix fernando flora florence floyd frances francis francisco frank franklin fred freda frederick gabriel gail gary gene george gerald geraldine gilbert gina giovanni gladys glen glenn gloria gordon grace graham grant greg gregory gwendolyn hank hannah hans harold harriet harry harvey hazel heather hector helen henry herbert herman hilda holly homer hope howard hugh hugo ian irene iris irma isaac isabel ivan jack jackie jacob jacqueline jaime jake james jamie jan jane janet janice jared jason javier jay jean jeff jeffrey jenny jenna jennifer jeremy jerome jerry jesse jessica jesus jill jim jimmy joan joanna joanne joe joel joey johanna john johnny jon jonathan jordan jorge jose josef joseph josephine josh joshua joy joyce juan judith judy julia julian julie julio june justin kara karen kate katherine kathleen kathy katie keith kelly ken kenneth kent kerry kevin kim kimberly kirk kristen kristin kurt kyle lance larry laura lauren laurie lawrence lee leo leon leonard leroy leslie lester lewis liam lila lillian lily linda lisa lloyd lois lori lorraine louis louise lucas lucia lucille lucy luis luke luther lydia lynn mabel mabel madeline mae maggie malcolm manuel marc marcia marco marcus margaret maria marian marie marilyn marion mark marlene marsha marshall martha martin marvin mary mason matt matthew maureen maurice max maxine may mei mel melanie melissa melody melvin mercedes meredith mia michael michele michelle miguel mike mildred miles milton minnie miriam mitchell molly monica morgan morris moses murray myra myrtle nancy naomi natalie nathan nathaniel neil nelson nestor nicholas nick nicolas nina noah nora norma norman nathan olga olive oliver olivia oscar otis owen pablo pam pamela pat patricia patrick patsy paul paula pauline pearl pedro peggy penny percy perry pete peter phil philip phillip phoebe phyllis pierre polly rachel ralph ramon randall randy raul ray raymond rebecca regina reginald rene rex rhonda ricardo richard rick ricky rita robert roberta roberto robin rodney roger roland ron ronald ronnie rosa rose ross roy ruben ruby rudolph russell ruth ryan sally salvador sam samantha samuel sandra santiago sara sarah saul scott sean selena serena seth shane shannon sharon shawn sheila shelley sherry shirley sidney simon sofia sonia sonny sophia sophie spencer stacey stacy stan stanley stella stephen steve steven stuart sue susan susie suzanne sylvia tamara tammy tanya tara ted teresa terrance terrence terry tessa thelma theodore theresa thomas tiffany tim timothy tina toby todd tom tommy toni tony tracy travis trevor tricia trisha troy tyler tyrone ursula valerie van vanessa vera vernon veronica victor victoria vincent violet virginia vivian vivien wade wallace walt walter wanda warren wayne wendell wendy wesley whitney wilbur wilfred will willard william willie wilma winifred winston yolanda yvonne zachary zoe"
+    +
+    // 西/葡/法/德/意/北欧/其他常见名
+    " adolfo agustin alejandra alejandro alessandro alfonso alonso alvaro amparo ana andres angeles antonia antonio arturo aurelio beatriz benito bernardo blanca camila carmela carmen carolina catalina cesar claudia concepcion consuelo cristian cristina dolores eduardo elena emilio enrique ernesto esperanza esteban estela esther eugenio federico felipe fernanda fernando francisca francisco gabriela gerardo gloria gonzalo graciela gregorio guadalupe guillermo gustavo hernando hugo ignacio ines isabel javier jenaro jesus joaquin jorge jose juan julia luis luz manuel marcela margarita maria marisol marta martin mateo mauricio mercedes miguel monica natalia nicolas octavio pablo paloma patricia paula pedro pilar rafael ramon raquel raul ricardo roberto rodrigo rosa rosario ruben salvador sandra santiago sergio silvia sofia sonia teresa tomas valentina veronica vicente victor virginia ximena "
+    +
+    " adrien alain albert andre antoine armand arnaud aurelie benoit bernard brigitte camille catherine cedric celeste chantal charles claire claude corinne damien daniel david denis denise didier dominique edouard elodie emilie emmanuel etienne fabrice florence franck francois frederic gabriel genevieve georges gerald geraldine gilbert gilles gregory guillaume helene henri herve hugues isabelle jacques jean jerome joel joseph julien laurent laurence luc lucie madeleine marc marcel marguerite marie mathieu mathilde maurice michel monique nathalie nicolas noel olivier pascal patrice patrick philippe pierre raymond rene robert roland sabine sebastien serge simone sophie stephane sylvie therese thierry valerie veronique vincent yves "
+    +
+    " andreas anke annette ansgar barbara bernd birgit brigitte claudia dieter dirk elke frank franz gerd gerhard gisela gunther hans hartmut heike heinz helga helmut ingrid jens joachim johannes jurgen karin klaus konrad lars manfred marcus martina matthias monika olaf otto petra rainer ralf reinhard renate rudolf sabine siegfried stefan steffen susanne thorsten thomas ulf ulrich ursula uta uwe volker werner wolfgang "
+    +
+    " alessandra alessio angelo antonio chiara cristina dario davide elena emanuele enrico fabio federica filippo francesca giacomo gianluca giorgio giovanni giulia giuseppe lorenzo luca luigi marco margherita maria matteo massimo michele paola paolo pietro riccardo roberto rossella salvatore sergio simone stefano valentina vittorio "
+    +
+    " anders anette anna bjorn carl christian dag erik espen fredrik geir gunnar hans ingrid jan jens johan jorgen karin karl kristian lars lena lise magnus marit martin mats nils ola olav per rasmus sigrid sofie stein sven sverre thor tobias trond ulla "
+    +
+    " ahmed ali amir ayesha fatima hassan hussein imran khalid mohammed muhammad omar rashid saeed salman tariq yusuf zara "
+    +
+    " aiko akiko daiki daisuke haruto haruka hina hiroshi ichiro kaito kaori kenji kenta mai maki masaru mei michiko naoko ryo sakura sato satoshi shinji takashi takeshi tomoko yuki yuko yumi "
+    +
+    " ananya arjun deepak ganesh kavya krishna lakshmi meera neha priya rahul rajesh ramesh sanjay sneha sunita vijay vikram "
+    +
+    // 葡语补充（实测漏网：diogo / tiago / joao 这类巴西、葡萄牙高频名）
+    " diogo tiago joao joão pedro henrique lucas gabriel matheus guilherme felipe bruno thiago leandro fabio vinicius duarte joaquim caio murilo otavio renan vinicius"
+  ).split(/\s+/).filter(Boolean)
+);
+
+// 人名词形：纯拉丁字母词（含重音/连字符/撇号）。
+// 🛑 曾经写成"首字母必须大写" —— 但 **Google 热搜词全是小写**（"leslie benzies" 而非
+//    "Leslie Benzies"），导致该规则实测命中 0 个。所以只校验"是不是纯字母词"，
+//    大小写在比较教名时统一转小写，不靠大小写做判断。
+const ALPHA_WORD = /^[\p{Script=Latin}\p{M}][\p{Script=Latin}\p{M}'’\-]*$/u;
+const hasDigit = /\d/;
+
+/**
+ * 是否"像人名"。零依赖兜底 —— 没有 LLM key 时也能过滤掉最大的一类噪音（实测占 24%）。
+ * 判据：2~3 个纯字母词 + 无数字 + 首词是常见教名。
+ * @param {string} q
+ * @returns {boolean}
+ */
+export function looksLikePerson(q) {
+  const s = String(q || "").trim();
+  const words = s.split(/\s+/);
+  if (words.length < 2 || words.length > 3) return false; // 人名通常 2~3 个词
+  if (hasDigit.test(s)) return false;                     // 游戏常带数字（slayers 2 / gta 6）
+  if (!words.every((w) => ALPHA_WORD.test(w))) return false; // 混入符号/缩写就不算人名
+  return GIVEN_NAMES.has(words[0].toLowerCase());
+}
+
 // 泛化的游戏类词，没有具体指向
 const GENERIC_WORD =
-  /^(multi ?joueur|multiplayer|jeux|juegos|jogo|jogos|spiel|giochi|oyun|games?|gameplay|video ?game|videojuegos|gaming)$/i;
+  /^(multi ?joueur|multiplayer|jeux|juegos|jogo|jogos|spiel|spiele|giochi|oyun|games?|gameplay|video ?game|videojuegos|gaming)$/i;
+// 必须先剥掉修饰词再判断 —— 实测 "free games" / "jeux gratuit" 正是靠修饰词躲过锚定匹配的
+const GENERIC_MODIFIER =
+  /\b(free|new|best|top|all|online|gratis|gratuit|gratuits|gratuite|kostenlos|gratuitos|completo|espanol|español)\b/gi;
+const stripGenericModifiers = (q) => q.trim().replace(GENERIC_MODIFIER, " ").replace(/\s+/g, " ").trim();
 // 明确不是游戏的身份类词 / 平台类词（不是"新游戏"）
 const NOT_GAME_EXTRA =
   /\b(vtuber|virtual youtuber|バーチャルyoutuber|youtuber|influencer|streamer|celebrity|twitch|discord|reddit|tiktok|instagram|facebook|spotify)\b/i;
@@ -93,12 +180,18 @@ export function gameCandidate(item, opts = {}) {
   const cats = item.cats || [];
   if (opts.latinOnly && NON_LATIN.test(q)) return { ok: false, reason: "非英文名", weight: 0 };
   if (!q || NOT_GAME.test(q) || NOT_GAME_EXTRA.test(q)) return { ok: false, reason: "非游戏实体", weight: 0 };
+  // 体育分类 + 赛事词形 = 比赛/盘口，不是游戏作品
+  if (cats.includes(CAT.SPORTS) && FIXTURE_FORM.test(q)) return { ok: false, reason: "体育赛事/盘口", weight: 0 };
+  if (SERVICE_ONLY.test(q)) return { ok: false, reason: "订阅服务", weight: 0 };
   if (FIXTURE.test(q)) return { ok: false, reason: "赛事查询", weight: 0 };
   if (HORSE_RACING.test(q)) return { ok: false, reason: "赛马", weight: 0 };
-  if (GAMBLING.test(q) || GAMBLING_I18N.test(q)) return { ok: false, reason: "博彩/彩票", weight: 0 };
+  if (GAMBLING.test(q) || GAMBLING_I18N.test(q) || BETTING_BRAND.test(q)) return { ok: false, reason: "博彩/彩票", weight: 0 };
+  if (SPORTS_MEDIA.test(q)) return { ok: false, reason: "体育媒体/联赛", weight: 0 };
+  if (NOT_A_WORK.test(q)) return { ok: false, reason: "非作品实体", weight: 0 };
   if (HARDWARE_ONLY.test(q.trim())) return { ok: false, reason: "主机硬件", weight: 0 };
   if (STORE_ONLY.test(q.trim())) return { ok: false, reason: "应用商店", weight: 0 };
-  if (GENERIC_WORD.test(q.trim())) return { ok: false, reason: "泛化词", weight: 0 };
+  // 剥掉修饰词后仍是泛化词 → 泛化词（"free games" / "jeux gratuit"）
+  if (GENERIC_WORD.test(q.trim()) || GENERIC_WORD.test(stripGenericModifiers(q))) return { ok: false, reason: "泛化词", weight: 0 };
   const inGameCat = cats.includes(CAT.GAMES);
   const platform = GAME_PLATFORMS.test(q);
   const signal = GAME_SIGNALS.test(q);
@@ -107,6 +200,9 @@ export function gameCandidate(item, opts = {}) {
   if (inGameCat) weight += 2;
   if (platform) weight += 2;
   if (signal) weight += 1;
+  // 只在"仅靠 Google 分类"这一条证据（weight≤2 且无平台词）时才用词典判人名 ——
+  // 有平台词/意图词的候选（weight≥3）实测几乎全是真游戏，判人名会误伤。
+  if (weight <= 2 && !platform && looksLikePerson(q)) return { ok: false, reason: "疑似人名", weight: 0 };
   return { ok: true, reason: [inGameCat && "Games分类", platform && "游戏平台词", signal && "游戏意图词"].filter(Boolean).join("+"), weight };
 }
 

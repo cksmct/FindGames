@@ -77,6 +77,11 @@ jobs:
 
       - name: 采集
         continue-on-error: true   # 尽力而为：采集失败也不阻塞发布
+        env:
+          # LLM 终审用的密钥（可选）。不配也不报错：终审自动跳过，沿用正则结果。
+          # 配法：仓库 Settings → Secrets and variables → Actions → 新建 JUDGE_API_KEY。
+          # 具体用哪家模型由 config.json 的 judge.provider 决定（deepseek/openai/moonshot/zhipu/...）。
+          JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
         run: |
           ARGS=""
           if [ -n "${{ github.event.inputs.geos }}" ]; then ARGS="$ARGS --geos ${{ github.event.inputs.geos }}"; fi
