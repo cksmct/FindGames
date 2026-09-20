@@ -73,19 +73,35 @@ series 长度 43（367 个）/ 56（23 个）· 390/390 全部有曲线 · score
 sightings 分布：1次×253、2次×60、3次×31 … 最多 19 次
 ```
 
-**结论：它不是一次抓那么多，是 13.8 天连续累积的（28.2 个/天）。** 而它每轮的口径同样很宽：
 
-- `score` 最低到 **2**，且混有 `kevin` / `IBC` / `Boss` 这类明显误收 → **几乎没有游戏识别过滤，把 Games 分类的词近乎全量喂给曲线接口**，用曲线本身当筛子。
-- 我们实测同一份快照里有 **134 个 `cats∋6` 的词**，其中 131 个能通过游戏识别。真正的差别在**搜索量门槛**：
+**结论：它不是一次抓那么多，是连续累积的（平均 28.2 个/天）。** 但下面这条旧结论在 **2026-09-20 被实测推翻**：
 
-| 我们的候选门槛 | 候选数 | 相对全量 |
-|---|---|---|
-| `minVol = 0` | 131 | 100% |
-| `minVol = 1000` | 53 | 40% |
-| `minVol = 5000` | 10 | **7.6%** |
-| `minVol = 20000` | **0** | 0% |
+> ~~它几乎没有游戏识别过滤，把 Games 分类的词近乎全量喂给曲线接口~~
 
-最初的 `minVol = 5000` 直接砍掉 92% 的候选 —— **这才是我们只抓到 4 个的真正原因**（不是识别算法差）。已把默认值改为 `1000`，产出量就能对齐原站量级。
+**实测（2026-09-20 逐名核对）证明：原站的游戏不是从 Google Trends 热搜里来的。**
+
+- 原站 `games.json` 的 404 个游戏，只有 **14 个**能在原站自己发布的 7 天热搜留档（56,861 条）里找到；
+- 在同一天发布的 24h 热搜（2,173 条）里只重合 **2 个**；
+- 热搜词自带的相关搜索（`item[9]`，实测全小写）里也找不到它们。
+
+**真正的来源是「游戏目录」（多源），可以逐名核对：**
+
+| 来源 | 逐名吻合的证据 |
+|---|---|
+| **Roblox Discover 榜单** | `apis.roblox.com/explore-api/v1/get-sorts` 的 5 个榜单（约 230 个体验名），就是它列表里的 `Ride A Pet` / `Build the Pyramid!` / `Rat Lab` / `Lumber Tycoon 2` / `Royale High` / `Anime Dice` / `Slayers 2` / `The Hunt: Roblox 20`；且名字正好是榜单名去掉 `[UPD]` `[ALPHA]` emoji 装饰后的结果 |
+| **Steam 商店榜单** | `Angel Engine`(#4173750) / `Infant God`(#4238140) / `Aniimo`(#4126040) / `Valheim` / `No Man's Sky` / `ENDLESS Legend 2` 都能在 Steam 的新发售、即将发售、特惠榜单里逐个找到 |
+| **App Store 游戏榜（手机端）** | `itunes.apple.com/us/rss/topfreeapplications/limit=100/genre=6014/json`（6014 = Games 分类）与 `newfreeapplications`（最新上架，新版 RSS 已忽略 genre，本地按 category 过滤）；纯 JSON、无需 key |
+
+**所以热搜的角色变了**：它不负责「发现新游戏」，只负责**验证「这个游戏现在热不热」**（拉 7 天兴趣曲线）。
+本仓库已按这个机制实现：
+
+```
+sources.mjs  →  Roblox 榜单 + Steam 榜单（多源候选）
+queue.mjs    →  候选队列（来源每天产出几百个，曲线配额只有几十个/轮，必须排队）
+interest.mjs →  7 天曲线验证（explore + multiline），通过才写进 games.json
+```
+
+旧的「搜索量门槛」结论作废：`minVol` / `strongSignal` 只作用在**热搜候选**那条腿上。
 
 顺带一个重要发现：**原站游戏列表里大量是 Roblox 游戏**——`Poly Loot`、`Defeat Anime RNG`、`BloxNote`、`Venture AOT`、`Anime Ascendants`、`Sword Hunter`、`Grow a Chicken Fighter`、`Dungeon Quest Reborn`。这条赛道对做 Roblox 攻略站的人直接可用。
 
@@ -96,7 +112,7 @@ sightings 分布：1次×253、2次×60、3次×31 … 最多 19 次
 | **数据源** | **100%** | 同一接口 `i0OFE`、同一 24h 窗口、同一 cookie 策略、同一分桶语义 |
 | **数据结构** | **~100%** | 4 个 JSON 的字段级对齐（含 `cats` 官方分类、`vol_peak`/`growth_peak`/`sightings`/`chunks` 分片）。我们产出的 `trends.json` 可直接替换原站文件 |
 | **采集调度** | **100%** | 每小时一轮、7 天滚动留档、峰值合并、按峰值降序 |
-| **游戏雷达** | **流程 100%，判据自建** | `explore` + `multiline` 取 7 天曲线、43 点 = 169 小时点每 4 小时抽样，全部对齐；但它的候选过滤规则无法反推，我们用白盒规则替代 |
+| **游戏雷达** | **90%（2026-09-20 反推升级）** | 候选来源已反推并复刻：Roblox Discover 榜单 + Steam 商店榜单 → 候选队列 → 7 天曲线验证（`explore` + `multiline`、43 点 = 169 小时点每 4 小时抽样）；剩下的差别是它的**保留/淘汰公式**未知（我们用自己的白盒 score 规则）|
 | **noise / score** | **0%（自建）** | 只能看到结果值，反推不出公式。我们自建可解释版本，数值不与原站一致 |
 | **UI** | **独立实现** | 未抄任何前端代码，界面自研（信息密度更高、多了词池与相关词展开） |
 
@@ -117,6 +133,8 @@ src/
   lib/
     trends.mjs           Google Trends 实时热搜采集（i0OFE）+ 重试/限流处理
     interest.mjs         7 天兴趣曲线 + 相关查询（explore/multiline/relatedsearches）
+    sources.mjs          游戏候选来源：Roblox Discover 榜单 + Steam 商店榜单（原站真正的 intake）
+    queue.mjs            候选队列：来源每天产出几百个，曲线配额有限，必须排队逐轮验证
     detect.mjs           噪音分类 / 新游戏识别 / 可解释打分
     pool.mjs             关键词池聚合
     store.mjs            7 天留档、峰值合并、分片输出
@@ -134,7 +152,7 @@ export/                  CSV 导出
 | 相关搜索词 `item[9]` | **完全丢弃** | 聚合成 `keywords.json` 词池，带「被哪些热搜带出」和次数 |
 | 关键词池 | 无 | 6k+ 词（7 天滚动累积），可按监控词过滤，一键导 CSV |
 | 业务相关度标注 | 无 | config `watch` 词表，命中打 ★（做站的人只关心自己的领域） |
-| 新游戏识别 | 黑盒 | 白盒规则：Games 分类 / 平台词 / 游戏意图词，显式剔除体育、影视、**彩票博彩**（Google 把彩票归到 Games 分类） |
+| 新游戏识别 | 黑盒 | **已反推复刻**：候选来自多源游戏目录（Roblox 榜单 / Steam 商店），热搜只负责热度验证；热搜自身仍走白盒规则（Games 分类 / 平台词 / 意图词 + 剔除体育影视彩票）|
 | 新游戏的可做页面词 | 只有游戏名 | 每个游戏附带 **Rising + Top 相关查询（攻略词）**，点出去是与游戏名的对比图，并汇入词池可导出 |
 | 打分 | 黑盒 | 可解释：搜索量分 + 涨幅分 + 起飞分 + 发现权重 |
 | 噪音 | 黑盒 | 白盒规则表，可直接改 `src/lib/detect.mjs` |
@@ -244,6 +262,12 @@ node src/report.mjs --watch --top 40         # 只看命中监控词的
 | `games.geos` | **游戏雷达扫描的市场**，默认 `["US","GB","CA","AU","NZ","IE"]`（英语六国）。只做英文站就保持这样 |
 | `games.latinOnly` | 默认 `true`：只收拉丁字母的游戏名（见下方「只做英文站」） |
 | `games.*` 其余 | 每轮取多少条曲线（`maxCurvesPerRun`）、曲线抽样间隔（`sampleEveryHours`）、刷新间隔（`refreshHours`）、收录门槛（`minVol`）、每个游戏留多少攻略词（`relatedWords`）、请求间隔（`delayMs`） |
+| `games.sources` | 候选来源开关：`{ "roblox": true, "steam": true }` |
+| `games.sourceShare` | 每轮曲线配额中分给来源候选的比例，默认 `0.7`（其余留给热搜候选） |
+| `games.sourceBatch` | 每轮最多从队列取多少个来源候选，默认 `120` |
+| `games.steamListCount` / `games.steamUpcomingCount` | Steam「新发售 / 未发售」各抓多少个，默认 60 / 40 |
+| `games.queue` | 候选队列：`{ max: 5000, ttlDays: 21 }` |
+| `games.appStoreGeos` | App Store 榜单取哪些国家，默认 `["US","GB","CA","AU"]` |
 
 ### 只做英文站（默认配置）
 

@@ -45,7 +45,8 @@ export async function explore(session, keyword, geo, timeframe = "now 7-d") {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.text();
     },
-    { retries: 4, base: 2500, label: `explore/${keyword}` }
+    // 429 是"窗口级"限流，长退避重试只是在浪费配额 —— 队列会在下一轮补上，所以只轻试 2 次
+    { retries: 2, base: 3000, label: `explore/${keyword}` }
   );
   return stripPrefix(text).widgets || [];
 }
@@ -62,8 +63,8 @@ async function fetchWidget(session, widget, path, keyword, geo, label) {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.text();
     },
-    // 曲线/相关查询接口限流明显更严，退避拉长
-    { retries: 4, base: 2500, label: `${label}/${keyword}` }
+    // 曲线/相关查询接口限流明显更严；同样别用长退避硬刚（见上）
+    { retries: 2, base: 3000, label: `${label}/${keyword}` }
   );
   return stripPrefix(text);
 }

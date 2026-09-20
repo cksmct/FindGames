@@ -290,6 +290,14 @@
     score: function (a, b) { return (b.score || 0) - (a.score || 0) || new Date(b.first) - new Date(a.first); },
   };
   var GAME_SORT_LABEL = { first: "最新发现", last: "最新信号", score: "分数" };
+  // 来源徽标：Roblox 榜单 / Steam 商店 —— 点出去看原始作品页（原站没有这一步）
+  var SRC_LABEL = { roblox: "Roblox", steam: "Steam" };
+  function srcLink(g) {
+    var label = SRC_LABEL[g.src] || g.src;
+    if (g.srcList) label += " · " + g.srcList;
+    if (!g.srcUrl) return esc(label);
+    return '<a class="srclink" target="_blank" rel="noopener" href="' + g.srcUrl + '">' + esc(label) + "</a>";
+  }
 
   function renderGames() {
     var el = $("game-cards");
@@ -323,7 +331,8 @@
       return '<div class="gcard"><div class="ghead"><h3>' + esc(g.name) + "</h3>" +
         '<span class="score">score ' + (g.score || 0) + "</span></div>" +
         '<div class="gmeta">' + times + (g.reason ? " · " + esc(g.reason) : "") +
-        (g.chart_geo ? " · 曲线地区 " + esc(g.chart_geo) : "") + "</div>" +
+        (g.chart_geo ? " · 曲线地区 " + esc(g.chart_geo) : "") +
+        (g.src ? " · " + srcLink(g) : "") + "</div>" +
         chart + kwHtml +
         '<div class="gmeta"><a href="' + exploreUrl(g.name, g.chart_geo) + '" target="_blank" rel="noopener">查看趋势' +
         (COMPARE ? "（vs " + esc(COMPARE) + "）" : "") + " →</a></div></div>";

@@ -159,3 +159,6 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 5px; color: #
   .fbar input[type="search"] { width: 140px; }
   .fbar button.ghost { margin-left: 0; }
 }
+
+.srclink { color: #7a5cf0; text-decoration: none; border-bottom: 1px dotted currentColor; }
+.srclink:hover { text-decoration: none; opacity: .8; }

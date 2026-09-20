@@ -28,6 +28,8 @@ import {
 } from "./lib/store.mjs";
 import { buildKeywordPool } from "./lib/pool.mjs";
 import { translateToZh } from "./lib/translate.mjs";
+import { collectSourceCandidates } from "./lib/sources.mjs";
+import { pushQueue, peekQueue, dropQueue } from "./lib/queue.mjs";
 
 const t0 = Date.now();
 const args = parseArgs();
@@ -38,6 +40,8 @@ if (args["no-games"]) cfg.games.enabled = false;
 if (args["only-games"]) { cfg._onlyGames = true; cfg.games.enabled = true; }
 if (args.translate) cfg.translate = true;
 if (args.minvol) cfg.minVol = Number(args.minvol);
+if (args["max-curves"]) cfg.games.maxCurvesPerRun = Number(args["max-curves"]);
+if (args["no-sources"]) cfg.games.sources = { roblox: false, steam: false };
 
 const session = await createSession();
 log("info", `会话就绪 ${session.cookie ? "(已获取 cookie)" : "(无 cookie)"}`);
@@ -210,6 +214,51 @@ if (cfg.games.enabled) {
       (cand.vol || 0) - (prev.vol || 0);
     if (better > 0) candMap.set(key, cand);
   }
+  // ── 多源候选：原站真正的 intake ──
+  // 实测（2026-09-20）：原站的游戏来自"游戏目录"——Roblox Discover 榜单与 Steam 商店榜单，
+  // 逐个名字都能对上；而它自己发布的 7 天热搜留档只覆盖其游戏列表的 14/404。
+  // 所以这里把来源候选入队，再由曲线配额逐个做"热度验证"，通过才进雷达。
+  const src = await collectSourceCandidates(cfg);
+  let queued = { added: 0, total: 0, seen: [] };
+  if (src.length) {
+    queued = pushQueue(cfg, src, new Set([...candMap.keys(), ...known.keys()]));
+    log("info", `来源候选 ${src.length} 个 → 入队新增 ${queued.added} 个（队列 ${queued.total}）`);
+  }
+  // 来源里再次出现 = "最新信号"：刷新 last / sightings（原站卡片上的 ×N）
+  const srcSeen = new Set(queued.seen);
+  if (srcSeen.size) {
+    let bumped = 0;
+    for (const g of known.values()) {
+      if (!g.src) continue;
+      if (!srcSeen.has(String(g.name).toLowerCase())) continue;
+      g.last = iso();
+      g.sightings = (g.sightings || 1) + 1;
+      bumped++;
+    }
+    if (bumped) log("dim", `  来源重申 ${bumped} 个已追踪游戏，刷新 last/sightings`);
+  }
+  for (const it of peekQueue(cfg, cfg.games.sourceBatch || 120)) {
+    const key = String(it.name).toLowerCase();
+    if (candMap.has(key)) continue;
+    // 你的反馈永远优先：写进 feedback.block 的名字不验证、不入库（存量条目也会被后面的重筛清掉）
+    if (feedbackVerdict(it.name, cfg.feedback) === "block") continue;
+    const cur = known.get(key);
+    if (cur && Date.now() - new Date(cur.chart_at || 0).getTime() < refreshMs) continue;
+    candMap.set(key, {
+      q: it.name,
+      geo: (cfg.games.geos || ["US"])[0],
+      vol: 0,
+      growth: 0,
+      cats: [],
+      weight: 3,
+      reason: "来源:" + it.source + (it.kind ? ":" + it.kind : ""),
+      trusted: true,
+      tracked: !!cur,
+      needRelated: !cur,
+      srcInfo: it,
+    });
+  }
+
   const cands = Array.from(candMap.values());
 
   // ── LLM 终审 ──
@@ -217,8 +266,9 @@ if (cfg.games.enabled) {
   // 它只做否决（人名/赛事/博彩/影视/卡牌/硬件/服务/泛化词），不会新增候选。
   // 必须把"已追踪的游戏名"一并送审：cands 只在新鲜度过滤之后构建，
   // 存量脏词（人名等）不会出现在 cands 里，只送审新词就永远清不掉它们。
-  const judged = await judgeCandidates(cands, cfg, Array.from(known.values()).map((g) => g.name));
-  const candsOk = judged.kept;
+  // 来源型候选是目录里的作品本体，不需要 LLM 判"是不是游戏"（只做热度验证），直接放行，也省 token
+  const judged = await judgeCandidates(cands.filter((c) => !c.trusted), cfg, Array.from(known.values()).map((g) => g.name));
+  const candsOk = [...judged.kept, ...cands.filter((c) => c.trusted)];
   if (judged.stats.mode === "on") {
     log("info", `终审：送审 ${judged.stats.judged} · 缓存命中 ${judged.stats.cached} · 否决 ${judged.stats.dropped}（模型 ${judged.stats.model}）`);
     for (const d of judged.dropped.slice(0, 10)) log("dim", `    ✕ ${d.q}  [${d.judgeKind}] ${d.judgeWhy}`);
@@ -237,21 +287,32 @@ if (cfg.games.enabled) {
   //    实测权重 ≥3（分类+平台词/意图词）的几乎全是真游戏，人名噪音全挤在权重=2。
   //  · 所以顺序是：先权重（精度）→ 再涨幅（新鲜度）→ 最后才看搜索量。
   const prio = (c) => (c.tracked ? (c.needRelated ? 1 : 2) : 0);
-  candsOk.sort((a, b) =>
+  const byTrend = (a, b) =>
     prio(a) - prio(b) ||
     (prefGeos.has(b.geo) ? 1 : 0) - (prefGeos.has(a.geo) ? 1 : 0) ||
     b.weight - a.weight ||
     (b.growth || 0) - (a.growth || 0) ||
-    (b.vol || 0) - (a.vol || 0)
-  );
-  const todo = candsOk.slice(0, cfg.games.maxCurvesPerRun || 12);
-  log("info", `游戏雷达：候选 ${candsOk.length} 个（新 ${candsOk.filter((c) => !c.tracked).length}），本轮取曲线 ${todo.length} 个`);
+    (b.vol || 0) - (a.vol || 0);
+  // 配额按 sourceShare 分给两个入口：来源（Roblox/Steam 目录）优先 —— 那才是原站口径的"新游戏"；
+  // 热搜候选保留一份，因为它能抓到目录之外的爆款（也是我们比原站多的一条腿）。
+  const cap = cfg.games.maxCurvesPerRun || 12;
+  const capSrc = Math.max(1, Math.round(cap * (cfg.games.sourceShare ?? 0.7)));
+  const srcOk = candsOk.filter((c) => c.trusted).sort((a, b) => prio(a) - prio(b));
+  const trendOk = candsOk.filter((c) => !c.trusted).sort(byTrend);
+  const todoSrc = srcOk.slice(0, capSrc);
+  const todo = [...todoSrc, ...trendOk.slice(0, Math.max(0, cap - todoSrc.length))];
+  log("info", `游戏雷达：候选 ${candsOk.length} 个（来源 ${srcOk.length} / 热搜 ${trendOk.length}），本轮取曲线 ${todo.length} 个（其中来源 ${todoSrc.length}）`);
 
   let added = 0;
   let kwAdded = 0;
   const maxWords = cfg.games.relatedWords ?? 12;
 
-  // 曲线 / 相关查询接口限流严格：串行 + 间隔，避免 429
+  // 曲线 / 相关查询接口限流严格：串行 + 间隔，避免 429。
+  // 再加一道熔断：连续 429 就结束本轮（否则会把 IP 越打越黑，还白等退避时间），
+  // 没验证完的来源候选留在队列里，下一轮继续。
+  const rlFailed = new Set();
+  const rlStop = cfg.games.rateLimitStop ?? 2;
+  let consecutive429 = 0;
   for (const c of todo) {
     const geo = prefGeos.has(c.geo) ? c.geo : (cfg.games.geos || ["US"])[0];
     const key = c.q.toLowerCase();
@@ -294,7 +355,10 @@ if (cfg.games.enabled) {
         hype,
         score,
         reason: prev?.reason || c.reason,
-        cats: c.cats,
+        src: prev?.src || (c.trusted ? c.srcInfo.source : ""),
+        srcUrl: prev?.srcUrl || (c.trusted ? c.srcInfo.url : ""),
+        srcList: prev?.srcList || (c.trusted ? c.srcInfo.kind || c.srcInfo.list || "" : ""),
+        cats: c.cats && c.cats.length ? c.cats : prev?.cats || [],
         geos: Array.from(new Set([...(prev?.geos || []), c.geo])).slice(0, 8),
         rising: rising.length ? rising : prev?.rising || [],
         words: words.length ? words : prev?.words || [],
@@ -303,10 +367,28 @@ if (cfg.games.enabled) {
       for (const w of words) gameKw.push({ q: w, parents: [c.q], geo: [c.geo] });
       kwAdded += words.length;
       added++;
+      consecutive429 = 0;
       log("ok", `  🎮 ${c.q} (${geo}) score=${score} hype=${hype} 峰值=${curve.peak} 攻略词=${words.length}`);
     } catch (e) {
       log("warn", `  ${c.q} 曲线失败: ${e.message}`);
+      if (/429|限流/.test(e.message)) {
+        consecutive429++;
+        rlFailed.add(c.q);
+        if (consecutive429 >= rlStop) {
+          log("warn", `曲线接口连续 ${consecutive429} 次限流，本轮提前结束（未验证的候选留在队列，下轮继续）`);
+          break;
+        }
+      } else {
+        consecutive429 = 0;
+      }
     }
+  }
+
+  // 本轮处理过的来源候选出队：成功的已进 known（下一轮不会再被选），失败的不再堵队首
+  const doneSrc = todo.filter((c) => c.trusted && !rlFailed.has(c.q)).map((c) => c.q);
+  if (doneSrc.length) {
+    const out = dropQueue(cfg, doneSrc);
+    if (out) log("dim", `  来源队列出队 ${out} 个`);
   }
 
   let list = Array.from(known.values());
@@ -318,6 +400,9 @@ if (cfg.games.enabled) {
   // 用本轮终审的判定（含缓存命中）清存量，而不是另读一次缓存文件 —— 口径保持一致
   const verdicts = judged.verdicts;
   list = list.filter((g) => {
+    // 来源型条目（Roblox 榜单 / Steam 商店）是目录里的作品本体，不套"热搜游戏识别"规则 ——
+    // 否则 "Mall" / "Cars" / "Find" 这类原名会被噪音 / 泛化词规则误杀
+    if (g.src) return true;
     const cats = g.cats || [];
     // 噪音规则也必须重跑：只重跑 gameCandidate 的话，
     // 靠 noise 才被挡住的脏条目（如体育赛事）一旦入了库就再也清不掉，要等 30 天过期。
