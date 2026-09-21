@@ -206,3 +206,29 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 5px; color: #
 #watch-table td b { font-weight: 600; }
 #watch-table td:last-child { white-space: nowrap; }
 #watch-table td:last-child a { margin-right: 2px; }
+
+/* 统计面板（Roblox 未发售清单的规模 / 状态 / 窗口 / 评估分布） */
+.wk-stats {
+  margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--panel);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.wk-stat { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+.wk-stat .k { color: var(--dim); flex: none; min-width: 128px; }
+.wk-stat-head .k { color: #cfe4ff; font-weight: 600; }
+.wk-chip {
+  display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11.5px;
+  background: var(--panel2); color: var(--dim); border: 1px solid var(--border);
+}
+.wk-chip b { color: #d7e4f5; margin-left: 3px; }
+
+/* 潜伏评估档位（分数 + 分档，悬停看分项理由） */
+.wk-band {
+  display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; white-space: nowrap;
+  background: var(--panel2); color: var(--dim); cursor: help;
+}
+.wk-band.wk-go { background: rgba(63, 185, 80, .14); color: #7ee787; }
+.wk-band.wk-watch { background: rgba(255, 159, 69, .13); color: #ffb86b; }
+.wk-band.wk-no { background: rgba(139, 151, 168, .12); color: var(--dim); }
+.wk-band.wk-risk { background: rgba(248, 81, 73, .12); color: #ff9a92; }
+.wk-band.wk-too-late { background: rgba(248, 81, 73, .12); color: #ff9a92; }

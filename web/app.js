@@ -13,6 +13,16 @@
     if (v >= 1e3) return v / 1e3 + "K";
     return String(v);
   }
+  /**
+   * 计数专用格式化：**必须把 0 和"未取得"分开**。
+   * fmtVol(0) 会返回 "—"，而 0（真的没人玩/没有评价）和 null（没抓到）是完全不同的结论 ——
+   * 数据层已经严格区分（缺失写 null），展示层不能又给混回去。
+   */
+  function fmtCount(v) {
+    if (v == null) return "未取得";
+    if (v === 0) return "0";
+    return fmtVol(v);
+  }
   function rel(iso) {
     if (!iso) return "";
     var m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -391,10 +401,17 @@
   function clamp01(v) { return Math.max(0, Math.min(100, v)); }
   var avgOf = function (a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : 0; };
 
-  /** 需求规模：访问量单调递增（log 归一）。1e5→0 · 1e6→33 · 1e7→66 · 1e8→100 */
-  function demandScore(visits) {
-    if (visits == null || visits <= 0) return null;
-    return clamp01((Math.log10(visits) - 5) * 33);
+  /**
+   * 需求规模（单调递增，log 归一）。两个平台的口径不同，**必须分开锚点**：
+   *   Roblox：终身访问量 —— 1e5→0 · 1e6→33 · 1e7→66 · 1e8→100
+   *   Steam ：当前在线人数（拿不到就用评价数当代理）—— 1→0 · 100→54 · 5000→100
+   * 🛑 不能用同一条曲线：Roblox 的访问量是"终身累计"，Steam 的 CCU 是"此刻在线"，
+   *    数量级差 4~5 个数量级，混用会让一边永远满分、另一边永远 0 分。
+   */
+  function demandScore(v, kind) {
+    if (v == null || v <= 0) return null;
+    if (kind === "steam") return clamp01((Math.log10(v) / 3.7) * 100);
+    return clamp01((Math.log10(v) - 5) * 33);
   }
   /** 内容面：已挖到的攻略词数量 ≈ 可直接做的页面数 */
   function surfaceScore(words) {
@@ -462,10 +479,15 @@
 
   function rankability(g) {
     var st = g.stats || {};
+    var isSteam = st.platform === "steam";
     var ageDays = ageDaysOf(g);
     var comp = compRoom(g, ageDays);
+    // Steam 优先用当前在线；CCU 为 0/缺失时退回评价数（评价数 ≈ 销量代理）
+    var demandRaw = isSteam
+      ? (st.playing != null && st.playing > 0 ? st.playing : st.reviews)
+      : st.visits;
     var parts = {
-      demand: demandScore(st.visits),
+      demand: demandScore(demandRaw, isSteam ? "steam" : "roblox"),
       surface: surfaceScore(g.words),
       fresh: freshAgeScore(ageDays),
       comp: comp.score,
@@ -531,6 +553,10 @@
     if (mc && mc.open != null && mc.open <= 2) {
       return { k: "no", t: "竞争饱和（人工判断）", why: mc.note || "长尾已被专用 wiki / 专业站占据" };
     }
+    // 未发售的走「潜伏线」，不该用"能不能挤进去"这套（还没上线谈不上挤）
+    if (st.comingSoon) {
+      return { k: "unknown", t: "未发售", why: "还没上线 —— 这类走「🚀 潜伏列表」那条线评估（窗口 + 潜伏评分）" };
+    }
     // 🛑 竞争测不到就不下结论 —— 但要给"怎么补"的动作（点「查竞争」看 SERP），
     //    而不是像旧版那样用访问量硬推断一个"巨头级"。
     if (r.comp.score == null) {
@@ -566,17 +592,27 @@
     }).join("");
     var age = r.ageDays == null ? "未取得" : (r.ageDays < 30 ? Math.round(r.ageDays) + " 天" : (r.ageDays / 365).toFixed(1) + " 年");
     var compSrc = { manual: "人工核查", age: "上线时长推断", unknown: "未测" }[r.comp.source] || "未测";
+    // 平台口径不同，展示也要分开（Steam 是"此刻在线 + 评价数"，Roblox 是"终身访问量"）
+    var metaLine = st.platform === "steam"
+      ? "需求 在线 " + fmtCount(st.playing) +
+        " · 评价 " + fmtCount(st.reviews) +
+        " · 好评 " + (st.approval == null ? "未取得" : st.approval + "%") +
+        " · 发售 " + (st.releaseText ? esc(st.releaseText) : "未取得") +
+        (st.price ? " · " + esc(st.price) : "")
+      : "需求 访问 " + fmtCount(st.visits) + " · 好评 " +
+        (st.approval == null ? "未取得" : st.approval + "%") + " · 上线 " +
+        (st.created ? esc(String(st.created).slice(0, 10)) : "未取得") + "（" + age + "）";
     return '<div class="gcard pk-card">' +
       '<div class="ghead"><h3>' + esc(g.name) + '</h3><span class="score pk-' + v.k + '">' +
       (r.score == null ? "—" : r.score) + "</span></div>" +
       '<div class="pk-verdict pk-' + v.k + '">' + v.t + (v.why ? " · " + esc(v.why) : "") + "</div>" +
       (evt ? '<div class="pk-verdict pk-flag">' + esc(evt) + "</div>" : "") +
+      // 来自潜伏清单转正的条目：没有 Trend 曲线，需求动能项会是"缺项"，必须说明原因
+      (/潜伏/.test(String(g.reason || "")) ? '<div class="pk-verdict pk-flag">来自「🚀 潜伏列表」转正（该游戏上线时被潜伏清单抓到；暂无 Google Trends 曲线，所以需求动能缺失）</div>' : "") +
       (r.manual ? '<div class="pk-verdict pk-flag">人工竞争：发稿滞后乘数 ×' + r.manual.mult +
         (r.manual.note ? " · " + esc(r.manual.note) : "") + "</div>" : "") +
       bars +
-      '<div class="gmeta">需求 访问 ' + fmtVol(st.visits) + " · 好评 " +
-      (st.approval == null ? "未取得" : st.approval + "%") + " · 上线 " +
-      (st.created ? esc(String(st.created).slice(0, 10)) : "未取得") + "（" + age + "）</div>" +
+      '<div class="gmeta">' + metaLine + "</div>" +
       '<div class="gmeta">竞争来源 ' + esc(compSrc) + " · 攻略词 " + (g.words || []).length + " 个</div>" +
       '<div class="kwrow">' +
       (g.srcUrl ? '<a class="kwchip" target="_blank" rel="noopener" href="' + esc(g.srcUrl) + '">Roblox 页</a>' : "") +
@@ -709,6 +745,13 @@
       var hb = b.source === "steam" && b.rank ? b.rank : 1e6 - (b.players || 0);
       return ha - hb;
     },
+    // 🎯 潜伏评分（只有 Roblox 未发售条目有；Steam 没有这项 → 沉底）
+    assess: function (a, b) {
+      var sa = a.assess ? a.assess.score : -1;
+      var sb = b.assess ? b.assess.score : -1;
+      if (sa !== sb) return sb - sa;
+      return WATCH_SORTS.date(a, b);
+    },
     name: function (a, b) { return String(a.name).localeCompare(String(b.name)); },
   };
 
@@ -720,6 +763,15 @@
     return true;
   }
 
+  /** 评估列：分数 + 分档，鼠标悬停看四个分项的理由（让人能一眼反驳） */
+  function assessCell(it) {
+    var a = it.assess;
+    if (!a) return '<span class="dim">—</span>';
+    var tip = "评分 " + a.score + " · " + a.band.t + "\n" + a.reasons.join("\n") +
+      (a.missing.length ? "\n缺：" + a.missing.join(" / ") : "");
+    return '<span class="wk-band wk-' + a.band.k + '" title="' + esc(tip) + '">' + a.score + " " + esc(a.band.t) + "</span>";
+  }
+
   function watchRowHtml(it, i) {
     var bits = [];
     if ((it.genres || []).length) bits.push(esc(it.genres.slice(0, 3).join(" / ")));
@@ -727,20 +779,58 @@
     if (it.price) bits.push(esc(it.price));
     if (it.source === "steam") bits.push(it.demo ? "有 Demo" : "无 Demo");
     if (it.status) bits.push(esc(it.status));
+    // 官方关联结果（搜索/来源页解析出来的）：把置信度与拒绝原因如实显示，别让人以为都是确认过的
+    var CONF = { high: "高", medium: "中", low: "低" };
+    if (it.universeId) bits.push("官方关联" + (CONF[it.matchConfidence] || "?"));
+    if (it.linkRejected) bits.push("⚠️ 归属不符：" + esc(it.linkRejected));
+    if (it.live && it.liveStats) bits.push("访问 " + fmtCount(it.liveStats.visits) + " · 在线 " + fmtCount(it.liveStats.playing));
     var src = it.source === "roblox"
-      ? "Roblox · " + esc(it.list || "BloxInformer") + (it.snapshotAt ? "（快照 " + String(it.snapshotAt).slice(0, 10) + "）" : "")
+      ? "Roblox · " + esc(it.list || "BloxInformer") + (it.dataAt ? "（数据 " + String(it.dataAt).slice(0, 16).replace("T", " ") + "）" : "")
       : "Steam" + (it.list ? " · " + esc(it.list) : "") + (it.rank ? " 愿望单#" + it.rank : "");
     var pr = PRECISION_LABEL[it.releasePrecision] || "";
+    // 已经能玩的 → 窗口一律显示「已上线」（它的"还有几天"已经没有意义了）
+    var win = it.live ? "live" : it.window;
     return "<tr>" +
       '<td class="num dim">' + (i + 1) + "</td>" +
       "<td><b>" + esc(it.name) + "</b>" + (bits.length ? '<div class="sub">' + bits.join(" · ") + "</div>" : "") + "</td>" +
+      '<td class="hide-sm">' + assessCell(it) + "</td>" +
       '<td class="dim hide-sm">' + src + "</td>" +
       "<td>" + esc(it.released || "—") + (pr ? ' <span class="tag">' + pr + "</span>" : "") + "</td>" +
-      '<td class="num ' + (it.window === "build" ? "up" : it.window === "close" ? "hot" : "dim") + '">' + daysText(it) + "</td>" +
-      '<td><span class="tag">' + (WINDOW_LABEL[it.window] || esc(it.window || "—")) + "</span></td>" +
-      '<td class="dim hide-sm">' + (TRENDS_LABEL[(it.trends || {}).status] || "未测") + "</td>" +
+      '<td class="num ' + (win === "build" ? "up" : win === "close" ? "hot" : "dim") + '">' + (it.live ? "已可玩" : daysText(it)) + "</td>" +
+      '<td><span class="tag">' + (WINDOW_LABEL[win] || esc(win || "—")) + "</span></td>" +
       '<td class="dim">' + watchLinks(it) + "</td>" +
       "</tr>";
+  }
+
+  /** 统计面板：BloxInformer 那份清单的规模、状态、窗口、评估分布（用户要的"统计"） */
+  function renderWatchStats() {
+    var el = $("watch-stats");
+    if (!el) return;
+    var s = (watch && watch.stats && watch.stats.robloxStats) || null;
+    if (!s) { el.innerHTML = ""; return; }
+    var chip = function (label, arr) {
+      return '<div class="wk-stat"><span class="k">' + esc(label) + "</span>" +
+        (arr || []).map(function (x) {
+          return '<span class="wk-chip">' + esc(x[0]) + " <b>" + x[1] + "</b></span>";
+        }).join("") + "</div>";
+    };
+    el.innerHTML =
+      '<div class="wk-stat wk-stat-head"><span class="k">Roblox 未发售清单</span>' +
+      '<span class="wk-chip">数据来源 <b>' + esc(s.sourceLabel) + "</b></span>" +
+      '<span class="wk-chip">数据时间 <b>' + esc(String(s.dataAt).slice(0, 16).replace("T", " ")) + "</b></span>" +
+      '<span class="wk-chip">原始 <b>' + s.fetchedFromSource + "</b></span>" +
+      '<span class="wk-chip">剔除已发售 <b>' + s.droppedPast + "</b></span>" +
+      '<span class="wk-chip">保留 <b>' + s.kept + "</b></span>" +
+      '<span class="wk-chip">平均分 <b>' + (s.avgScore == null ? "—" : s.avgScore) + "</b></span></div>" +
+      chip("有确切日期 / 有 Roblox 页 / 有 Discord", [["确切日期", s.dated], ["Roblox 页", s.withRobloxPage], ["Discord", s.withDiscord], ["YouTube", s.withYoutube]]) +
+      chip("官方关联（搜索接口）", [
+        ["已关联", s.linked], ["高置信", s.linkedHighConfidence],
+        ["归属不符拒绝", s.linkRejected], ["已上线(可玩)", s.liveDetected], ["本轮交雷达", s.promotedToRadar], ["本轮新搜索", s.linkSearched],
+      ]) +
+      chip("按状态", s.byStatus) +
+      chip("按窗口", s.byWindow) +
+      chip("按潜伏评估", s.byBand) +
+      chip("类型 Top", s.byGenre);
   }
 
   function renderWatch() {
@@ -757,6 +847,7 @@
         "）· 有发售日 " + dated.length + " · 未定档 " + (all.length - dated.length) +
         (state.watchTba ? "（已展开）" : "（已折叠）") + " · 显示 " + rows.length;
     }
+    renderWatchStats();
     var notes = $("watch-notes");
     if (notes) {
       notes.innerHTML = (watch.notes || []).map(function (n) {
@@ -765,8 +856,8 @@
     }
     if (!rows.length) { el.innerHTML = '<p class="empty">该筛选下暂无候选（换来源，或点「显示未定档」）</p>'; return; }
     el.innerHTML = '<div class="table-wrap"><table><thead><tr>' +
-      '<th class="num">#</th><th>游戏</th><th class="hide-sm">来源</th><th>发售日</th>' +
-      '<th class="num">距今</th><th>窗口</th><th class="hide-sm">需求</th><th>链接</th>' +
+      '<th class="num">#</th><th>游戏</th><th class="hide-sm">潜伏评估</th><th class="hide-sm">来源</th><th>发售日</th>' +
+      '<th class="num">距今</th><th>窗口</th><th>链接</th>' +
       "</tr></thead><tbody>" + rows.map(watchRowHtml).join("") + "</tbody></table></div>";
   }
 
@@ -942,12 +1033,16 @@
         name: it.name, source: it.source, list: it.list || "", rank: it.rank || "",
         window: it.window || "", released: it.released || "", releaseInDays: it.releaseInDays == null ? "" : it.releaseInDays,
         releasePrecision: it.releasePrecision || "", players: it.players || "",
+        assessScore: it.assess ? it.assess.score : "", assessBand: it.assess ? it.assess.band.t : "",
+        assessReasons: it.assess ? it.assess.reasons.join(" | ") : "",
+        status: it.status || "",
         genres: (it.genres || []).join("|"), developer: it.developer || "", price: it.price || "", demo: it.demo ? 1 : 0,
         trendsStatus: (it.trends && it.trends.status) || "",
         store: L.page || "", trends: L.trends || "", serp: L.serp || "",
       };
-    }), ["name", "source", "list", "rank", "window", "released", "releaseInDays", "releasePrecision",
-        "players", "genres", "developer", "price", "demo", "trendsStatus", "store", "trends", "serp"]);
+    }), ["name", "source", "list", "rank", "window", "assessScore", "assessBand", "assessReasons", "status",
+        "released", "releaseInDays", "releasePrecision", "players", "genres", "developer", "price", "demo",
+        "trendsStatus", "store", "trends", "serp"]);
   });
   $("pool-csv").addEventListener("click", function () {
     if (!pool) return;

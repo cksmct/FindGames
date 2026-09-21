@@ -19,6 +19,7 @@
  * 🛑 不要用 games.roblox.com/v2/games（新接口）—— 未鉴权时不可靠；
  *    也不要回退到旧的 gamesV2 群组接口，实测对所有组都返回空数组（见 skill 护栏 1）。
  */
+import { randomUUID } from "node:crypto";
 import { log, sleep, iso, dataPath, readJson, writeJson } from "./util.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
@@ -249,4 +250,201 @@ export async function enrichGameStats(items, cfg) {
     if (errors.length > 5) log("dim", `    …还有 ${errors.length - 5} 个`);
   }
   return { mode: "on", checked: need.length, fetched, skipped, failed, errors, requests };
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 潜伏 → 上线：把 BloxInformer 的"未发售"条目关联到 Roblox 官方 universeId
+//
+// 为什么要这一步：潜伏清单与建站推荐原先是**两条互不相通的线** ——
+// 一个游戏在潜伏清单里盯了两个月，上线后不会自动出现在建站推荐里，
+// 要等它自己从 Discover 榜单/热搜里冒出来（可能几天甚至几周后）。
+// 这里用官方搜索接口把名字关联到 universeId，于是：
+//   ① 潜伏条目能直接给出**官方游戏页**（不用再看第三方来源页）
+//   ② 一旦该 universe 的 visits/playing > 0（= 已经能玩）→ 判定"已上线"，
+//      自动推进雷达队列，下一轮就带官方数据进入建站推荐 → **接班完成**
+// ══════════════════════════════════════════════════════════════════════════
+
+/** 归一化游戏名（Roblox 名字带 emoji/装饰，比较前必须先洗） */
+const NAME_NORM = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/** 从 BloxInformer 的社媒链接里取 Roblox 用户/群组 id（用于归属校验） */
+function socialIdFromUrl(url) {
+  const m = String(url || "").match(/roblox\.com\/(?:users|groups)\/(\d+)/i);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * 官方搜索接口（omni-search）。
+ *
+ * ⚠️ 实测两个坑（2026-09-21，比 skill 里记的更严重）：
+ *   ① **`sessionId` 必须是 UUID 格式** —— 传个普通字符串（如 "radar"）会被拒；
+ *   ② 限流极狠：一次 200 之后**隔 4 秒再打就 429**（响应体是 `{"errors":[{"code":0,"message":""}]}`，
+ *      连错误信息都不给）。所以调用方必须：长间隔（默认 6s）+ 每轮极小的上限 + 连续 429 熔断。
+ *   ③ **429 不能当"搜不到"缓存** —— 那是限流，不是结论；否则会把真的存在游戏永久标成"没有"。
+ */
+export async function searchExperiences(name, { sessionId } = {}) {
+  const sid = sessionId || randomUUID();
+  const j = await getJson(
+    `https://apis.roblox.com/search-api/omni-search?searchQuery=${encodeURIComponent(name)}&sessionId=${sid}&pageType=all`,
+    { retries: 0, label: `search/${name}` }
+  );
+  const out = [];
+  for (const grp of j?.searchResults || []) {
+    for (const it of grp?.contents || []) {
+      if (it?.universeId && it?.name) out.push({ name: it.name, universeId: it.universeId, playerCount: it.playerCount ?? null });
+    }
+  }
+  return out;
+}
+
+/** 从 Roblox 游戏页 URL 取 placeId */
+function placeIdFromUrl(url) {
+  const m = String(url || "").match(/roblox\.com\/games\/(\d+)/i);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * 给「未发售」条目关联官方 universeId，并判定是否已经上线。
+ *
+ * 就地写入每个 entry：`universeId` / `robloxPage` / `matchType` / `matchConfidence` /
+ * `live` / `liveStats` / `linkRejected`（校验没过时的原因，不静默丢）。
+ *
+ * 三条护栏：
+ *  ① **名字是弱键**：必须校验归属 —— BloxInformer 给了 Roblox 用户/群组链接时，
+ *     要求解析出的 universe 的 creator.id 与它一致；不一致就拒绝并记录原因。
+ *  ② 搜索只认**严格同名**（归一化后相等），退一步只接受"名字前缀 + 长度接近"。
+ *  ③ 负结果缓存（默认 7 天）+ 每轮搜索上限（默认 12）—— 否则每轮重搜几十个搜不到的名字。
+ */
+export async function linkUpcomingToRoblox(entries, cfg) {
+  const g = cfg.games || {};
+  if (g.upcomingLink === false) return { mode: "off", searched: 0, resolved: 0, live: 0, rejected: 0, errors: [] };
+  const maxPerRun = g.upcomingLinkMaxPerRun ?? 12;
+  const gapMs = g.upcomingLinkGapMs ?? 1200;
+  const negDays = g.upcomingLinkNegativeDays ?? 7;
+
+  const cacheFile = dataPath(cfg, ".roblox-upcoming-universe.json");
+  const cache = readJson(cacheFile, { names: {} });
+  cache.names = cache.names || {};
+  const now = Date.now();
+  const errors = [];
+  let searched = 0;
+
+  const cachedHit = (name) => {
+    const c = cache.names[NAME_NORM(name)];
+    if (!c) return undefined;
+    if (c.universeId) return c;                                     // 正向：永久有效（映射不会变）
+    return now - new Date(c.at).getTime() < negDays * 86400_000 ? null : undefined;
+  };
+
+  // ① 先用 BloxInformer 自己给的 Roblox 页：有就直接用，**不花搜索配额**（搜索接口是这里最贵的资源）
+  const mapFile = universeMapFile(cfg);
+  const umap = readJson(mapFile, { map: {} });
+  umap.map = umap.map || {};
+  let placeResolved = 0;
+  for (const e of entries) {
+    const pid = placeIdFromUrl(e.robloxUrl);
+    if (!pid) continue;
+    e.robloxPage = e.robloxUrl;
+    e.matchType = "source";
+    e.matchConfidence = "high";
+    if (umap.map[pid]) { e.universeId = umap.map[pid]; continue; }   // 复用 enrichGameStats 建的同一份映射缓存
+    if (placeResolved >= (g.upcomingPlaceMaxPerRun ?? 8)) continue;
+    try {
+      placeResolved++;
+      const u = await getJson(`https://apis.roblox.com/universes/v1/places/${pid}/universe`, { retries: 0, label: `place/${pid}` });
+      if (u?.universeId) { umap.map[pid] = u.universeId; e.universeId = u.universeId; }
+    } catch (err) {
+      errors.push(`${e.name} place→universe: ${err.message}`);
+    }
+    await sleep(gapMs);
+  }
+  writeJson(mapFile, { updated: iso(), map: umap.map }, true);
+
+  // ② 剩下的按名字搜索：长间隔 + 小上限 + **连续 429 熔断**
+  //    （实测一次 200 之后隔 4 秒就 429，所以绝不能像别的接口那样连打）
+  let consecutive429 = 0;
+  for (const e of entries) {
+    if (e.universeId) continue;
+    const hit = cachedHit(e.name);
+    if (hit !== undefined) continue;                    // 有缓存（正向或未过期的负向）就不再搜
+    if (searched >= maxPerRun) break;
+    if (consecutive429 >= (g.upcomingLinkStopAfter429 ?? 2)) {
+      errors.push("搜索接口连续 429，本轮提前结束（剩下的下一轮继续）");
+      break;
+    }
+    searched++;
+    try {
+      const found = await searchExperiences(e.name);
+      consecutive429 = 0;
+      const target = NAME_NORM(e.name);
+      const exact = found.filter((x) => NAME_NORM(x.name) === target);
+      const near = found.find((x) => NAME_NORM(x.name).startsWith(target) && NAME_NORM(x.name).length <= target.length + 12);
+      const pick = exact[0] || near || null;
+      cache.names[target] = pick
+        ? { universeId: pick.universeId, matchType: exact.length ? "exact" : "prefix", at: iso() }
+        : { universeId: null, at: iso() };
+    } catch (err) {
+      if (/429|限流/.test(err.message)) {
+        consecutive429++;
+        errors.push(`${e.name}: 429（搜索接口约 6 秒才有 1 次机会）`);
+      } else {
+        errors.push(`${e.name}: ${err.message}`);
+      }
+      // 🛑 429 绝不能写进负缓存 —— 那是"被限流"，不是"这个游戏不存在"
+    }
+    await sleep(gapMs);
+  }
+
+  // ③ 批量取所有已关联 universeId 的官方数据（50 个一批，通常 1~2 次请求）
+  const ids = [...new Set([
+    ...entries.map((e) => e.universeId).filter(Boolean),
+    ...Object.values(cache.names).map((x) => x && x.universeId).filter(Boolean),
+  ])];
+  let gamesMap = new Map();
+  if (ids.length) {
+    const r = await fetchGamesByIds(ids, 200);
+    gamesMap = r.map;
+    errors.push(...r.errors);
+  }
+
+  // ④ 回填到条目（含归属校验）
+  let resolved = 0;
+  let live = 0;
+  let rejected = 0;
+  for (const e of entries) {
+    const c = cache.names[NAME_NORM(e.name)];
+    const uid = e.universeId || (c && c.universeId);
+    if (!uid) continue;
+    resolved++;
+    e.universeId = uid;
+    if (!e.matchType) e.matchType = c ? c.matchType : "";
+    const d = gamesMap.get(uid);
+    const wantId = socialIdFromUrl(e.social && e.social.robloxGroup);
+    if (wantId && d?.creator && d.creator.id !== wantId) {
+      // 归属不符：可能是同名仿作 → 拒绝关联，但把原因留在条目上（不静默丢弃）
+      e.linkRejected = `creator ${d.creator.id}（${d.creator.name}）≠ 官方社媒账号 ${wantId}`;
+      rejected++;
+      continue;
+    }
+    // 归属校验通过（或有官方社媒账号佐证）→ high；仅靠严格同名 → medium；前缀匹配 → low
+    e.matchConfidence = wantId ? "high" : (e.matchType === "exact" ? "medium" : e.matchType === "source" ? "high" : "low");
+    if (d) {
+      e.robloxPage = d.rootPlaceId ? `https://www.roblox.com/games/${d.rootPlaceId}` : `https://www.roblox.com/games/${uid}`;
+      e.liveStats = { visits: d.visits ?? null, playing: d.playing ?? null, created: d.created || null, updated: d.updated || null };
+      e.live = (d.visits ?? 0) > 0 || (d.playing ?? 0) > 0;
+      if (e.live) live++;
+    } else {
+      // 关联上了但 games 接口没有这条（未发布体验常见）→ 仍给官方页，只是不知道是否可玩
+      e.robloxPage = e.robloxPage || `https://www.roblox.com/games/${uid}`;
+      e.live = false;
+      if (e.matchConfidence === "high" && !wantId) e.matchConfidence = "medium";
+    }
+  }
+
+  writeJson(cacheFile, cache, true);
+  if (searched || resolved || live) {
+    log("dim", `  Roblox 关联：新搜索 ${searched} · 已关联 ${resolved} · 判定已上线 ${live}${rejected ? " · 归属不符拒绝 " + rejected : ""} · 请求 ${chunk(ids, 50).length}`);
+  }
+  for (const e of errors.slice(0, 4)) log("dim", `    ! ${e}`);
+  return { mode: "on", searched, resolved, live, rejected, errors, resolvedTotal: ids.length };
 }

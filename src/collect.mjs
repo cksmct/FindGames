@@ -14,6 +14,7 @@
  *   node src/collect.mjs --no-games              跳过游戏雷达
  *   node src/collect.mjs --only-games            只跑游戏雷达
  */
+import path from "node:path";
 import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, writeJson, dataPath } from "./lib/util.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio } from "./lib/interest.mjs";
@@ -30,6 +31,7 @@ import { buildKeywordPool } from "./lib/pool.mjs";
 import { translateToZh } from "./lib/translate.mjs";
 import { collectSourceCandidates } from "./lib/sources.mjs";
 import { enrichGameStats } from "./lib/roblox.mjs";
+import { enrichSteamStats } from "./lib/steam.mjs";
 import { pushQueue, peekQueue, dropQueue } from "./lib/queue.mjs";
 import { buildWatchlist } from "./lib/watchlist.mjs";
 
@@ -46,6 +48,8 @@ if (args["max-curves"]) cfg.games.maxCurvesPerRun = Number(args["max-curves"]);
 if (args["no-sources"]) cfg.games.sources = { roblox: false, steam: false };
 if (args["no-watchlist"]) cfg.watchlist = { ...(cfg.watchlist || {}), enabled: false };
 if (args["only-watchlist"]) cfg._onlyWatchlist = true;
+// 把浏览器里另存的 BloxInformer 页面直接喂进来（无视保鲜期检查，因为是你刚存的）
+if (args["roblox-html"]) cfg._robloxHtmlPath = path.resolve(String(args["roblox-html"]));
 
 const session = await createSession();
 log("info", `会话就绪 ${session.cookie ? "(已获取 cookie)" : "(无 cookie)"}`);
@@ -347,69 +351,91 @@ if (cfg.games.enabled) {
     const prev = known.get(key);
     const needRelated = !!c.needRelated; // 已由候选筛选阶段判定
     await sleep(cfg.games.delayMs ?? 2500);
+
+    // 先单独取曲线：**让"取不到曲线"和"曲线是空的"都能被统一处理**
+    let curve = null;
+    let curveErr = null;
     try {
-      const curve = await fetchInterest(session, c.q, geo, {
+      curve = await fetchInterest(session, c.q, geo, {
         timeframe: cfg.games.timeframe || "now 7-d",
         sampleEveryHours: cfg.games.sampleEveryHours || 4,
         withRelated: needRelated,
       });
-      if (!curve || curve.series.length < 2 || curve.peak <= 0) continue; // 零信号不要
-      const hype = hypeRatio(curve.series);
-      const score = scoreKeyword({
-        vol: c.vol, growth: c.growth, hype, weight: c.weight,
-        // feedback.boost 里的词加分：你判断值得做的，让它排前面
-        feedbackBoost: feedbackVerdict(c.q, cfg.feedback) === "boost" ? FEEDBACK_BOOST_PTS : 0,
-      });
-      // Rising 先做相关性过滤（剔除同期爆红的无关词），Top 本身质量高、不过滤
-      const nameTokens = tokensOf(c.q);
-      const rising = (curve.rising || []).filter((w) => relevantTo(w, nameTokens)).slice(0, maxWords);
-      const top = (curve.top || []).slice(0, maxWords);
-      // 优先收「上升」词，不足再用「最热门」词补齐 ——
-      // 实测很多词只有 top、rising 是空的（如 wordle hints / xbox game pass）
-      const words = [];
-      for (const w of [...rising, ...top]) {
-        if (words.length >= maxWords) break;
-        if (!words.includes(w)) words.push(w);
-      }
-      known.set(key, {
-        name: c.q,
-        series: curve.series,
-        chart_at: iso(),
-        related_at: needRelated ? iso() : prev?.related_at || iso(),
-        chart_geo: geo,
-        first: prev?.first || iso(),
-        last: iso(),
-        sightings: (prev?.sightings || 0) + 1,
-        hype,
-        score,
-        reason: prev?.reason || c.reason,
-        src: prev?.src || (c.trusted ? c.srcInfo.source : ""),
-        srcUrl: prev?.srcUrl || (c.trusted ? c.srcInfo.url : ""),
-        srcList: prev?.srcList || (c.trusted ? c.srcInfo.kind || c.srcInfo.list || "" : ""),
-        cats: c.cats && c.cats.length ? c.cats : prev?.cats || [],
-        geos: Array.from(new Set([...(prev?.geos || []), c.geo])).slice(0, 8),
-        rising: rising.length ? rising : prev?.rising || [],
-        words: words.length ? words : prev?.words || [],
-      });
-      // 这些就是可直接起标题的攻略词，一并汇入关键词池
-      for (const w of words) gameKw.push({ q: w, parents: [c.q], geo: [c.geo] });
-      kwAdded += words.length;
-      added++;
-      consecutive429 = 0;
-      log("ok", `  🎮 ${c.q} (${geo}) score=${score} hype=${hype} 峰值=${curve.peak} 攻略词=${words.length}`);
     } catch (e) {
-      log("warn", `  ${c.q} 曲线失败: ${e.message}`);
-      if (/429|限流/.test(e.message)) {
-        consecutive429++;
-        rlFailed.add(c.q);
-        if (consecutive429 >= rlStop) {
-          log("warn", `曲线接口连续 ${consecutive429} 次限流，本轮提前结束（未验证的候选留在队列，下轮继续）`);
-          break;
-        }
-      } else {
-        consecutive429 = 0;
-      }
+      curveErr = e;
     }
+
+    // 曲线门槛（第 ⑧ 道）：零信号不要 —— 但**来自潜伏清单的"已上线"条目例外**。
+    // 为什么例外：它们是我们在潜伏清单里盯到上线的游戏，官方数据（访问/好评/上线日）已经拿到，
+    // 曲线只影响"需求动能"与攻略词，不该当准入门槛。
+    // 实测：不加这条例外，Starforged / Magoi / A Bizarre Race 这类新游戏
+    //   ① 在 Trends 上本来就没有曲线 → 被整条丢弃；
+    //   ② 或者恰好碰到 429 → 被当失败 → 盯了几个月的成果直接蒸发。
+    const promoted = c.srcInfo && c.srcInfo.via === "watchlist-live";
+    const hasCurve = curve && curve.series.length >= 2 && curve.peak > 0;
+
+    if (!hasCurve && !promoted) {
+      if (curveErr) {
+        log("warn", `  ${c.q} 曲线失败: ${curveErr.message}`);
+        if (/429|限流/.test(curveErr.message)) {
+          consecutive429++;
+          rlFailed.add(c.q);
+          if (consecutive429 >= rlStop) {
+            log("warn", `曲线接口连续 ${consecutive429} 次限流，本轮提前结束（未验证的候选留在队列，下轮继续）`);
+            break;
+          }
+        } else {
+          consecutive429 = 0;
+        }
+      }
+      continue;
+    }
+    if (curveErr) log("dim", `  ${c.q} 曲线拿不到（${curveErr.message}）→ 潜伏转正条目，用官方数据收录`);
+
+    const hype = hasCurve ? hypeRatio(curve.series) : 0;
+    const score = scoreKeyword({
+      vol: c.vol, growth: c.growth, hype, weight: c.weight,
+      // feedback.boost 里的词加分：你判断值得做的，让它排前面
+      feedbackBoost: feedbackVerdict(c.q, cfg.feedback) === "boost" ? FEEDBACK_BOOST_PTS : 0,
+    });
+    // Rising 先做相关性过滤（剔除同期爆红的无关词），Top 本身质量高、不过滤
+    // （无曲线时 curve 为 null，必须都做空值保护）
+    const nameTokens = tokensOf(c.q);
+    const rising = ((curve && curve.rising) || []).filter((w) => relevantTo(w, nameTokens)).slice(0, maxWords);
+    const top = ((curve && curve.top) || []).slice(0, maxWords);
+    // 优先收「上升」词，不足再用「最热门」词补齐 ——
+    // 实测很多词只有 top、rising 是空的（如 wordle hints / xbox game pass）
+    const words = [];
+    for (const w of [...rising, ...top]) {
+      if (words.length >= maxWords) break;
+      if (!words.includes(w)) words.push(w);
+    }
+    known.set(key, {
+      name: c.q,
+      series: hasCurve ? curve.series : (prev?.series || []),   // 无曲线时保留旧曲线，不写空数组覆盖
+      chart_at: iso(),
+      related_at: needRelated ? iso() : prev?.related_at || iso(),
+      chart_geo: geo,
+      first: prev?.first || iso(),
+      last: iso(),
+      sightings: (prev?.sightings || 0) + 1,
+      hype,
+      score,
+      reason: prev?.reason || (promoted && !hasCurve ? "潜伏清单转正（Trends 暂无曲线）" : c.reason),
+      src: prev?.src || (c.trusted ? c.srcInfo.source : ""),
+      srcUrl: prev?.srcUrl || (c.trusted ? c.srcInfo.url : ""),
+      srcList: prev?.srcList || (c.trusted ? c.srcInfo.kind || c.srcInfo.list || "" : ""),
+      cats: c.cats && c.cats.length ? c.cats : prev?.cats || [],
+      geos: Array.from(new Set([...(prev?.geos || []), c.geo])).slice(0, 8),
+      rising: rising.length ? rising : prev?.rising || [],
+      words: words.length ? words : prev?.words || [],
+    });
+    // 这些就是可直接起标题的攻略词，一并汇入关键词池
+    for (const w of words) gameKw.push({ q: w, parents: [c.q], geo: [c.geo] });
+    kwAdded += words.length;
+    added++;
+    consecutive429 = 0;
+    log("ok", `  🎮 ${c.q} (${geo}) score=${score} hype=${hype} 峰值=${hasCurve ? curve.peak : "无"} 攻略词=${words.length}${promoted && !hasCurve ? "（潜伏转正）" : ""}`);
   }
 
   // 本轮处理过的来源候选出队：成功的已进 known（下一轮不会再被选），失败的不再堵队首
@@ -448,12 +474,19 @@ if (cfg.games.enabled) {
   // 55 个游戏稳态只要 2 次请求，不必再为了省配额把它压到 7 天。失败保留旧值。
   const statRes = await enrichGameStats(list, cfg);
 
+  // ── 补 Steam 官方数据（发售日 / 评价数 / 好评率 / 在线人数）──
+  // 与 Roblox 侧同一目的：让"建站推荐"对非 Roblox 游戏也能算需求/口碑/新鲜度。
+  // 注意 appdetails 不支持多 appid 批量 → 每个游戏 3 次请求，所以靠 TTL + 每轮上限控制。
+  const steamRes = await enrichSteamStats(list, cfg);
+
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
   writeGames(cfg, list);
   log("ok", `输出 data/games.json（${list.length} 个，本轮新增 ${added}，挖到攻略词 ${kwAdded} 个）`);
   if (statRes.mode === "on") {
-    const withStats = list.filter((x) => x.stats?.visits != null).length;
-    log("dim", `  官方数据覆盖：${withStats}/${list.length} 条（其余为 Steam/App Store 来源或无 Roblox 页）`);
+    const rbx = list.filter((x) => x.stats?.visits != null).length;
+    const stm = list.filter((x) => x.stats?.platform === "steam").length;
+    const unknown = list.filter((x) => !x.stats || (x.stats.visits == null && x.stats.platform !== "steam")).length;
+    log("dim", `  官方数据覆盖：Roblox ${rbx} · Steam ${stm} · 仍缺 ${unknown}/${list.length}（缺的多是热搜候选：AAA 或根本不是游戏）`);
   }
 }
 

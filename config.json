@@ -49,8 +49,23 @@
     "delayMs": 3500,
     "rateLimitStop": 2,
     "relatedWords": 12,
-    "excludeAAA": false,
+    "excludeAAA": true,
     "statsEnabled": true,
+    "upcomingLink": true,
+    "upcomingLinkMaxPerRun": 1,
+    "upcomingLinkGapMs": 2000,
+    "upcomingLinkStopAfter429": 1,
+    "upcomingLinkNegativeDays": 7,
+    "upcomingPlaceMaxPerRun": 8,
+    "steamStats": {
+      "enabled": true,
+      "refreshHours": 6,
+      "maxPerRun": 40,
+      "gapMs": 350,
+      "resolveByName": true,
+      "nameResolveMaxPerRun": 15,
+      "nameNegativeDays": 7
+    },
     "statsRefreshHours": 1,
     "statsMaxPerRun": 300,
     "statsDelayMs": 250,
@@ -77,7 +92,9 @@
     },
     "robloxUpcoming": {
       "enabled": true,
-      "cacheHours": 12,
+      "directFetch": true,
+      "waybackFallback": true,
+      "cacheHours": 1,
       "overrideMaxDays": 3,
       "dropPast": true,
       "maxItems": 80
@@ -91,7 +108,20 @@
     "trendsFreshDays": 3
   },
   "feedback": {
-    "block": [],
+    "block": [
+      "fc 27",
+      "madden 27",
+      "companion app fc 27",
+      "sony playstation",
+      "wordle hints",
+      "30th anniversary pokemon cards",
+      "target 30th anniversary pokemon",
+      "pokémon 30 jahre top trainer box",
+      "caribeña noche",
+      "once hoy",
+      "sinuano noche",
+      "physint hideo kojima"
+    ],
     "boost": []
   },
   "judge": {

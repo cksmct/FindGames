@@ -8,10 +8,10 @@
  *     而它自述数据来自「官方公告 + Discord 爆料 + 开发者社媒」——即**第三方人工核实**，不是官方 API
  *
  * 所以本模块做三件事：
- *   ① 用 **Wayback 快照**取 BloxInformer Release Hub 的页面（直连被 Cloudflare 403，快照可抓）
- *   ② 从页面**内嵌 JSON** 里解析出结构化的即将发售清单（含发售日时间戳与状态）
- *   ③ 支持**本地覆盖文件**：把浏览器里另存的页面丢到 data/roblox-upcoming.html，
- *      就会优先用它（新鲜度可自控），快照只是兜底
+ *   ① **直连** BloxInformer Release Hub（Node fetch 会被 Cloudflare 按 TLS 指纹拦，
+ *      自动换 `curl` 通道即可 200 —— 见 web-fetch.mjs）
+ *   ② 从页面**内嵌 JSON**（`window.urgArchiveData`）里解析出结构化清单（发售日时间戳 + 状态 + 社媒）
+ *   ③ 三级兜底：本地覆盖文件（你在浏览器里另存的页面）> 1 小时缓存 > Wayback 存档 + 旧缓存
  *
  * 三条硬护栏：
  *   · **绝不把快照当成"今天的实时数据"**：每条都带 snapshotAt，过期了要在页面上显式告警
@@ -19,6 +19,7 @@
  *   · 快照里已经发售的条目（releaseTimestamp 已过）默认**剔除并计数**，但要如实报出剔除了几条
  */
 import { dataPath, readJson, writeJson, iso, log, sleep, retry } from "./util.mjs";
+import { fetchPage } from "./web-fetch.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const PAGE = "https://bloxinformer.com/upcoming-roblox-games/";
@@ -248,6 +249,89 @@ async function getText(url, label, timeoutMs = 30000, retries = 1) {
   }
 }
 
+/**
+ * 潜伏评分（0~100）——**只用于"还没上线"的候选**，四个维度都是上线前可测的：
+ *
+ *   发布确定性 35  官方/开发者口风（Confirmed > Beta/Early Access > In Development > Pre-Alpha > Delayed > Maybe Cancelled）
+ *   日期精确度 25  确切日期 > 月份 > 季度 > 年份 > 未定档（决定"现在动手来不来得及"）
+ *   内容面     20  由 genres 推断"能写多少页面"（图鉴/配队类 ≫ 只值得做 codes 的玩法）
+ *   社区地基   20  有无 Discord / YouTube / Roblox 群组（有社群才有需求地基）
+ *
+ * 它与"窗口"(build/close/far) 是两个正交维度：评分高但窗口只剩 7 天 = 来不及；
+ * 评分低哪怕还有 3 个月 = 也不值得投。
+ *
+ * 🛑 这是**启发式**，不是实测：内容面靠 genres 推断（页面没有"能写多少页"这种字段）。
+ *    所以理由必须跟着分数一起显示，让人能一眼反驳它。
+ */
+const GENRE_TIERS = [
+  { re: /monster catching|turn based|rpg|adventure|open world/i, score: 92, why: "有单位/技能/养成体系（图鉴·配队·流派页可写）" },
+  { re: /survival|tycoon|simulator|simulation|sports|strategy/i, score: 70, why: "有系统/道具/升级线（攻略页中等）" },
+  { re: /action|shooter|horror|anime|racing|puzzle|fighting|battle/i, score: 52, why: "攻略面偏薄（多为机制/通关说明）" },
+  { re: /escape|obby|platformer|rng|party|casual|social|utility/i, score: 28, why: "内容面窄，通常只值得做 codes 页" },
+];
+const STATUS_TIERS = [
+  { re: /confirmed|release date|launch date/i, score: 100, label: "已确认" },
+  { re: /beta|early access/i, score: 82, label: "测试中" },
+  // 容忍站方拼写错误（实测有 "In Deveopment" 这种）
+  { re: /in deve?lop/i, score: 55, label: "开发中" },
+  { re: /pre-?alpha|alpha/i, score: 40, label: "早期原型" },
+  { re: /delayed/i, score: 30, label: "已延期" },
+  { re: /maybe cancelled|cancelled|canceled/i, score: 5, label: "可能取消" },
+];
+
+/** @param {object} g normalizeEntry 的输出（含 status/genres/social/releasePrecision/releaseInDays） */
+export function scoreUpcoming(g) {
+  const reasons = [];
+  const missing = [];
+
+  // ① 发布确定性
+  const statusStr = String(g.status || "");
+  let st = { score: 45, label: "未标注" };
+  for (const t of STATUS_TIERS) if (t.re.test(statusStr)) { st = t; break; }
+  if (!statusStr) missing.push("状态未标注");
+  reasons.push(`发布确定性 ${st.score}（${st.label}：${statusStr || "未标注"}）`);
+
+  // ② 日期精确度
+  const dp = g.releasePrecision || "unknown";
+  const CONF = { day: 100, month: 70, quarter: 55, year: 40, unknown: 15 };
+  const dateScore = CONF[dp] == null ? 15 : CONF[dp];
+  reasons.push(`日期 ${dateScore}（${{ day: "确切日期", month: "只有月份", quarter: "只有季度", year: "只有年份" }[dp] || "未定档"}：${g.released || "—"}）`);
+
+  // ③ 内容面（取命中里**最高**的一档）
+  let surface = 30;
+  let surfaceWhy = "类型不足以判断（按最低档计）";
+  for (const t of GENRE_TIERS) {
+    if ((g.genres || []).some((x) => t.re.test(String(x)))) { surface = t.score; surfaceWhy = t.why; break; }
+  }
+  if (!(g.genres || []).length) missing.push("无类型标注");
+  reasons.push(`内容面 ${surface}（${(g.genres || []).join("/") || "无类型"} → ${surfaceWhy}）`);
+
+  // ④ 社区地基
+  const social = g.social || {};
+  let community = 0;
+  const have = [];
+  if (social.discord) { community += 8; have.push("Discord"); }
+  if (social.youtube) { community += 6; have.push("YouTube"); }
+  if (social.robloxGroup) { community += 6; have.push("Roblox 群组"); }
+  community = Math.min(20, community);
+  if (!have.length) missing.push("无任何社媒链接");
+  reasons.push(`社区地基 ${community}（${have.join(" + ") || "无"}）`);
+
+  const score = Math.round(st.score * 0.35 + dateScore * 0.25 + surface * 0.2 + community * 0.2);
+
+  // 风险与窗口
+  const risky = /maybe cancelled|cancelled|canceled|delayed/i.test(statusStr);
+  const d = g.releaseInDays;
+  let band;
+  if (d != null && d < 7) band = { k: "too-late", t: "窗口已过（≤7 天）" };
+  else if (risky) band = { k: "risk", t: "风险（延期 / 可能取消）" };
+  else if (score >= 75) band = { k: "go", t: "值得潜伏" };
+  else if (score >= 55) band = { k: "watch", t: "观察" };
+  else band = { k: "no", t: "暂不" };
+
+  return { score, band, reasons, missing };
+}
+
 /** 时间戳 → ISO（必须用 UTC，本机 UTC+8 用本地时区会差一天） */
 export function tsToIso(ts) {
   if (!ts || ts.length < 8) return "";
@@ -285,7 +369,15 @@ export async function waybackLatestViaCdx(pageUrl = PAGE) {
 
 /**
  * 取「即将发售」原始记录（带缓存）。
- * 优先级：本地覆盖文件 > 12 小时内的缓存 > Wayback 快照
+ *
+ * 🛑 2026-09-21 重排优先级（用户质问"为什么走 Wayback，不能直接抓吗"）：
+ *    实测 **curl 直连 bloxinformer.com 返回 200 + 完整页面** —— 根本不需要 Wayback。
+ *    所以现在的顺序是：
+ *      ① 本地覆盖文件（你自己另存的页面，最新鲜）
+ *      ② 1 小时内的缓存
+ *      ③ **直连**（`fetchPage`：Node fetch → 被 CF 拦就换 curl 通道）
+ *      ④ Wayback 快照（仅当直连也不通时的兜底；实测 Internet Archive 会整站 503）
+ *      ⑤ 任意年龄的旧缓存 + stale 标记（旧数据也好过没有，但要如实标注）
  * @returns {Promise<{items:Array, snapshotAt:string, source:string, stale:boolean}>}
  */
 export async function loadRobloxUpcoming(cfg) {
@@ -295,71 +387,92 @@ export async function loadRobloxUpcoming(cfg) {
   const cache = readJson(cacheFile, null);
   const now = Date.now();
   const cacheFresh = cache && cache.parserVersion === PARSER_VERSION && cache.fetchedAt &&
-    now - new Date(cache.fetchedAt).getTime() < (w.cacheHours || 12) * 3600000;
+    now - new Date(cache.fetchedAt).getTime() < (w.cacheHours || 1) * 3600000;
+  const save = (raw, snapshotAt, source, extra = {}) =>
+    writeJson(cacheFile, Object.assign({ parserVersion: PARSER_VERSION, fetchedAt: iso(), snapshotAt, source, raw }, extra), true);
 
   // ① 本地覆盖文件（你在浏览器里另存的页面）——最新鲜，优先
-  const overrideFile = dataPath(cfg, "roblox-upcoming.html");
+  const overrideFile = cfg._robloxHtmlPath || dataPath(cfg, "roblox-upcoming.html");
   try {
     if (fs.existsSync(overrideFile)) {
       const st = fs.statSync(overrideFile);
       const ageDays = (now - st.mtimeMs) / 86400000;
-      if (ageDays <= (w.overrideMaxDays || 3)) {
+      if (cfg._robloxHtmlPath || ageDays <= (w.overrideMaxDays || 3)) {
         const raw = parseBloxInformer(fs.readFileSync(overrideFile, "utf8")).games;
         const snapAt = iso(new Date(st.mtimeMs));
-        writeJson(cacheFile, { parserVersion: PARSER_VERSION, fetchedAt: iso(), snapshotAt: snapAt, source: "local-override", raw }, true);
+        save(raw, snapAt, "local-override");
         return { items: raw, snapshotAt: snapAt, source: "local-override", stale: false };
       }
-      log("dim", `  Roblox 即将发售：本地覆盖文件已过期（${ageDays.toFixed(1)} 天 > ${w.overrideMaxDays} 天），改用快照`);
+      log("dim", `  Roblox 即将发售：本地覆盖文件已过期（${ageDays.toFixed(1)} 天 > ${w.overrideMaxDays} 天），改用直连`);
     }
   } catch (e) {
-    log("warn", `  Roblox 即将发售：本地覆盖文件解析失败（${e.message}），改用快照`);
+    log("warn", `  Roblox 即将发售：本地覆盖文件解析失败（${e.message}），改用直连`);
   }
 
-  // ② 缓存
+  // ② 缓存（默认 1 小时）
   if (cacheFresh && cache.raw && cache.raw.length) {
-    const ageDays = (now - new Date(cache.snapshotAt).getTime()) / 86400000;
-    return { items: cache.raw, snapshotAt: cache.snapshotAt, source: cache.source, stale: ageDays > 21 };
+    const ageH = (now - new Date(cache.snapshotAt).getTime()) / 3600000;
+    return { items: cache.raw, snapshotAt: cache.snapshotAt, source: cache.source, stale: ageH > 26 };
   }
 
-  // ③ Wayback 快照：三条通道依次试（实测稳定性 直链 > 最近快照入口 > CDX），
-  //    全失败才降级用任何年龄的缓存 —— 旧数据也好过没有数据，只要如实标注。
-  const channels = [];
-  if (cache && cache.snapshotUrl) channels.push(["cached-url", () => fetchSnapshotUrl(cache.snapshotUrl)]);
-  channels.push(["latest", () => fetchWaybackLatest(PAGE)]);
-  channels.push(["cdx", async () => {
-    const s = await waybackLatestViaCdx(PAGE);
-    if (!s) throw new Error("CDX 里没有快照");
-    return fetchSnapshotUrl(s.url);
-  }]);
-
-  let snap = null;
   let lastErr = null;
-  for (const [name, fn] of channels) {
-    try {
-      snap = await fn();
-      if (snap && snap.html) { snap.channel = name; break; }
-    } catch (e) {
-      lastErr = e;
-      log("dim", `  Roblox 即将发售：通道 ${name} 失败（${e.message}），换下一个`);
-    }
-    await sleep(1200);
-  }
 
-  if (snap && snap.html) {
+  // ③ 直连（Node fetch → curl 兜底）
+  if (w.directFetch !== false) {
     try {
-      const raw = parseBloxInformer(snap.html).games;
-      const snapshotAt = tsToIso(snap.ts) || iso();
-      writeJson(cacheFile, { parserVersion: PARSER_VERSION, fetchedAt: iso(), snapshotAt, snapshotUrl: snap.url, source: "wayback:" + snap.channel, raw }, true);
-      const ageDays = (now - new Date(snapshotAt).getTime()) / 86400000;
-      return { items: raw, snapshotAt, source: "wayback:" + snap.channel, stale: ageDays > 21 };
+      const res = await fetchPage(PAGE, { timeoutMs: 30000, label: "bloxinformer/upcoming" });
+      const raw = parseBloxInformer(res.html).games;
+      const snapshotAt = iso();
+      save(raw, snapshotAt, "direct:" + res.via);
+      if (res.via === "curl") log("dim", "  Roblox 即将发售：Node fetch 被 Cloudflare 拦，curl 通道直连成功");
+      return { items: raw, snapshotAt, source: "direct:" + res.via, stale: false };
     } catch (e) {
       lastErr = e;
+      log("dim", `  Roblox 即将发售：直连失败（${e.message}）`);
     }
   }
 
+  // ④ Wayback 兜底：三条通道依次试（实测稳定性 直链 > 最近快照入口 > CDX）
+  if (w.waybackFallback !== false) {
+    const channels = [];
+    if (cache && cache.snapshotUrl) channels.push(["cached-url", () => fetchSnapshotUrl(cache.snapshotUrl)]);
+    channels.push(["latest", () => fetchWaybackLatest(PAGE)]);
+    channels.push(["cdx", async () => {
+      const s = await waybackLatestViaCdx(PAGE);
+      if (!s) throw new Error("CDX 里没有快照");
+      return fetchSnapshotUrl(s.url);
+    }]);
+
+    let snap = null;
+    for (const [name, fn] of channels) {
+      try {
+        snap = await fn();
+        if (snap && snap.html) { snap.channel = name; break; }
+      } catch (e) {
+        lastErr = e;
+        log("dim", `  Roblox 即将发售：存档通道 ${name} 失败（${e.message}）`);
+      }
+      await sleep(1200);
+    }
+
+    if (snap && snap.html) {
+      try {
+        const raw = parseBloxInformer(snap.html).games;
+        const snapshotAt = tsToIso(snap.ts) || iso();
+        save(raw, snapshotAt, "wayback:" + snap.channel, { snapshotUrl: snap.url });
+        const ageDays = (now - new Date(snapshotAt).getTime()) / 86400000;
+        log("warn", `  Roblox 即将发售：直连不通，退回 Wayback 快照（${snapshotAt.slice(0, 10)}）`);
+        return { items: raw, snapshotAt, source: "wayback:" + snap.channel, stale: ageDays > 21 };
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+  }
+
+  // ⑤ 任意年龄的旧缓存
   if (cache && cache.parserVersion === PARSER_VERSION && Array.isArray(cache.raw) && cache.raw.length) {
-    log("warn", `  Roblox 即将发售：快照不可用（${lastErr ? lastErr.message : "无快照"}），降级使用 ${String(cache.snapshotAt).slice(0, 10)} 的旧缓存`);
-    return { items: cache.raw, snapshotAt: cache.snapshotAt, source: String(cache.source || "cache") + "+stale", stale: true, error: lastErr ? lastErr.message : "无快照" };
+    log("warn", `  Roblox 即将发售：直连与存档都不可用（${lastErr ? lastErr.message : "无可用通道"}），降级使用 ${String(cache.snapshotAt).slice(0, 16)} 的旧缓存`);
+    return { items: cache.raw, snapshotAt: cache.snapshotAt, source: String(cache.source || "cache") + "+stale", stale: true, error: lastErr ? lastErr.message : "无可用通道" };
   }
-  throw lastErr || new Error("Wayback 上没有该页快照");
+  throw lastErr || new Error("BloxInformer 页面取不到（直连与存档都失败）");
 }

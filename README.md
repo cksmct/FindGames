@@ -495,15 +495,38 @@ boost 词 aion 2 是否保留: ✅   score=7（feedbackBoost 贡献 +6）
 词池里的 block 词: ✅ 已清
 ```
 
-### AAA 大作黑名单（`games.excludeAAA`，默认关）
+### AAA 大作黑名单（`games.excludeAAA`）
+
+> ⚠️ **2026-09-21 已开启**（用户要求清掉推荐列表里的 AAA 噪音）。
 
 **这是「能不能做」的维度，不是「是不是新游戏」的维度。**
 
 `gta 6` / `fifa 27` / `roblox` / `fortnite` 确实是新游戏、也确实火 —— 但对做内容站的人是**纯噪音**：官方站权重极高、攻略站多如牛毛，**你根本排不上去**。它们出现在雷达里只会浪费取曲线的配额。
 
 ```jsonc
-"games": { "excludeAAA": true }   // 默认 false，不改动现有行为
+"games": { "excludeAAA": true }
 ```
+
+**它盖不住的部分用 `feedback.block` 补**（正则只认"系列名"，`fc 27` 这种缩写、以及压根不是游戏的热搜词都得手动列）。
+实测把下面这批加进 `feedback.block` 后，"缺官方数据"的条目从 **25 → 5**：
+
+```jsonc
+"feedback": { "block": [
+  "fc 27", "madden 27", "companion app fc 27", "sony playstation",   // 年度体育 AAA / 厂商词
+  "wordle hints",                                                     // 工具词
+  "30th anniversary pokemon cards", "target 30th anniversary pokemon",
+  "pokémon 30 jahre top trainer box",                                 // 实体卡
+  "caribeña noche", "once hoy", "sinuano noche",                      // 西语电视剧
+  "physint hideo kojima"                                              // 人名型查询
+] }
+```
+
+`feedback.block` 是**确定性信号**，优先级高于任何启发式规则，且**存量也会被清掉**（下一轮采集自动重筛）。
+
+**故意没动的 5 条**（属于"有可能值得做、但也是大 IP"的灰区，留给人判断）：
+`wow forever beta` / `how to install wow forever beta` / `wow forever beta installieren` /
+`horizon forbidden west` / `fire emblem` —— README 早先的回归测试把它们当作"自建 IP 续作不误伤"的样本。
+要一起清，把名字加进 `feedback.block` 即可。
 
 实测开关前后（同一份 38 国样本）：
 
@@ -680,7 +703,7 @@ srcUrl 的 placeId → apis.roblox.com/universes/v1/places/{id}/universe
 
 | 项 | 权重 | 怎么算 | 说明 |
 |---|---|---|---|
-| **需求规模** | 22 | 访问量 log 归一，**单调递增**（1e5→0 · 1e6→33 · 1e7→66 · 1e8→100） | 越大越好，只代表"有多少人在找" |
+| **需求规模** | 22 | log 归一、**单调递增**，锚点按平台分开：Roblox 终身访问量（1e5→0 · 1e8→100）／Steam 当前在线（1→0 · 5000→100，为 0 时退回评价数） | 越大越好，只代表"有多少人在找" |
 | **内容面** | 20 | 已挖到的攻略词数量 ≈ 可直接做的页面数 | |
 | **新鲜度（上线时长）** | 16 | ≤1 月 100 · 1 年 40 · 5 年 10 · 10 年 0 | **"上线时间长"的兑现**，只认官方上线日 |
 | **竞争（分高 = 竞争低）** | 16 | 人工 SERP 核查优先；否则由上线时长推断；两者皆无 → **未测** | 🛑 不用访问量推断 |
@@ -743,6 +766,69 @@ srcUrl 的 placeId → apis.roblox.com/universes/v1/places/{id}/universe
 2. **评分不区分「持久需求」和「一次性活动」** —— `The Hunt: Roblox 20` 拿了 96 分，但它 9/17–9/28 只有 12 天窗口，
    活动结束需求就断崖归零，新站来不及排上去。目前只用名称启发式打一个 ⚠️ 提示，**不否决、不扣分**。
 
+#### Steam 官方数据（`src/lib/steam.mjs`）
+
+原先只有 Roblox 来源能评分，Steam 候选全是「竞争未测」。现在补三个官方接口（零密钥）：
+
+| 指标 | 端点 | 用途 |
+|---|---|---|
+| 发售日 / 价格 / 类型 | `store.steampowered.com/api/appdetails` | 新鲜度（上线时长）、内容面 |
+| 评价数 / 好评率 | `store.steampowered.com/appreviews/<id>?json=1&num_per_page=0` | 口碑；评价数≈销量代理 |
+| 当前在线 | `api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers` | 需求规模（Steam 口径） |
+
+**四条实测约束（踩过的坑）**：
+
+1. **`appdetails` 不支持多 appid 批量**（`appids=a,b,c` → HTTP 400）→ 逐个请求；靠「6 小时 TTL + 每轮上限 40」把稳态请求压到 0。
+2. **`query_summary.num_reviews` 在 `num_per_page=0` 时恒为 0** → 真实条数必须看 `total_reviews / total_positive / total_negative`。
+3. **CCU 接口对未发售 / 无效 appid 返回 404**（不是 200+0）→ 必须当"没有数据"处理，否则每次白等两轮退避重试。
+4. 🛑 **按名字关联外部数据必须先确认唯一标识** —— 实测 `Deep Fishing` 在 Roblox 与 Steam 上**同名不同游戏**，
+   只按名字匹配会把 Steam 的评价数写进 Roblox 游戏身上、覆盖它真实的 visits/approval。
+   所以：**只对「来源未知」或「明确是 Steam」的条目做名字解析**，且要求**归一化后严格同名**
+   （`gta v` 绝不匹配 `GTA VI`）；搜不到的负结果缓存 7 天，避免每轮重搜同一批。
+
+**需求规模的锚点按平台分开**（不能共用一条曲线，两者数量级差 4~5 个数量级）：
+
+| 平台 | 口径 | 锚点 |
+|---|---|---|
+| Roblox | **终身访问量** | 1e5→0 · 1e6→33 · 1e7→66 · 1e8→100 |
+| Steam | **当前在线**（为 0/缺失时退回评价数） | 1→0 · 100→54 · 5000→100 |
+
+实测覆盖（2026-09-21，**开了 AAA 黑名单 + 补了 `feedback.block` 之后**，74 个候选）：
+**Roblox 65 · Steam 4 · 仍缺 5**（那 5 条是故意留的灰区，见"AAA 大作黑名单"一节）。
+
+> 历史：清理前是 76 条里缺 25 条 —— 那些缺口**不是数据问题，是"根本不是可做站的游戏"**
+> （`gta vi` / `fifa 27` / `wordle hints` / `pokemon cards`），所以正确处理是**过滤**而不是硬补数据。
+
+#### 潜伏 → 上线：接班机制（2026-09-21）
+
+**问题**：潜伏清单和建站推荐原先是两条互不相通的线 —— 一个游戏在潜伏清单里盯了两个月，
+上线后不会自动出现在建站推荐里，得等它自己从 Discover 榜单/热搜冒出来（可能几天到几周）。
+
+**做法**（`linkUpcomingToRoblox()`，在潜伏清单生成时就地跑）：
+
+1. **关联官方 universeId**：优先用 BloxInformer 自己给的 `robloxLink`（零配额，实测 11/68 有）；
+   没有的才去官方搜索接口按名字解析 —— 并校验归属：BloxInformer 给了 Roblox 用户/群组链接时，
+   要求解析出的 universe 的 `creator.id` 与之一致，不一致就拒绝并记录原因（防同名仿作）。
+2. **判定是否已上线**：把关联到的 universeId **批量**丢给 `games.roblox.com/v1/games`
+   （一次 50 个 → 1~2 次请求），`visits > 0 || playing > 0` 即判定"已经能玩"。
+3. **推进雷达队列**：带上 `prio: 5`（插队）+ `via: "watchlist-live"` 标记 → 走现有链路
+   （取曲线 → 补官方数据 → 进 `games.json`）→ 下一轮就带官方数据出现在建站推荐。
+
+**四个实测坑（都修了）**：
+
+| 坑 | 现象 | 修法 |
+|---|---|---|
+| 搜索接口 `sessionId` 必须是 **UUID** | 传普通字符串直接被拒 | 每次调用 `randomUUID()` |
+| 搜索接口是**配额冷却**不是限速 | 一次 200 后隔 4 秒、甚至 15 秒全 429 | 每轮只搜 1 次 + 首次 429 立即熔断 + **429 绝不写进负缓存**（那是限流，不是"不存在"） |
+| 队列"抬优先级"时**没同步元数据** | 条目升到 prio 5 但 `via` 没写进去，下游"免曲线门槛"规则永远看不到 | bump 时一并合并新字段 |
+| 雷达的「零信号不要」会吃掉转正条目 | 新游戏在 Trends 上没有曲线 → 整条丢弃，潜伏几个月的成果蒸发 | `via === "watchlist-live"` 的条目**免曲线门槛**；曲线取不到（含 429）也照样用官方数据收录，`reason` 标「潜伏清单转正（Trends 暂无曲线）」 |
+
+> 前端配合：转正条目的 `reason` 含「潜伏」，推荐页会给一条黄条说明
+> "暂无 Trends 曲线，所以需求动能缺失" —— 缺项要说明原因，不能让人以为是 0。
+
+实测（2026-09-21 一轮）：6 条从潜伏清单转正，6/6 进入 `games.json` 并带官方数据
+（如 `Starforged` 访问 61K / 好评 68% / 上线 2025-12-23；`A Bizarre Race` 好评仅 38.2% → 被口碑门槛否决，这是该有的行为）。
+
 #### 关于「每小时实时更新吗」
 
 **不是"每分钟实时刷新"，是三档节奏**（页面顶部的"更新于 X"指的是**采集时间**，不是评分计算时间）：
@@ -751,6 +837,7 @@ srcUrl 的 placeId → apis.roblox.com/universes/v1/places/{id}/universe
 |---|---|---|
 | **分数与排序** | **打开页面时实时重算** | `rankability()` 跑在浏览器里，每次打开就地重算 |
 | **Roblox 官方数据**（访问量 / 好评 / 上线日 / 在线人数） | **每小时**（`statsRefreshHours: 1`） | 批量接口，稳态 2 次请求 |
+| **Steam 官方数据**（评价 / 好评 / 在线 / 发售日） | 每 6 小时（`steamStats.refreshHours`） | 接口不支持批量（每个游戏 3 次请求），所以 TTL 定长一些 |
 | 热搜 / 攻略词 | 每小时采集（CI `:23`） | 攻略词按 `refreshHours: 6` 节流 |
 | **Google Trends 曲线**（需求动能） | 每 6 小时（`refreshHours: 6`） | 🛑 唯一有真实封禁风险的接口，刻意保守 |
 | 新鲜度项 | 随 `Date.now()` 自然衰减 | 唯一"不看采集时间也会变"的项 |
@@ -778,7 +865,8 @@ srcUrl 的 placeId → apis.roblox.com/universes/v1/places/{id}/universe
 | **发售日 / 精确度** | Steam `comingsoon` + `appdetails` | `day` > `quarter` > `year` > 未定档（决定你要不要现在动手） |
 | **是否有 Demo** | `appdetails` | 有 demo＝团队在预热、玩法已验证 |
 | **类型 / 开发商 / 价格** | `appdetails` | 判断"能不能写出足够多的页面" |
-| **Roblox 未发售** | **BloxInformer Release Hub**（第三方，经 Wayback 快照） | Roblox **官方没有任何"未发布体验"公开列表**（官方 `up-and-coming` 是"已上线刚起量"）；BloxInformer 自述数据来自官方公告 + Discord 爆料 + 开发者社媒，是行业事实标准（41 条，带发行状态与倒计时） |
+| **Roblox 未发售** | **BloxInformer Release Hub**（第三方，**直连实时抓取**） | Roblox **官方没有任何"未发布体验"公开列表**（官方 `up-and-coming` 是"已上线刚起量"）；BloxInformer 自述数据来自官方公告 + Discord 爆料 + 开发者社媒，是行业事实标准（实测 68 条，带发行状态与倒计时） |
+| **Roblox 潜伏评估** | 由上面那份清单算出来 | 发布确定性 35 + 日期精确度 25 + 内容面 20 + 社区地基 20（见下方"潜伏评分"） |
 
 **窗口分类**（决定"现在还来不来得及"）：
 
@@ -812,8 +900,20 @@ npm run watchlist                        # 同上，看板读 data/watchlist.jso
 ```jsonc
 "watchlist": {
   "roblox": { "upcoming": true, "rising": false },                 // rising = 官方 up-and-coming（已上线，默认关）
-  "robloxUpcoming": { "cacheHours": 12, "overrideMaxDays": 3, "dropPast": true }
+  "robloxUpcoming": {
+    "directFetch": true,        // 直连（fetch → 被 CF 拦就换 curl）
+    "waybackFallback": true,    // 直连全挂时才用 Wayback 存档
+    "cacheHours": 1,            // 直连可用 → 每小时刷新
+    "overrideMaxDays": 3,       // data/roblox-upcoming.html 的保鲜期
+    "dropPast": true            // 已发售的条目剔除（计数并显示）
+  }
 }
+```
+
+也可以**手动喂一份刚存的页面**（无视保鲜期，直接生效）：
+
+```bash
+node src/collect.mjs --only-watchlist --roblox-html "D:\Downloads\upcoming-roblox-games.html"
 ```
 
 > 抓快照的三条通道（自动依次试）：**上次成功过的直链 > `/web/2/` 最近快照入口 > CDX 列表**。
@@ -834,12 +934,51 @@ npm run watchlist                        # 同上，看板读 data/watchlist.jso
 
 - **Steam 没有"3~6 个月后发售的高愿望单"官方榜**（实测深翻页仍是近月发售的游戏）→ 远期候选只能靠人工渠道
   （官方公告 / 预告片 / 社区）补，本清单偏「近月高热度」。
-- **Roblox 侧没有官方数据源**：BloxInformer 直连被 Cloudflare 403（连无头 Chrome 都被拦，`/wp-json` 同样 403），
-  所以只能用 **Wayback 快照**（实测快照一个月才更新一次）→ 页面会显式标注 `快照 YYYY-MM-DD` 并在超 21 天时告警，
-  清单里还会报「快照后有 N 条已发售、已剔除」来暴露过期程度。
-  想要实时数据：**把 `https://bloxinformer.com/upcoming-roblox-games/` 在浏览器里另存为
-  `data/roblox-upcoming.html`**（3 天内有效，优先于快照）——脚本会自动识别。
-- Roblox 条目的「状态」（In Development / Confirmed / Delayed）是 BloxInformer 的**第三方核对结果**，不是 Roblox 官方声明。
+- **Roblox 侧没有官方数据源**：官方 `up-and-coming` 是"已上线刚起量"，不是未发布。
+  数据来自第三方 BloxInformer Release Hub —— **直连抓取**（见下方"为什么能直连 Cloudflare 站点"），
+  每小时刷新一次；通道全挂时才会退到 Wayback 存档或旧缓存，并在页面上显式标注来源与数据时间。
+- Roblox 条目的「状态」（In Development / Confirmed / Delayed / Maybe Cancelled）是 BloxInformer 的**第三方核对结果**，不是 Roblox 官方声明。
+
+#### 为什么能直连 Cloudflare 站点（`src/lib/web-fetch.mjs`）
+
+**这不是"绕过"，是换一个指纹正常的取页器。** 实测结论（2026-09-21）：
+
+| 取页方式 | 结果 |
+|---|---|
+| Node `fetch`（undici） | ❌ **403「Attention Required」** —— 改 UA、加 header 全都无效 |
+| 无头 Chrome `--headless=new --dump-dom` | ❌ 更严格的硬拦（"you have been blocked"） |
+| **`curl.exe`**（Windows 10+ / Linux 自带） | ✅ **HTTP 200 + 完整 68 条** |
+
+Cloudflare 拦的是 **TLS / HTTP-2 指纹**（Node 的握手特征明显不是浏览器），不是 UA 字符串。
+所以 `web-fetch.mjs` 做成两条通道：**先 `fetch`（快，多数站点够用）→ 只看内容特征判定是否挑战页
+（CF 托管挑战常常返回 200 + 一段 JS）→ 命中就换 `curl`**。
+
+> 这个层是**通用**的：以后任何被 Cloudflare 挡住的来源（robipedia / allthings.how / 其它 wiki）
+> 都走同一个 `fetchPage()`，不要再退回 Wayback。
+
+#### 潜伏评分（Roblox 未发售条目，0~100）
+
+四个维度**全部是上线前可测的**（页面给的字段）：
+
+| 维度 | 权重 | 怎么算 |
+|---|---|---|
+| **发布确定性** | 35 | Confirmed 100 · Beta/Early Access 82 · In Development 55 · Pre-Alpha 40 · Delayed 30 · Maybe Cancelled 5 |
+| **日期精确度** | 25 | 确切日期 100 · 只有月份 70 · 只有季度 55 · 只有年份 40 · 未定档 15 |
+| **内容面** | 20 | 由 genres 推断：图鉴/养成类（RPG / monster catching / Turn Based / Open World）92 · 模拟经营类 70 · Action/Shooter 52 · Escape/Obby/RNG 28 |
+| **社区地基** | 20 | Discord +8 · YouTube +6 · Roblox 群组 +6（封顶 20） |
+
+档位：`≥75 值得潜伏` · `55~74 观察` · `<55 暂不`；**风险覆盖**：状态含 Delayed / Maybe Cancelled → 强制「风险」，
+距发售 ≤7 天 → 「窗口已过」。
+
+> 🛑 它是**启发式，不是实测**：内容面靠 genres 推断（页面没有"能写多少页"这种字段）。
+> 所以前端把四个分项的理由一起放在 `title` 里，鼠标一悬停就能看到每一分是怎么来的、并直接反驳它。
+
+**统计面板**（页面顶部）直接给出这份清单的规模：原始条数 / 剔除已发售 / 保留条数 / 平均分 /
+按状态 / 按窗口 / 按评估档 / 类型 Top / 有确切日期·有 Roblox 页·有 Discord 的数量。
+
+> 实测一轮（2026-09-21）：原始 **68** 条 → 剔除已发售 **36** → 保留 **29**（其中只有 5 条有确切日期，
+> 24 条未定档），平均分 47 → 这正是真实情况：**Roblox 的未发售清单里绝大多数还没有日期**，
+> 所以「哪个最近发售」必须靠日期列排序（默认），而不是靠评分排序。
 
 ---
 

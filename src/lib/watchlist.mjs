@@ -18,7 +18,9 @@
  */
 import { dataPath, readJson, writeJson, iso, log, sleep } from "./util.mjs";
 import { fetchSteamPopularUpcoming, fetchSteamList, fetchRobloxSortGames } from "./sources.mjs";
-import { loadRobloxUpcoming, normalizeEntry } from "./roblox-upcoming.mjs";
+import { loadRobloxUpcoming, normalizeEntry, scoreUpcoming } from "./roblox-upcoming.mjs";
+import { linkUpcomingToRoblox } from "./roblox.mjs";
+import { pushQueue } from "./queue.mjs";
 import { fetchInterest, hypeRatio } from "./interest.mjs";
 
 const STEAM = "https://store.steampowered.com";
@@ -91,6 +93,14 @@ export function windowOf(days) {
   return "far";
 }
 const WINDOW_ORDER = { build: 0, far: 1, live: 2, close: 3, "too-late": 4 };
+/** 统计面板用的中文标签（顺序与 WINDOW_ORDER 一致） */
+const WINDOW_LABEL_ZH = {
+  build: "🟢 黄金窗口 30~180 天",
+  close: "🟡 临门 ≤30 天",
+  far: "⚪ 远期 / 未定档",
+  "too-late": "🔴 已来不及 ≤7 天",
+  live: "🔵 已上线",
+};
 
 export function trendsUrl(term, geo, compare) {
   const t = String(term || "").trim();
@@ -323,21 +333,39 @@ export async function buildWatchlist(cfg, session) {
       trends: { status: "not-queried" },
     });
   }
-  // Roblox 即将发售（BloxInformer 快照）——真正的"未 release"清单
+  // Roblox 未发售（BloxInformer Release Hub）——真正的"未 release"清单 + 潜伏评分
   let rbxDroppedPast = 0;
+  let rbxStat = null;
   if (rbxUpcoming) {
     const normalized = rbxUpcoming.items
       .map((g) => normalizeEntry(g, now))
       .filter((g) => g.name && g.name.length >= 2);
+
+    // ── 关联官方 universeId（为"上线后自动接班"铺路）──
+    // 用 BloxInformer 给的名字去官方搜索接口解析，并用它的社媒账号做归属校验。
+    // 结果就地写回每个 entry（universeId / robloxPage / live / matchConfidence）。
+    let rbxLink = null;
+    try {
+      // 只给"能进清单的"做搜索解析：已经发售的（releaseInDays<0）和 ≤7 天的都会被下面的过滤器丢掉，
+      // 给它们花搜索配额是浪费（搜索接口限流最严，每轮上限只有 12 次）。
+      const toLink = normalized.filter((g) => g.releaseInDays == null || g.releaseInDays >= (w.includeTooLate ? 0 : 7));
+      rbxLink = await linkUpcomingToRoblox(toLink, cfg);
+    } catch (e) {
+      notes.push("Roblox 官方关联（搜索接口）失败：" + e.message + "（清单照常出，只是没有官方页链接）");
+    }
+
+    const pushed = [];
     for (const g of normalized) {
-      // 快照可能已过期：已经发售的条目默认剔除，但要计数（不静默吞）
+      // 数据可能过期：已经发售的条目默认剔除，但要计数（不静默吞）
       if (g.releaseInDays != null && g.releaseInDays < 0) { rbxDroppedPast++; if (w.dropPast !== false) continue; }
       if (!w.includeTooLate && g.releaseInDays != null && g.releaseInDays < 7) continue;
       const key = g.name.toLowerCase();
       if (seenName.has(key)) continue;
       seenName.add(key);
-      const page = g.robloxUrl || g.sourceUrl;
-      items.push({
+      // 优先给**官方游戏页**；解析不到才退回第三方来源页
+      const page = g.robloxPage || g.robloxUrl || g.sourceUrl;
+      const assess = scoreUpcoming(g);
+      const item = {
         id: g.id,
         name: g.name,
         source: "roblox",
@@ -358,11 +386,82 @@ export async function buildWatchlist(cfg, session) {
           discord: (g.social && g.social.discord) || "",
           youtube: (g.social && g.social.youtube) || "",
         }),
-        snapshotAt: rbxUpcoming.snapshotAt,
+        assess,
+        // 官方关联结果（有就带上；没有就如实留空，不编）
+        universeId: g.universeId || null,
+        matchType: g.matchType || "",
+        matchConfidence: g.matchConfidence || "",
+        linkRejected: g.linkRejected || "",
+        live: !!g.live,
+        liveStats: g.liveStats || null,
+        dataAt: rbxUpcoming.snapshotAt,
         trends: { status: "not-queried" },
-      });
+      };
+      items.push(item);
+      pushed.push(item);
     }
-    if (rbxDroppedPast) log("dim", `  Roblox 即将发售：剔除 ${rbxDroppedPast} 条快照里已经发售的（快照 ${rbxUpcoming.snapshotAt.slice(0, 10)}）`);
+
+    // ── 已经能玩的（官方数据有访问/在线）→ 推进雷达队列，让它在建站推荐里"接班" ──
+    // 这一步就是"潜伏 → 上线"的交接：走的是现有队列 → 取曲线 → 补官方数据 → 进 games.json 的完整链路。
+    let promoted = 0;
+    const liveItems = pushed.filter((x) => x.live && x.links.page.includes("roblox.com"));
+    if (liveItems.length) {
+      try {
+        const knownDoc = readJson(dataPath(cfg, "games.json"), { items: [] });
+        const knownNames = new Set((knownDoc.items || []).map((x) => String(x.name).toLowerCase()));
+        // prio 5 = 最高优先级：队列里躺着几百个 Roblox 候选，而这几条**已经确认可玩**，
+        // 必须让它们插队，否则会排在新候选后面等好几轮（实测：默认 prio 4 时 6 条只进了 2 条）。
+        const res = pushQueue(cfg, liveItems.map((x) => ({
+          name: x.name, source: "roblox", kind: "new", url: x.links.page,
+          prio: 5,                 // 插队：已确认可玩，比排队等验证的候选更急
+          via: "watchlist-live",   // 标记来源：雷达对这类条目免"必须有 Trend 曲线"的门槛
+        })), knownNames);
+        // added + bumped 都算"本轮交给了雷达"：已在队列里的会被抬优先级而不是重复入队，
+        // 只报 added 会让人误以为漏掉了（实测：7 条转正，added 只有 2）。
+        promoted = res.added + (res.bumped || 0);
+      } catch (e) {
+        notes.push("把已上线的 Roblox 条目推进雷达队列失败：" + e.message);
+      }
+    }
+
+    // ── 统计（用户明确要的"统计"）：按状态 / 窗口 / 评估档 / 类型 / 数据完整度 ──
+    const tally = (arr, key) => {
+      const m = {};
+      for (const x of arr) { const k = key(x) || "(未标注)"; m[k] = (m[k] || 0) + 1; }
+      return Object.entries(m).sort((a, b) => b[1] - a[1]);
+    };
+    const genreCount = {};
+    for (const x of pushed) for (const gg of x.genres || []) genreCount[gg] = (genreCount[gg] || 0) + 1;
+    rbxStat = {
+      fetchedFromSource: rbxUpcoming.items.length,
+      valid: normalized.length,
+      droppedPast: rbxDroppedPast,
+      kept: pushed.length,
+      dataAt: rbxUpcoming.snapshotAt,
+      source: rbxUpcoming.source,
+      sourceLabel: rbxUpcoming.source.startsWith("direct") ? "直连实时抓取"
+        : rbxUpcoming.source.startsWith("local") ? "本地导入的页面"
+          : rbxUpcoming.source.startsWith("wayback") ? "Wayback 存档（直连失败时的兜底）"
+            : "旧缓存（所有通道都失败）",
+      dated: pushed.filter((x) => x.releaseInDays != null).length,
+      withRobloxPage: pushed.filter((x) => x.links.page.includes("roblox.com")).length,
+      withDiscord: pushed.filter((x) => x.links.discord).length,
+      withYoutube: pushed.filter((x) => x.links.youtube).length,
+      // 官方关联（搜索接口）的结果
+      linked: pushed.filter((x) => x.universeId).length,
+      linkedHighConfidence: pushed.filter((x) => x.matchConfidence === "high").length,
+      linkRejected: pushed.filter((x) => x.linkRejected).length,
+      liveDetected: pushed.filter((x) => x.live).length,
+      promotedToRadar: promoted,
+      linkSearched: rbxLink ? rbxLink.searched : 0,
+      byStatus: tally(pushed, (x) => x.status),
+      byWindow: tally(pushed, (x) => WINDOW_LABEL_ZH[x.window] || x.window),
+      byBand: tally(pushed, (x) => x.assess.band.t),
+      byGenre: Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 8),
+      avgScore: pushed.length ? Math.round(pushed.reduce((a, x) => a + x.assess.score, 0) / pushed.length) : null,
+      top: pushed.slice().sort((a, b) => b.assess.score - a.assess.score).slice(0, 5)
+        .map((x) => ({ name: x.name, score: x.assess.score, band: x.assess.band.t, days: x.releaseInDays })),
+    };
   }
 
   // Roblox 官方「新晋」榜（已上线，默认关闭 —— 用户要的是未发售清单）
@@ -413,19 +512,29 @@ export async function buildWatchlist(cfg, session) {
   stats.robloxSource = rbxUpcoming ? rbxUpcoming.source : "none";
   stats.robloxSnapshotAt = rbxUpcoming ? rbxUpcoming.snapshotAt : "";
   stats.robloxStale = rbxUpcoming ? !!rbxUpcoming.stale : false;
+  stats.robloxStats = rbxStat;
   stats.total = limited.length;
   for (const it of limited) stats.windows[it.window] = (stats.windows[it.window] || 0) + 1;
 
   notes.push("Steam 不公开愿望单数量：popularcomingsoon 的名次只作**热度代理**，不是绝对需求。");
   notes.push("Steam 没有「3~6 个月后发售的高愿望单」官方榜（实测深翻页仍是近月发售的游戏）——所以远期候选只能靠人工渠道（官方公告 / 预告片 / 社区）补，本清单偏「近月高热度」。");
-  if (rbxUpcoming) {
-    notes.push("Roblox 侧是**未发售清单**：Roblox 官方没有这类公开列表（官方 up-and-coming 是「已上线刚起量」，不是未发布），数据来自第三方 BloxInformer Release Hub，经 Wayback 快照获取。" +
-      "快照时间 " + rbxUpcoming.snapshotAt.slice(0, 10) + "（来源 " + rbxUpcoming.source + "）" +
-      "—— 快照偏旧时发售日可能已经变动，以来源页为准。");
-    if (rbxUpcoming.stale) notes.push("⚠️ Roblox 快照已超过 21 天：日期请以 BloxInformer 来源页为准（可把页面另存为 data/roblox-upcoming.html 换成实时数据）。");
-    if (rbxDroppedPast) notes.push("Roblox 快照里已有 " + rbxDroppedPast + " 条在快照后被发售，已从清单剔除（说明快照确实过期了）。");
+  if (rbxUpcoming && rbxStat) {
+    notes.push("Roblox 侧是**未发售清单**：Roblox 官方没有这类公开列表（官方 up-and-coming 是「已上线刚起量」），数据来自第三方 BloxInformer Release Hub，" +
+      rbxStat.sourceLabel + "。数据时间 " + rbxUpcoming.snapshotAt.slice(0, 16).replace("T", " ") +
+      "（原始 " + rbxStat.fetchedFromSource + " 条 → 剔除已发售 " + rbxStat.droppedPast + " 条 → 保留 " + rbxStat.kept + " 条）。");
+    notes.push("Roblox 条目的**潜伏评分（0~100）**＝发布确定性 35 + 日期精确度 25 + 内容面 20 + 社区地基 20；" +
+      "内容面与日期精确度是**按页面给的字段推断的启发式**（不是实测），所以每条都带理由，可一眼反驳。窗口(build/close/far)与评分是两件事：评分高但只剩 7 天照样来不及。");
+    if (rbxUpcoming.stale) notes.push("⚠️ 这份 Roblox 数据已过期（>26 小时）：日期请以 BloxInformer 来源页为准。");
+    if (rbxDroppedPast) notes.push("数据里已有 " + rbxDroppedPast + " 条在上次抓取后被发售，已从清单剔除（上线后请走「建站推荐」那条线评估）。");
+    notes.push("已用 Roblox 官方搜索接口把条目关联到官方 universeId：关联上 " + rbxStat.linked + " 条（其中归属校验通过 " +
+      rbxStat.linkedHighConfidence + " 条，拒绝 " + rbxStat.linkRejected + " 条同名仿作）。有官方页的条目链接直接指向 roblox.com。");
+    if (rbxStat.liveDetected) {
+      notes.push("其中 **" + rbxStat.liveDetected + " 条已经能玩**（官方数据里已有访问量/在线）→ 已自动推进雷达队列" +
+        (rbxStat.promotedToRadar ? "（新增 " + rbxStat.promotedToRadar + " 条）" : "（已在队列或已在雷达里）") +
+        "，下一轮采集就会带官方数据出现在「🎯 建站推荐」—— 这就是「潜伏 → 上线」的接班。");
+    }
   }
-  notes.push("Roblox 条目里的「状态」来自 BloxInformer（如 In Development / Confirmed / Delayed），是第三方核对结果，不是 Roblox 官方声明。");
+  notes.push("Roblox 条目里的「状态」来自 BloxInformer（如 In Development / Confirmed / Delayed / Maybe Cancelled），是第三方核对结果，不是 Roblox 官方声明。");
   if (stats.trendsMode === "off") notes.push("Trends 本轮未查（省配额）：每条都带 Google Trends 与 SERP 直链，可自己点开看。");
   notes.push("未测 ≠ 没有需求：字段标「未测」时请以链接实测为准。");
 

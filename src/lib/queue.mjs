@@ -15,6 +15,10 @@ const KEY = (s) => String(s || "").trim().toLowerCase();
  *   1  榜单常客          —— Steam 特惠/热销、App Store 下载榜（多为饱和老游戏，验证价值低）
  */
 const PRIO = (it) => {
+  // 显式 prio 优先：调用方明确说"这条更急"时必须听它的。
+  // 实测用得上：潜伏清单发现某个 Roblox 游戏**已经上线**时会把它推进队列，
+  // 那条比几百个排队等验证的候选更急（我们知道它已经可玩，早一轮验证就早一轮能建站）。
+  if (it.prio) return it.prio;
   if (it.source === "roblox") return 4;
   if (it.source === "appstore") return String(it.kind || "").startsWith("new") ? 3 : 1;
   if (it.kind === "new" || it.kind === "upcoming") return 3;
@@ -34,17 +38,34 @@ export function loadQueue(cfg) {
  */
 export function pushQueue(cfg, incoming, known) {
   const q = loadQueue(cfg);
-  const have = new Set(q.items.map((x) => KEY(x.name)));
+  const have = new Map(q.items.map((x) => [KEY(x.name), x]));
   const seen = [];
   let added = 0;
+  let bumped = 0;
   const now = iso();
   for (const it of incoming || []) {
     const k = KEY(it && it.name);
     if (!k || k.length < 2) continue;
     if (known && known.has(k)) { seen.push(k); continue; }
-    if (have.has(k)) continue;
-    have.add(k);
-    q.items.push(Object.assign({}, it, { addedAt: now, prio: PRIO(it) }));
+    const prio = PRIO(it);
+    const exist = have.get(k);
+    if (exist) {
+      // 已在队列里：**只升不降**地抬优先级，并同步新带的元数据。
+      // 为什么：同一批候选可能先以普通优先级入队，之后我们拿到了更强的信号
+      // （实测：潜伏清单发现它已经上线 → prio 5 + via 标记），此时必须让它插队，
+      // 否则要排在几百条后面等好几轮。
+      // ⚠️ 元数据也必须一起同步 —— 实测踩过：只改 prio 不同步 `via`，
+      //    下游那条"潜伏转正免曲线门槛"的规则永远看不到 via，条目照样被丢弃。
+      if (prio > (exist.prio || 0)) { exist.prio = prio; bumped++; }
+      for (const k of Object.keys(it)) {
+        if (k === "addedAt" || k === "prio") continue;
+        if (it[k] !== undefined) exist[k] = it[k];
+      }
+      continue;
+    }
+    const item = Object.assign({}, it, { addedAt: now, prio });
+    have.set(k, item);
+    q.items.push(item);
     added++;
   }
   const g = cfg.games || {};
@@ -53,7 +74,7 @@ export function pushQueue(cfg, incoming, known) {
   const nowMs = Date.now();
   q.items = q.items.filter((x) => x.addedAt && nowMs - new Date(x.addedAt).getTime() <= ttl).slice(-max);
   writeJson(dataPath(cfg, ".queue.json"), { updated: now, items: q.items }, true);
-  return { added, total: q.items.length, seen };
+  return { added, bumped, total: q.items.length, seen };
 }
 
 /** 取优先级最高的 n 个（不删除：验证成功的下一轮会因"已追踪"被跳过，验证失败的自然过期） */
