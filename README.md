@@ -745,6 +745,85 @@ srcUrl 的 placeId → apis.roblox.com/universes/v1/places/{id}/universe
 
 ---
 
+### 🚀 潜伏列表（看板标签页 · 零配额）
+
+**为什么需要单独一页**：「新游戏雷达」是**已经起量**的游戏（要拉曲线、吃 Trends 配额、还可能被限流）；
+但真正决定成败的是**上线之前**那段时间 —— 实测教训（Batomon Showdown，2026-09-21）：等游戏上线才动手，
+6 天内 SERP 上已经出现 **7 个专用站**，最值钱的词前 8 位被 5 个域名瓜分。**等到看见热度，窗口已经关了。**
+
+所以「潜伏」的判据必须是**上线前可测的**：
+
+| 项 | 来源 | 说明 |
+|---|---|---|
+| **愿望单序位** | Steam `filter=popularcomingsoon` | 发售前唯一可测的需求代理（Steam 不公开愿望单数量，只能用名次近似） |
+| **发售日 / 精确度** | Steam `comingsoon` + `appdetails` | `day` > `quarter` > `year` > 未定档（决定你要不要现在动手） |
+| **是否有 Demo** | `appdetails` | 有 demo＝团队在预热、玩法已验证 |
+| **类型 / 开发商 / 价格** | `appdetails` | 判断"能不能写出足够多的页面" |
+| **Roblox 未发售** | **BloxInformer Release Hub**（第三方，经 Wayback 快照） | Roblox **官方没有任何"未发布体验"公开列表**（官方 `up-and-coming` 是"已上线刚起量"）；BloxInformer 自述数据来自官方公告 + Discord 爆料 + 开发者社媒，是行业事实标准（41 条，带发行状态与倒计时） |
+
+**窗口分类**（决定"现在还来不来得及"）：
+
+| 窗口 | 含义 | 动作 |
+|---|---|---|
+| 🟢 `build` | 距发售 **30~180 天** | **黄金窗口**：够建站、够被收录 → 优先做 |
+| 🟡 `close` | ≤30 天 | 窗口很窄 → 只做时效性长尾页 |
+| ⚪ `far` | >180 天或**未定档** | 高愿望单 + 没定档恰恰是最典型的潜伏标的 |
+| 🔵 `live` | 已经上线（Roblox 侧） | 按"可挤入度"判断，不走潜伏线 |
+| 🔴 `too-late` | ≤7 天 | 默认**不进清单**（`includeTooLate: true` 可放开） |
+
+**三条硬约定（不要改）**：
+
+1. **不消耗 Trends 配额**（`watchlist.trendsCheck` 默认 `false`）。列表零配额、可每小时跑；要不要看需求趋势由人点链接决定。
+2. **任何失败都不删条目**。每条都带三个直链 —— `商店页 / Google Trends / SERP（查 wiki·竞品占位）`。
+   Trends 429、`appdetails` 失败、某来源挂掉，条目照样在，只是对应字段标「未测」。
+   **"未测"不等于没有需求**：链接永远有效，自己点过去看。
+3. **占位日期必须识别**。Steam 上大量未定档游戏写着 `2099 / 9998` 这类占位年份，当成真发售日会把清单按荒谬顺序排
+   （实测 `Released_DESC` 榜 40 条里 15 条是占位值）—— 脚本把「当前年 +5 年之后」一律按"未定档"处理。
+
+命令行：
+
+```bash
+node src/collect.mjs --only-watchlist    # 只刷潜伏清单（约 30s，之后走缓存更快）
+node src/collect.mjs --no-watchlist      # 全量采集但跳过潜伏清单
+npm run watchlist                        # 同上，看板读 data/watchlist.json
+```
+
+**Roblox 侧开关**（`config.json`）：
+
+```jsonc
+"watchlist": {
+  "roblox": { "upcoming": true, "rising": false },                 // rising = 官方 up-and-coming（已上线，默认关）
+  "robloxUpcoming": { "cacheHours": 12, "overrideMaxDays": 3, "dropPast": true }
+}
+```
+
+> 抓快照的三条通道（自动依次试）：**上次成功过的直链 > `/web/2/` 最近快照入口 > CDX 列表**。
+> 实测直链最稳，`/web/2/` 与 CDX 更容易被 429 —— 所以解析成功后会记住那个快照 URL 复用。
+
+**产物**：`data/watchlist.json`（随 `data/*.json` 一起发布到站点）+
+
+- `data/.steam-detail-cache.json`：Steam 详情缓存（7 天 TTL）—— 未发售游戏的类型/价格变化慢，别每小时重打
+- `data/.roblox-upcoming.json`：Roblox 快照缓存（12 小时 TTL）+ 记住可用的快照直链
+- `data/.watchlist-state.json`：Trends 检查结果缓存（仅在 `trendsCheck: true` 时产生）
+
+> 两者都以 `.` 开头 → 不会被工作流的 `find ... -not -name '.*'` 打包进静态站点。
+>
+> ⚠️ 实测：Steam `appdetails` **不支持多 appid 批量**（`appids=a,b,c` 返回 HTTP 400），只能逐个请求 ——
+> 所以靠"缓存 + 每轮上限（`enrichCount`）"控制请求数，而不是靠合并请求。
+
+**已知边界（诚实交代）**：
+
+- **Steam 没有"3~6 个月后发售的高愿望单"官方榜**（实测深翻页仍是近月发售的游戏）→ 远期候选只能靠人工渠道
+  （官方公告 / 预告片 / 社区）补，本清单偏「近月高热度」。
+- **Roblox 侧没有官方数据源**：BloxInformer 直连被 Cloudflare 403（连无头 Chrome 都被拦，`/wp-json` 同样 403），
+  所以只能用 **Wayback 快照**（实测快照一个月才更新一次）→ 页面会显式标注 `快照 YYYY-MM-DD` 并在超 21 天时告警，
+  清单里还会报「快照后有 N 条已发售、已剔除」来暴露过期程度。
+  想要实时数据：**把 `https://bloxinformer.com/upcoming-roblox-games/` 在浏览器里另存为
+  `data/roblox-upcoming.html`**（3 天内有效，优先于快照）——脚本会自动识别。
+- Roblox 条目的「状态」（In Development / Confirmed / Delayed）是 BloxInformer 的**第三方核对结果**，不是 Roblox 官方声明。
+
+---
+
 ## 三、已知限制与风险（务必知悉）
 
 1. **Google Trends 没有官方 API**。本系统用的是网页内部接口，Google 可能随时改动字段或加验证。`src/lib/trends.mjs` 已把结构解析集中在 `normalizeItem()` 一处，接口变动时只改这里。

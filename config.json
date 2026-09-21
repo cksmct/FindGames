@@ -62,6 +62,34 @@
       }
     }
   },
+  "watchlist": {
+    "enabled": true,
+    "steamPopularCount": 100,
+    "comingSoonCount": 40,
+    "comingSoonDays": 180,
+    "includeTooLate": false,
+    "roblox": {
+      "upcoming": true,
+      "rising": false,
+      "risingSorts": ["up-and-coming"],
+      "risingPerSort": 40,
+      "minPlayers": 300
+    },
+    "robloxUpcoming": {
+      "enabled": true,
+      "cacheHours": 12,
+      "overrideMaxDays": 3,
+      "dropPast": true,
+      "maxItems": 80
+    },
+    "enrichCount": 40,
+    "enrichCacheDays": 7,
+    "enrichDelayMs": 250,
+    "maxItems": 120,
+    "trendsCheck": false,
+    "trendsPerRun": 3,
+    "trendsFreshDays": 3
+  },
   "feedback": {
     "block": [],
     "boost": []

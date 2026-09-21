@@ -191,3 +191,27 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 5px; color: #
 .pk-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
 .pk-val { flex: none; width: 26px; text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; }
 .pk-dim { color: var(--hot); opacity: .85; }
+
+/* ── 🚀 潜伏列表（data/watchlist.json）── */
+#watch-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.wk-notes {
+  margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--panel);
+}
+.wk-note { color: var(--dim); font-size: 12px; line-height: 1.55; }
+.wk-note + .wk-note { margin-top: 4px; }
+
+/* 左侧色条 = 潜伏窗口，一眼区分"还来得及 / 已经来不及" */
+.wk-card { border-left: 3px solid var(--border); }
+.wk-card.wk-build { border-left-color: var(--up); }
+.wk-card.wk-close { border-left-color: var(--hot); }
+.wk-card.wk-live { border-left-color: var(--accent); }
+.wk-card.wk-far { border-left-color: var(--dim); }
+.wk-card.wk-too-late { border-left-color: #f85149; }
+
+.wk-window { font-weight: 600; }
+.wk-window.wk-build { background: rgba(63, 185, 80, .12); color: #7ee787; }
+.wk-window.wk-close { background: rgba(255, 159, 69, .12); color: #ffb86b; }
+.wk-window.wk-live { background: rgba(79, 156, 249, .12); color: #9ecbff; }
+.wk-window.wk-far { background: var(--panel2); color: var(--dim); }
+.wk-window.wk-too-late { background: rgba(248, 81, 73, .12); color: #ff9a92; }

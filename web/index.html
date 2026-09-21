@@ -30,6 +30,7 @@
   <button data-tab="hot" class="on">🔥 实时热词</button>
   <button data-tab="hist">🗓 7 天留档</button>
   <button data-tab="pick">🎯 建站推荐</button>
+  <button data-tab="watch">🚀 潜伏列表</button>
   <button data-tab="games">🎮 新游戏雷达</button>
   <button data-tab="pool">🔑 关键词池</button>
 </nav>
@@ -86,6 +87,32 @@
       <span class="meta" id="pick-meta"></span>
     </div>
     <div id="pick-cards"></div>
+  </section>
+
+  <section id="panel-watch" hidden>
+    <p class="hint">还没火的时候该盯谁：<b>Steam 愿望单序位</b> + <b>Roblox 官方「新晋」榜</b>。
+      窗口＝距发售还有几天：<b>30~180 天是建站黄金窗口</b>（够建站、够被收录）；≤30 天窗口很窄；
+      ≤7 天默认不进这张表（新站来不及排上去）。每条都带
+      <b>商店页 / Google Trends / SERP 直链</b> —— 字段标「未测」或被限流都不影响你点过去自己看。</p>
+    <div class="fbar">
+      <span class="group" id="watch-window">
+        <button data-window="all" class="on">全部窗口</button>
+        <button data-window="build">🟢 黄金窗口</button>
+        <button data-window="close">🟡 临门</button>
+        <button data-window="far">⚪ 远期/未定档</button>
+        <button data-window="live">🔵 已上线</button>
+      </span>
+      <span class="group" id="watch-src">
+        <button data-src="all" class="on">全部来源</button>
+        <button data-src="steam">仅 Steam</button>
+        <button data-src="roblox">仅 Roblox</button>
+      </span>
+      <input id="watch-search" type="search" placeholder="筛选名字…" />
+      <button id="watch-csv" class="ghost">导出 CSV（含全部链接）</button>
+      <span class="meta" id="watch-meta"></span>
+    </div>
+    <div id="watch-notes" class="wk-notes"></div>
+    <div id="watch-cards"></div>
   </section>
 
   <section id="panel-pool" hidden>

@@ -89,15 +89,13 @@ export async function fetchSteamFeatured() {
   return out;
 }
 
-/** Steam 搜索页：按发售时间排序，能拿到更多"刚上架 / 未发售"的游戏名与发售日 */
-export async function fetchSteamList(limit = 60, upcoming = false) {
-  const sort = upcoming ? "&sort_by=Released_ASC&filter=comingsoon" : "&sort_by=Released_DESC";
-  const url = STEAM + "/search/results/?query=&start=0&count=" + limit + sort + "&category1=998&infinite=1&cc=us&l=en";
-  const r = await fetch(url, { headers: { "user-agent": UA, "accept-language": "en-US" } });
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  const j = await r.json();
+/**
+ * 解析 Steam 搜索页返回的 results_html。
+ * 三种榜单（新发售 / 即将发售 / 愿望单最热）共用这一套解析，避免三份正则各自漂移。
+ */
+function parseSteamSearch(html, kind) {
   const dq = String.fromCharCode(34);
-  const parts = String(j.results_html || "").split("<a href=" + dq + STEAM + "/app/");
+  const parts = String(html || "").split("<a href=" + dq + STEAM + "/app/");
   const out = [];
   for (let i = 1; i < parts.length; i++) {
     const b = parts[i];
@@ -112,7 +110,76 @@ export async function fetchSteamList(limit = 60, upcoming = false) {
       const gt = b.indexOf(">", rl);
       released = b.slice(gt + 1, b.indexOf("<", gt)).replace(/\s+/g, " ").trim();
     }
-    out.push({ name, rawName: name, source: "steam", kind: upcoming ? "upcoming" : "new", appid, released, url: STEAM + "/app/" + appid });
+    out.push({ name, rawName: name, source: "steam", kind, appid, released, url: STEAM + "/app/" + appid });
+  }
+  return out;
+}
+
+async function steamSearch(url, kind) {
+  const r = await fetch(url, { headers: { "user-agent": UA, "accept-language": "en-US" } });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  return { items: parseSteamSearch(j.results_html, kind), total: j.total_count || 0 };
+}
+
+/** Steam 搜索页：按发售时间排序，能拿到更多"刚上架 / 未发售"的游戏名与发售日 */
+export async function fetchSteamList(limit = 60, upcoming = false) {
+  const sort = upcoming ? "&sort_by=Released_ASC&filter=comingsoon" : "&sort_by=Released_DESC";
+  const url = STEAM + "/search/results/?query=&start=0&count=" + limit + sort + "&category1=998&infinite=1&cc=us&l=en";
+  const { items } = await steamSearch(url, upcoming ? "upcoming" : "new");
+  return items;
+}
+
+/**
+ * Steam「未发售里最受关注的」——按**愿望单热度**排序，带发售日。
+ *
+ * 为什么单独要这个榜：`featuredcategories.coming_soon` 只有 10 条且是人工编排；
+ * 而 popularcomingsoon 实测有 5.5 万条、按愿望单序位排 —— 愿望单是**发售前唯一可测的需求代理**
+ * （Steam 不公开愿望单数量，只能用名次近似），所以它才是「潜伏清单」的主力来源。
+ * 注意 ⚠️：不能用 `sort_by=Released_DESC` 的 comingsoon 榜（实测会混入 9998 / 2104 这类占位年份）。
+ */
+export async function fetchSteamPopularUpcoming(limit = 40) {
+  const url = STEAM + "/search/results/?query=&start=0&count=" + limit +
+    "&category1=998&filter=popularcomingsoon&infinite=1&cc=us&l=en";
+  const { items, total } = await steamSearch(url, "popular-upcoming");
+  return { items, total };
+}
+
+/**
+ * Roblox 指定榜单（默认取 up-and-coming）。
+ *
+ * 与 fetchRoblox() 的区别：后者把所有榜单混在一起按玩家数排序（用于"发现新游戏"），
+ * 会丢掉"来自哪个榜"这一层含义；潜伏清单要的恰恰是 **官方「新晋」榜** 这个语义
+ * （Roblox 没有"未发布"公开列表，Up-and-Coming 是官方最接近的一档）。
+ */
+export async function fetchRobloxSortGames(sortIds = ["up-and-coming"], limitPerSort = 60) {
+  const url = "https://apis.roblox.com/explore-api/v1/get-sorts?sessionId=" + randomUUID();
+  const r = await fetch(url, { headers: { "user-agent": UA, accept: "application/json" } });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  const want = new Set(sortIds.map((s) => String(s).toLowerCase()));
+  const out = [];
+  for (const s of j.sorts || []) {
+    if (!want.has(String(s.sortId || "").toLowerCase())) continue;
+    const listName = s.sortDisplayName || s.sortId || "";
+    const buckets = [...(s.games ? [s.games] : []), ...(s.content || []).map((c) => c.games || [])];
+    let n = 0;
+    for (const bucket of buckets) {
+      if (n >= limitPerSort) break;
+      for (const g of bucket) {
+        if (n >= limitPerSort) break;
+        const raw = String(g.name || "");
+        const name = cleanName(raw);
+        if (!name || name.length < 2) continue;
+        n++;
+        out.push({
+          name, rawName: raw, source: "roblox", kind: "rising", list: listName,
+          universeId: g.universeId || 0,
+          players: g.playerCount || 0,
+          url: g.universeId ? "https://www.roblox.com/games/" + (g.rootPlaceId || g.universeId) : "",
+        });
+      }
+    }
   }
   return out;
 }

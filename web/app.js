@@ -68,8 +68,9 @@
   var state = {
     tab: "hot", geo: "ALL", cat: "all", vol: 0, growth: 0,
     noise: false, watch: false, q: "", rowsShown: 200, poolQ: "", gameSort: "first", pick: "all",
+    watchWindow: "all", watchSrc: "all", watchQ: "",
   };
-  var trends = null, history = null, games = null, pool = null, poolIndex = null;
+  var trends = null, history = null, games = null, pool = null, poolIndex = null, watch = null;
   var CATS = {}, GEOS = [];
   // 对比基准词：来自 config.json 的 trendsCompare，由 trends.json 透出
   // 所有点出去的 Google Trends 链接都会带上它，形成"该词 vs 基准词"的对比图
@@ -569,6 +570,126 @@
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // 🚀 潜伏列表（data/watchlist.json）
+  //
+  // 与「🎮 新游戏雷达」的分工：
+  //   雷达      = 哪个游戏**在火**（需要 Trends 曲线，吃配额、可能被限流）
+  //   潜伏列表  = **还没火的时候该盯谁**（愿望单序位 / 发售日 / 官方新晋榜，零配额）
+  //
+  // 实测教训（Batomon Showdown，2026-09-21）：等上线才动手已经晚了 ——
+  // 上线 6 天内 SERP 上出现 7 个专用站。所以这里的核心字段是「还有几天发售」。
+  //
+  // 🛑 关键约定：**每条必须给出可点链接**（商店页 / Google Trends / SERP）。
+  //    数据里 trends.status 可能是 not-queried（省配额）或 429（被限流）——
+  //    这时不显示曲线，但链接照给，由用户自己点过去判断。绝不允许因为"没测到"就把条目藏起来。
+  // ══════════════════════════════════════════════════════════════════════
+  var WINDOW_LABEL = {
+    build: "🟢 黄金窗口（30~180 天）",
+    close: "🟡 临门（≤30 天）",
+    far: "⚪ 远期 / 未定档",
+    "too-late": "🔴 已来不及（≤7 天）",
+    live: "🔵 已上线",
+  };
+  var TRENDS_LABEL = {
+    "not-queried": "需求：未测（点链接自己看）",
+    "429": "需求：Trends 限流（点链接自己看）",
+    empty: "需求：无趋势数据",
+    error: "需求：查询失败",
+    ok: "需求：已测",
+  };
+  var PRECISION_LABEL = { quarter: "季度", year: "仅年份", unknown: "未定档", day: "" };
+
+  function watchLinkChips(it) {
+    var L = it.links || {};
+    var out = [];
+    if (L.page) {
+      var isRbxPage = String(L.page).indexOf("roblox.com") > 0;
+      out.push('<a class="kwchip" target="_blank" rel="noopener" href="' + esc(L.page) + '">' +
+        (it.source === "roblox" ? (isRbxPage ? "Roblox 页" : "来源页") : "商店页") + "</a>");
+    }
+    // Roblox 未发售的游戏往往还没建 Roblox 页，来源页（带倒计时/状态）才是能看的那一页
+    if (L.source && L.source !== L.page) {
+      out.push('<a class="kwchip" target="_blank" rel="noopener" title="第三方来源页：倒计时、状态与官方链接" href="' + esc(L.source) + '">来源页（BloxInformer）</a>');
+    }
+    if (L.discord) out.push('<a class="kwchip" target="_blank" rel="noopener" href="' + esc(L.discord) + '">Discord</a>');
+    if (L.trends) out.push('<a class="kwchip" target="_blank" rel="noopener" title="在 Google Trends 看该词的 7 天曲线" href="' + esc(L.trends) + '">Google Trends</a>');
+    if (L.serp) out.push('<a class="kwchip up" target="_blank" rel="noopener" title="看这个游戏现在有几个站占位（wiki / tier list / comps）" href="' + esc(L.serp) + '">查 wiki / 竞品</a>');
+    return out.join("");
+  }
+
+  function watchCard(it) {
+    var st = it.trends || {};
+    var when;
+    if (it.source === "roblox") {
+      when = it.released ? "预计 " + esc(it.released) : "发售日未定";
+      if (it.releaseInDays != null) {
+        when += "（" + (it.releaseInDays <= 0 ? "已到发售日" : it.releaseInDays + " 天后") + "）";
+      }
+      var plr = PRECISION_LABEL[it.releasePrecision];
+      if (plr) when += " · 日期精度：" + plr;
+      if (it.players) when += " · 当前在线 " + fmtVol(it.players);
+    } else {
+      when = it.released ? "发售 " + esc(it.released) : "发售日未公布";
+      if (it.releaseInDays != null) {
+        when += "（" + (it.releaseInDays <= 0 ? "已到发售日" : it.releaseInDays + " 天后") + "）";
+      }
+      var pl = PRECISION_LABEL[it.releasePrecision];
+      if (pl) when += " · 日期精度：" + pl;
+    }
+    var bits = [];
+    if ((it.genres || []).length) bits.push(esc(it.genres.slice(0, 3).join(" / ")));
+    if (it.developer) bits.push(esc(it.developer));
+    if (it.price) bits.push(esc(it.price));
+    // Roblox 条目的状态来自 BloxInformer（In Development / Confirmed / Delayed…），是判断信号，必须显示
+    if (it.status) bits.push(esc(it.status));
+    if ((it.platforms || []).length) bits.push(esc(it.platforms.join(" / ")));
+    if (it.source === "steam") bits.push(it.demo ? "有 Demo" : "无 Demo");
+    if (it.snapshotAt) bits.push("快照 " + String(it.snapshotAt).slice(0, 10));
+    var badge = (it.source === "roblox" ? "Roblox" : "Steam") +
+      (it.list ? " · " + esc(it.list) : "") + (it.rank ? " #" + it.rank : "");
+    var win = it.window || "";
+    var chart = (st.status === "ok" && (st.series || []).length > 1)
+      ? sparkSvg(st.series, "#3fb950") + '<div class="gmeta">7 天热度快照 · 峰值 ' + (st.peak == null ? "—" : st.peak) + (st.cached ? " · 取自缓存" : "") + "</div>"
+      : "";
+    return '<div class="gcard wk-card wk-' + esc(it.window || "far") + '">' +
+      '<div class="ghead"><h3>' + esc(it.name) + '</h3><span class="tag">' + badge + "</span></div>" +
+      '<div class="pk-verdict wk-window wk-' + esc(win) + '">' + (WINDOW_LABEL[win] || esc(win)) + " · " + when + "</div>" +
+      (bits.length ? '<div class="gmeta">' + bits.join(" · ") + "</div>" : "") +
+      '<div class="kwrow"><span class="kwlabel">' + (TRENDS_LABEL[st.status] || "需求：未测") + '</span>' + watchLinkChips(it) + "</div>" +
+      chart +
+      "</div>";
+  }
+
+  function watchMatch(it) {
+    if (state.watchWindow !== "all" && it.window !== state.watchWindow) return false;
+    if (state.watchSrc !== "all" && it.source !== state.watchSrc) return false;
+    if (state.watchQ && String(it.name).toLowerCase().indexOf(state.watchQ) < 0) return false;
+    return true;
+  }
+
+  function renderWatch() {
+    var el = $("watch-cards");
+    if (!el) return;
+    if (!watch) { el.innerHTML = '<p class="empty">加载中…（若长期为空：先跑一次 <code>npm run watchlist</code>）</p>'; return; }
+    var all = watch.items || [];
+    var rows = all.filter(watchMatch);
+    var meta = $("watch-meta");
+    if (meta) {
+      var st = watch.stats || {};
+      meta.textContent = "共 " + all.length + " 条（Steam " + (st.steam || 0) + " / Roblox " + (st.roblox || 0) +
+        "）· 显示 " + rows.length + " · 更新 " + rel(watch.updated);
+    }
+    var notes = $("watch-notes");
+    if (notes) {
+      notes.innerHTML = (watch.notes || []).map(function (n) {
+        return '<div class="wk-note">' + esc(n) + "</div>";
+      }).join("");
+    }
+    if (!rows.length) { el.innerHTML = '<p class="empty">该筛选下暂无候选（换个窗口/来源看看）</p>'; return; }
+    el.innerHTML = rows.map(watchCard).join("");
+  }
+
   // ── 关键词池 ──
   function renderPool() {
     var el = $("pool-table");
@@ -633,13 +754,15 @@
     $("panel-hot").hidden = tab !== "hot";
     $("panel-hist").hidden = tab !== "hist";
     $("panel-pick").hidden = tab !== "pick";
+    $("panel-watch").hidden = tab !== "watch";
     $("panel-games").hidden = tab !== "games";
     $("panel-pool").hidden = tab !== "pool";
     // 顶部那排筛选（地区/分类/搜索）只服务"实时热词 / 7天留档"
-    $("filters").hidden = tab === "games" || tab === "pool" || tab === "pick";
+    $("filters").hidden = tab === "games" || tab === "pool" || tab === "pick" || tab === "watch";
     if (tab === "hot") renderHot();
     if (tab === "hist") renderHist();
     if (tab === "pick") renderPick();
+    if (tab === "watch") renderWatch();
     if (tab === "games") renderGames();
     if (tab === "pool") renderPool();
   }
@@ -703,6 +826,37 @@
     Array.prototype.forEach.call(this.querySelectorAll("button"), function (x) { x.classList.toggle("on", x === b); });
     renderGames();
   });
+  // 🚀 潜伏列表：两个独立筛（窗口 / 来源），各自单选
+  function bindWatchGroup(id, attr, key) {
+    $(id).addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-" + attr + "]");
+      if (!b) return;
+      state[key] = b.dataset[attr];
+      Array.prototype.forEach.call(this.querySelectorAll("button"), function (x) { x.classList.toggle("on", x === b); });
+      renderWatch();
+    });
+  }
+  bindWatchGroup("watch-window", "window", "watchWindow");
+  bindWatchGroup("watch-src", "src", "watchSrc");
+  $("watch-search").addEventListener("input", debounce(function (e) {
+    state.watchQ = e.target.value.trim().toLowerCase();
+    renderWatch();
+  }, 180));
+  $("watch-csv").addEventListener("click", function () {
+    if (!watch) return;
+    downloadCsv("watchlist.csv", (watch.items || []).filter(watchMatch).map(function (it) {
+      var L = it.links || {};
+      return {
+        name: it.name, source: it.source, list: it.list || "", rank: it.rank || "",
+        window: it.window || "", released: it.released || "", releaseInDays: it.releaseInDays == null ? "" : it.releaseInDays,
+        releasePrecision: it.releasePrecision || "", players: it.players || "",
+        genres: (it.genres || []).join("|"), developer: it.developer || "", price: it.price || "", demo: it.demo ? 1 : 0,
+        trendsStatus: (it.trends && it.trends.status) || "",
+        store: L.page || "", trends: L.trends || "", serp: L.serp || "",
+      };
+    }), ["name", "source", "list", "rank", "window", "released", "releaseInDays", "releasePrecision",
+        "players", "genres", "developer", "price", "demo", "trendsStatus", "store", "trends", "serp"]);
+  });
   $("pool-csv").addEventListener("click", function () {
     if (!pool) return;
     downloadCsv("keyword-pool.csv", (pool.items || []).map(function (x) {
@@ -738,6 +892,11 @@
     games = d;
     if (state.tab === "games") renderGames();
     if (state.tab === "pick") renderPick();
+  }).catch(function () {});
+  // 潜伏列表：独立文件（data/watchlist.json），零 Trends 配额，随每小时采集一起刷新
+  fetchJson("data/watchlist.json").then(function (d) {
+    watch = d;
+    if (state.tab === "watch") renderWatch();
   }).catch(function () {});
   // 词池用于行内"相关词"展开，后台静默加载
   fetchJson("data/keywords.json").then(function (d) {

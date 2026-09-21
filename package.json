@@ -11,6 +11,7 @@
     "collect": "node src/collect.mjs",
     "collect:quick": "node src/collect.mjs --geos US,GB,JP,KR,TW --no-games",
     "radar": "node src/collect.mjs --only-games",
+    "watchlist": "node src/collect.mjs --only-watchlist",
     "report": "node src/report.mjs",
     "export": "node src/report.mjs --csv",
     "serve": "node src/serve.mjs",

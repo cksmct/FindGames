@@ -31,6 +31,7 @@ import { translateToZh } from "./lib/translate.mjs";
 import { collectSourceCandidates } from "./lib/sources.mjs";
 import { enrichGameStats } from "./lib/roblox.mjs";
 import { pushQueue, peekQueue, dropQueue } from "./lib/queue.mjs";
+import { buildWatchlist } from "./lib/watchlist.mjs";
 
 const t0 = Date.now();
 const args = parseArgs();
@@ -43,9 +44,32 @@ if (args.translate) cfg.translate = true;
 if (args.minvol) cfg.minVol = Number(args.minvol);
 if (args["max-curves"]) cfg.games.maxCurvesPerRun = Number(args["max-curves"]);
 if (args["no-sources"]) cfg.games.sources = { roblox: false, steam: false };
+if (args["no-watchlist"]) cfg.watchlist = { ...(cfg.watchlist || {}), enabled: false };
+if (args["only-watchlist"]) cfg._onlyWatchlist = true;
 
 const session = await createSession();
 log("info", `会话就绪 ${session.cookie ? "(已获取 cookie)" : "(无 cookie)"}`);
+
+// ── 0. 潜伏清单（未发售 / 刚起量）──
+// 刻意放在热搜采集【之前】：它不依赖 Google Trends（默认零配额），
+// 所以哪怕热搜被限流到本轮中止，潜伏清单也已经写好了 —— 这是"必须能看到"的那份数据。
+if (cfg.watchlist?.enabled !== false) {
+  try {
+    const wl = await buildWatchlist(cfg, session);
+    if (wl) {
+      const wn = Object.entries(wl.stats.windows || {}).map(([k, v]) => `${k}:${v}`).join(" ");
+      log("ok", `潜伏清单：共 ${wl.stats.total} 条（Steam ${wl.stats.steam} / Roblox ${wl.stats.roblox}）${wn ? " · 窗口 " + wn : ""} · Trends 检查 ${wl.stats.trendsChecked}`);
+      for (const n of wl.notes.slice(0, 3)) log("dim", `  ${n}`);
+    }
+  } catch (e) {
+    log("warn", `潜伏清单生成失败：${e.message}（不影响其它环节）`);
+  }
+}
+
+if (cfg._onlyWatchlist) {
+  log("ok", `仅潜伏清单模式，完成。用时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  process.exit(0);
+}
 
 // ── 1. 采集热搜 ──
 let fresh = [];
