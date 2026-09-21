@@ -29,6 +29,7 @@
 <nav id="tabs">
   <button data-tab="hot" class="on">🔥 实时热词</button>
   <button data-tab="hist">🗓 7 天留档</button>
+  <button data-tab="pick">🎯 建站推荐</button>
   <button data-tab="games">🎮 新游戏雷达</button>
   <button data-tab="pool">🔑 关键词池</button>
 </nav>
@@ -70,6 +71,21 @@
       <span class="meta" id="game-meta"></span>
     </div>
     <div id="game-cards"></div>
+  </section>
+
+  <section id="panel-pick" hidden>
+    <p class="hint">按<b>建站可做性</b>排序：找「需求够大、但还没被攻略站做透」的游戏。
+      注意它和「🎮 新游戏雷达」的排序是<b>反的</b> —— 那边越热越好；这里<b>太热是减分项</b>，
+      因为访问量越大意味着攻略站越多、权重越高，新站越排不上去。</p>
+    <div class="fbar" id="pick-bar">
+      <span class="group">
+        <button data-pick="all" class="on">全部</button>
+        <button data-pick="todo">✅ 值得做</button>
+        <button data-pick="nowords">⚠️ 缺攻略词</button>
+      </span>
+      <span class="meta" id="pick-meta"></span>
+    </div>
+    <div id="pick-cards"></div>
   </section>
 
   <section id="panel-pool" hidden>

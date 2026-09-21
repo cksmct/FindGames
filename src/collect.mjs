@@ -29,6 +29,7 @@ import {
 import { buildKeywordPool } from "./lib/pool.mjs";
 import { translateToZh } from "./lib/translate.mjs";
 import { collectSourceCandidates } from "./lib/sources.mjs";
+import { enrichGameStats } from "./lib/roblox.mjs";
 import { pushQueue, peekQueue, dropQueue } from "./lib/queue.mjs";
 
 const t0 = Date.now();
@@ -154,6 +155,9 @@ if (!cfg._onlyGames) {
   const PUBLIC_CFG = ["trendsCompare", "trendsDefaultGeo", "watch", "geos", "catLabels", "geoLabels", "feedback"];
   const publicCfg = {};
   for (const k of PUBLIC_CFG) if (cfg[k] !== undefined) publicCfg[k] = cfg[k];
+  // 竞争强度的人工判断（专用 wiki / 专业站抢首发这类信息只能人查，自动抓不到）。
+  // 单独透出给看板的「🎯 建站推荐」用 —— 否则那页会把竞争饱和的游戏排在第一位。
+  if (cfg.games?.competition) publicCfg.competition = cfg.games.competition;
   writeJson(dataPath(cfg, "config.json"), publicCfg);
 }
 
@@ -414,9 +418,18 @@ if (cfg.games.enabled) {
     return gameCandidate({ q: g.name, cats }, { latinOnly, excludeAAA }).ok;
   });
   if (list.length < ruleFiltered) log("dim", `  按当前规则清掉 ${ruleFiltered - list.length} 个不再符合条件的旧条目`);
+  // ── 补 Roblox 官方数据（访问量 / 好评率 / 上线时间 / 更新）──
+  // 这是"建站可做性"评分里【竞争强度】的唯一来源，必须写在 writeGames 之前。
+  // 零密钥（Roblox 公开接口），按需刷新（默认 7 天），失败保留旧值。
+  const statRes = await enrichGameStats(list, cfg);
+
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
   writeGames(cfg, list);
   log("ok", `输出 data/games.json（${list.length} 个，本轮新增 ${added}，挖到攻略词 ${kwAdded} 个）`);
+  if (statRes.mode === "on") {
+    const withStats = list.filter((x) => x.stats?.visits != null).length;
+    log("dim", `  官方数据覆盖：${withStats}/${list.length} 条（其余为 Steam/App Store 来源或无 Roblox 页）`);
+  }
 }
 
 // ── 4. 关键词池：热搜的相关词 + 游戏雷达挖出的攻略词 ──

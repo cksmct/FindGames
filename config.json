@@ -49,7 +49,18 @@
     "delayMs": 3500,
     "rateLimitStop": 2,
     "relatedWords": 12,
-    "excludeAAA": false
+    "excludeAAA": false,
+    "statsEnabled": true,
+    "statsRefreshDays": 7,
+    "statsMaxPerRun": 40,
+    "statsDelayMs": 900,
+    "competition": {
+      "slayers 2": {
+        "open": 1,
+        "lagHours": 8,
+        "note": "查到的实情：3 个专用 wiki（slayers2game.wiki / slayers-2.wiki / project-slayers2.wiki）+ progameguides 专属 hub，长尾已被占满"
+      }
+    }
   },
   "feedback": {
     "block": [],
