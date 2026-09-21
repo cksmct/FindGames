@@ -67,8 +67,8 @@
   // ── 状态 ──
   var state = {
     tab: "hot", geo: "ALL", cat: "all", vol: 0, growth: 0,
-    noise: false, watch: false, q: "", rowsShown: 200, poolQ: "", gameSort: "first", pick: "all",
-    watchWindow: "all", watchSrc: "all", watchQ: "",
+    noise: false, watch: false, q: "", rowsShown: 200, poolQ: "", gameSort: "first", pick: "all", pickSort: "verdict",
+    watchSort: "date", watchSrc: "all", watchQ: "", watchTba: false,
   };
   var trends = null, history = null, games = null, pool = null, poolIndex = null, watch = null;
   var CATS = {}, GEOS = [];
@@ -363,28 +363,38 @@
   // ══════════════════════════════════════════════════════════════════════
   // 建站可做性（🎯 建站推荐）
   //
-  // ⚠️ 这一页的排序和「🎮 新游戏雷达」是**反的**，这是刻意的：
-  //    雷达回答「哪个游戏在火」；这一页回答「哪个游戏我挤得进去」。
+  // 🛑 2026-09-21 用户修正（重要，别改回去）：
+  //    **「访问量/流量大」不是负面因素** —— 负面因素是「**竞争高**」和「**上线时间长**」。
+  //    旧实现把访问量做成"中间高、两端低"的竞争余量，等于**用访问量反推竞争**，方向反了：
+  //      访问量 = 需求（有人搜）→ 应该**正向**计分；
+  //      竞争   = 要独立测（人工 SERP 核查优先，其次用上线时长推断）；测不到就标「竞争未测」。
   //
-  // 实测依据（2026-09-21，28 条有 Roblox 官方数据的游戏）访问量量级分布：
-  //    >10B 7 个 · 1B-10B 12 个 · 100M-1B 3 个 · 1M-100M 6 个
-  // 可做区间是 1M~100M —— 太低没有搜索需求，太高没有排名余地。
-  // 所以「体量」在评分里是**中间高、两端低**的曲线，不是单调的（这是本页最反直觉的一点）。
+  // 六项（合计 100）：
+  //   需求规模 22  访问量 / 在线人数，log 归一，**单调递增**
+  //   内容面   20  已挖到的攻略词数量 ≈ 能做的页面数
+  //   需求动能 14  7 天曲线后半段 vs 前半段
+  //   口碑     12  好评率
+  //   新鲜度   16  **距上线多久**，越老越难挤（"上线时间长"的兑现）
+  //   竞争     16  分高 = 竞争低。人工 SERP 核查 > 上线时长推断 > 未测
+  // 另：人工 lagHours（对手发稿滞后）作为**全局乘数** —— 是否决性信息，不参与加权平均。
   //
-  // 反面案例（Royale High）：访问 1045 亿、好评 85.9%、2 天前还在更新 ——
-  // 从"游戏好不好"看是满分，从"能不能挤进去"看是零分（需求同比 -38%、
-  // 7 家专业站 8 小时内发稿、长尾被社区垄断）。
+  // 反面案例（Royale High）：访问 1045 亿（需求拉满）、但上线 9 年 + 需求同比 -38% +
+  // 7 家专业站 8 小时内发稿 + 长尾被社区垄断 → 这是**竞争与时长**否掉的，
+  // 不是"因为它访问量太大"否掉的。
   // ══════════════════════════════════════════════════════════════════════
-  var PICK_W = { comp: 28, surface: 26, momentum: 18, quality: 16, fresh: 12 };
-  var PICK_LABEL = { comp: "竞争余量", surface: "内容面", momentum: "需求动能", quality: "口碑", fresh: "新鲜度" };
+  var PICK_W = { demand: 22, surface: 20, fresh: 16, comp: 16, momentum: 14, quality: 12 };
+  var PICK_LABEL = {
+    demand: "需求规模", surface: "内容面", fresh: "新鲜度(上线时长)",
+    comp: "竞争(分高=竞争低)", momentum: "需求动能", quality: "口碑",
+  };
 
   function clamp01(v) { return Math.max(0, Math.min(100, v)); }
   var avgOf = function (a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : 0; };
 
-  /** 竞争余量：以 1000 万访问为峰值，每偏离一个数量级扣 45 分。1e7→100 / 1e6→55 / 1e9→10 / 1e10→0 */
-  function compScore(visits) {
+  /** 需求规模：访问量单调递增（log 归一）。1e5→0 · 1e6→33 · 1e7→66 · 1e8→100 */
+  function demandScore(visits) {
     if (visits == null || visits <= 0) return null;
-    return clamp01(100 - Math.abs(Math.log10(visits) - 7) * 45);
+    return clamp01((Math.log10(visits) - 5) * 33);
   }
   /** 内容面：已挖到的攻略词数量 ≈ 可直接做的页面数 */
   function surfaceScore(words) {
@@ -409,26 +419,62 @@
     if (approval == null) return null;
     return clamp01(((approval - 50) / 45) * 100);
   }
-  /** 新鲜度：刚发现 100 分，每多 1 天减 3.3 分（30 天归零） */
-  function freshScore(first) {
-    if (!first) return null;
-    return clamp01(100 - ((Date.now() - new Date(first).getTime()) / 86400000) * 3.3);
+  /**
+   * 上线时长（天）：**只认官方上线日 stats.created**（Roblox 接口给的）。
+   *
+   * 🛑 绝不能退化成「首次发现时间 g.first」：那是我们数据库里的时间，不是游戏的上线时间。
+   *    实测踩过：拿 g.first 当 ageDays 后，没有官方数据的词（sony playstation / gta 6 …）
+   *    因为"1 天前才发现"被算成上线 1 天 → 竞争项直接 100 分 → 排到推荐榜第一。
+   *    拿不到就返回 null，让竞争项标「未测」，而不是编一个"新鲜=竞争低"。
+   */
+  function ageDaysOf(g) {
+    var c = g.stats && g.stats.created;
+    if (!c) return null;
+    var d = (Date.now() - new Date(c).getTime()) / 86400000;
+    return isFinite(d) ? d : null;
+  }
+  /** 新鲜度（越新越高）：≤1 月 100 · 1 年 40 · 5 年 10 · 10 年 0 */
+  function freshAgeScore(ageDays) {
+    if (ageDays == null) return null;
+    if (ageDays <= 30) return 100;
+    if (ageDays <= 365) return clamp01(100 - ((ageDays - 30) / 335) * 60);
+    if (ageDays <= 1825) return clamp01(40 - ((ageDays - 365) / 1460) * 30);
+    return clamp01(10 - ((ageDays - 1825) / 1825) * 10);
+  }
+  /**
+   * 竞争（分高 = 竞争低 = 好挤进去）。
+   * 优先级：人工 SERP 核查（最准）> 上线时长推断 > 未测(null)。
+   * 🛑 绝不拿访问量推断竞争 —— 那是需求，不是竞争。
+   */
+  function compRoom(g, ageDays) {
+    var mc = manualComp(g.name);
+    if (mc && mc.open != null) {
+      return { score: [10, 25, 50, 75, 100][Math.max(1, Math.min(5, Math.round(mc.open))) - 1], source: "manual" };
+    }
+    if (ageDays == null) return { score: null, source: "unknown" };
+    var s = ageDays <= 180 ? 100
+      : ageDays <= 365 ? 80
+        : ageDays <= 730 ? 60
+          : ageDays <= 1460 ? 40
+            : ageDays <= 2920 ? 20 : 5;
+    return { score: s, source: "age" };
   }
 
   function rankability(g) {
     var st = g.stats || {};
+    var ageDays = ageDaysOf(g);
+    var comp = compRoom(g, ageDays);
     var parts = {
-      comp: compScore(st.visits),
+      demand: demandScore(st.visits),
       surface: surfaceScore(g.words),
+      fresh: freshAgeScore(ageDays),
+      comp: comp.score,
       momentum: momentumScore(g.series),
       quality: qualityScore(st.approval),
-      fresh: freshScore(g.first),
     };
-    // 🛑 没有竞争数据就不给分，**绝不做权重归一化**。
-    //    踩过的坑：第一版把 comp(28) 和 quality(16) 的权重让给剩下三项后，
-    //    sony playstation / fc 27 / gta 6 / fifa 27 这些"最高权重项缺失"的词
-    //    靠 内容面100 + 动能 + 新鲜度 凑出了 99 分，**排在了推荐榜第一位** ——
-    //    而它们恰恰是最做不了的那批（没有 Roblox 页 = 我们无从判断竞争强度）。
+    // 🛑 竞争测不到就不给总分，**绝不做权重归一化**。
+    //    踩过的坑：把缺失项的权重让给其它项后，sony playstation / fc 27 / gta 6 / fifa 27
+    //    靠 内容面100 + 动能 + 新鲜度 凑出 99 分排到第一 —— 而它们恰恰是最做不了的那批。
     //    缺失不等于满分，也不等于 0，而是"判断不了"，必须如实显示为 —。
     var sum = 0, wsum = 0, missing = [];
     for (var k in PICK_W) {
@@ -436,27 +482,19 @@
       sum += parts[k] * PICK_W[k];
       wsum += PICK_W[k];
     }
-    if (parts.comp == null) {
-      return { score: null, parts: parts, missing: missing, reason: "no-competition-data" };
-    }
-    if (!wsum) return { score: null, parts: parts, missing: missing };
-    // 人工竞争判断作为**乘数**，不参与加权平均 ——
-    // 它是否决性信息（"这个长尾已经被专用 wiki 占满了"），不是一个能被其它项摊平的分数。
     var mc = manualComp(g.name);
+    // 只把「对手发稿滞后」当全局乘数（open 已经进了竞争项，不能重复计一次）
     var mult = 1;
-    if (mc) {
-      // open: 1(垄断)→×0.35 · 3(自由竞争)→×1 · 5(蓝海)→×1.35
-      if (mc.open != null) {
-        mult *= [0.35, 0.6, 1, 1.2, 1.35][Math.max(1, Math.min(5, Math.round(mc.open))) - 1];
-      }
-      // 对手发稿越快，惩罚越重
-      if (mc.lagHours != null) {
-        mult *= mc.lagHours <= 12 ? 0.6 : mc.lagHours <= 24 ? 0.8 : mc.lagHours >= 72 ? 1.1 : 1;
-      }
+    if (mc && mc.lagHours != null) {
+      mult *= mc.lagHours <= 12 ? 0.6 : mc.lagHours <= 24 ? 0.8 : mc.lagHours >= 72 ? 1.1 : 1;
     }
+    if (comp.score == null) {
+      return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult, reason: "no-competition-data" };
+    }
+    if (!wsum) return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult };
     return {
       score: Math.round(clamp01((sum / wsum) * mult)),
-      parts: parts, missing: missing,
+      parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult,
       manual: mc ? { mult: Number(mult.toFixed(2)), note: mc.note || "" } : null,
     };
   }
@@ -480,7 +518,12 @@
     return "⚠️ 像是限时活动：先确认结束时间 —— 窗口太短的话新站来不及排上去（本评分不区分持久需求与一次性活动）";
   }
 
-  /** 结论档位。与 roblox-game-breakout-scanner 技能同一套口径、同三条硬否决。 */
+  /** 查竞争用的一次点击：SERP 里看这个游戏现在有几个独立域名占位 */
+  function serpSearchUrl(name) {
+    return "https://www.google.com/search?q=" + encodeURIComponent("\"" + name + "\" wiki tier list comps guide");
+  }
+
+  /** 结论档位。与 roblox-game-breakout-scanner 技能同一套口径，但**不再拿访问量当否决项**。 */
   function pickVerdict(g, r) {
     var st = g.stats || {};
     // 人工判断优先级最高：它是最具体的信息，且自动分看不到长尾垄断这件事
@@ -488,16 +531,18 @@
     if (mc && mc.open != null && mc.open <= 2) {
       return { k: "no", t: "竞争饱和（人工判断）", why: mc.note || "长尾已被专用 wiki / 专业站占据" };
     }
-    if (st.visits == null) {
-      return { k: "unknown", t: "缺官方数据", why: "非 Roblox 来源或未取到 —— 判断不了竞争强度，别当结论用" };
+    // 🛑 竞争测不到就不下结论 —— 但要给"怎么补"的动作（点「查竞争」看 SERP），
+    //    而不是像旧版那样用访问量硬推断一个"巨头级"。
+    if (r.comp.score == null) {
+      return { k: "unknown", t: "竞争未测", why: "没有官方上线数据，也没填人工竞争判断 —— 点「查竞争」看 SERP 再决定" };
     }
-    // 阈值与 roblox-game-breakout-scanner 技能保持一致：10 亿访问 = 巨头级。
-    // 注意这个数要和 compScore() 对齐 —— compScore 在 1e9 处正好降到 0，
-    // 如果否决线定得更高，就会出现"竞争余量已经是 0、却还标着可小试"的自相矛盾（实测踩过：Animal Hospital 23 亿访问拿了 59 分标"可小试"）。
-    if (st.visits >= 1e9) return { k: "no", t: "巨头级", why: "访问 " + fmtVol(st.visits) + "，攻略站多且权重高，新站基本排不上去" };
     if (st.approval != null && st.approval < 60) return { k: "no", t: "口碑偏低", why: "好评 " + st.approval + "%，游戏本身在流失玩家" };
     if (!(g.words || []).length) return { k: "warn", t: "没挖到攻略词", why: "没有可做页面的词 —— 可能需求弱，也可能只是本轮还没挖到" };
-    if (r.score >= 65) return { k: "yes", t: "值得做", why: "体量在可做区间 + 有现成攻略词" };
+    // 上线很久 → 长尾多半已固化：不否决，但降档（"上线时间长是负面因素"的兑现）
+    if (r.ageDays != null && r.ageDays > 1460 && r.score >= 65) {
+      return { k: "warn", t: "上线超 4 年", why: "长尾大概率已固化（新鲜度与竞争项已扣分），建议先做 1~2 页试水" };
+    }
+    if (r.score >= 65) return { k: "yes", t: "值得做", why: "需求够 + 竞争未饱和（竞争来源：" + (r.comp.source === "manual" ? "人工核查" : "上线时长推断") + "）" };
     if (r.score >= 45) return { k: "warn", t: "可小试", why: "有条件但不够硬，建议先做 1~2 页试水" };
     return { k: "no", t: "不建议", why: "" };
   }
@@ -519,21 +564,25 @@
     var words = (g.words || []).map(function (w) {
       return '<a class="kwchip" target="_blank" rel="noopener" href="' + exploreUrl(w, g.chart_geo) + '">' + esc(w) + "</a>";
     }).join("");
-    var dl = g.srcUrl
-      ? ' · <a class="srclink" target="_blank" rel="noopener" href="' + esc(g.srcUrl) + '">Roblox 页</a>'
-      : "";
+    var age = r.ageDays == null ? "未取得" : (r.ageDays < 30 ? Math.round(r.ageDays) + " 天" : (r.ageDays / 365).toFixed(1) + " 年");
+    var compSrc = { manual: "人工核查", age: "上线时长推断", unknown: "未测" }[r.comp.source] || "未测";
     return '<div class="gcard pk-card">' +
       '<div class="ghead"><h3>' + esc(g.name) + '</h3><span class="score pk-' + v.k + '">' +
       (r.score == null ? "—" : r.score) + "</span></div>" +
       '<div class="pk-verdict pk-' + v.k + '">' + v.t + (v.why ? " · " + esc(v.why) : "") + "</div>" +
       (evt ? '<div class="pk-verdict pk-flag">' + esc(evt) + "</div>" : "") +
-      (r.manual ? '<div class="pk-verdict pk-flag">人工竞争判断：总分 ×' + r.manual.mult +
+      (r.manual ? '<div class="pk-verdict pk-flag">人工竞争：发稿滞后乘数 ×' + r.manual.mult +
         (r.manual.note ? " · " + esc(r.manual.note) : "") + "</div>" : "") +
       bars +
-      '<div class="gmeta">访问 ' + fmtVol(st.visits) + " · 好评 " +
+      '<div class="gmeta">需求 访问 ' + fmtVol(st.visits) + " · 好评 " +
       (st.approval == null ? "未取得" : st.approval + "%") + " · 上线 " +
-      (st.created ? esc(String(st.created).slice(0, 10)) : "未取得") +
-      " · 攻略词 " + (g.words || []).length + " 个" + dl + "</div>" +
+      (st.created ? esc(String(st.created).slice(0, 10)) : "未取得") + "（" + age + "）</div>" +
+      '<div class="gmeta">竞争来源 ' + esc(compSrc) + " · 攻略词 " + (g.words || []).length + " 个</div>" +
+      '<div class="kwrow">' +
+      (g.srcUrl ? '<a class="kwchip" target="_blank" rel="noopener" href="' + esc(g.srcUrl) + '">Roblox 页</a>' : "") +
+      '<a class="kwchip up" target="_blank" rel="noopener" title="数一下前十有几个独立域名占位，就是竞争强度的实测" href="' + serpSearchUrl(g.name) + '">查竞争（SERP）</a>' +
+      '<a class="kwchip" target="_blank" rel="noopener" href="' + exploreUrl(g.name, g.chart_geo) + '">Google Trends</a>' +
+      "</div>" +
       (words ? '<div class="kwrow"><span class="kwlabel">可做的词</span>' + words + "</div>" : "") +
       (r.missing.length
         ? '<div class="gmeta pk-dim">缺项（未计入，不是 0）：' + r.missing.map(function (k) { return PICK_LABEL[k]; }).join(" · ") + "</div>"
@@ -551,8 +600,20 @@
     var rows = all;
     if (state.pick === "todo") rows = all.filter(function (x) { return x.v.k === "yes"; });
     else if (state.pick === "nowords") rows = all.filter(function (x) { return !(x.g.words || []).length; });
-    // 先按结论档位，同档内再按分数 —— 避免"巨头级 67 分"排到"可小试 63 分"前面
+    // 排序：
+    //   verdict（默认）先按结论档位、同档按分数 —— 避免"可小试 63 分"被"不建议 67 分"压下去
+    //   newest / oldest 按**上线日**（正是"新鲜度"项的输入）—— 想抢新游戏就用这个
     rows = rows.slice().sort(function (a, b) {
+      if (state.pickSort === "newest" || state.pickSort === "oldest") {
+        var va = a.r.ageDays, vb = b.r.ageDays;
+        // 无上线数据的一律沉底（两个都是 null 也是一样）。
+        // 🛑 不能拿 Infinity 当哨兵：Infinity - Infinity = NaN，比较函数返回 NaN 会让整个排序乱掉
+        //    （实测踩过：选「最早上线」时，没有上线数据的 gta vi 反而排在第一）。
+        if (va == null && vb == null) return 0;
+        if (va == null) return 1;
+        if (vb == null) return -1;
+        return state.pickSort === "newest" ? va - vb : vb - va;
+      }
       var ra = VERDICT_RANK[a.v.k], rb = VERDICT_RANK[b.v.k];
       if (ra !== rb) return ra - rb;
       return (b.r.score == null ? -1 : b.r.score) - (a.r.score == null ? -1 : a.r.score);
@@ -574,111 +635,127 @@
   // 🚀 潜伏列表（data/watchlist.json）
   //
   // 与「🎮 新游戏雷达」的分工：
-  //   雷达      = 哪个游戏**在火**（需要 Trends 曲线，吃配额、可能被限流）
-  //   潜伏列表  = **还没火的时候该盯谁**（愿望单序位 / 发售日 / 官方新晋榜，零配额）
+  //   雷达      = 哪个游戏**在火**（要 Trends 曲线，吃配额、可能被限流）
+  //   潜伏列表  = **还没火的时候该盯谁**（愿望单序位 / 发售日 / 未发售清单，零配额）
   //
-  // 实测教训（Batomon Showdown，2026-09-21）：等上线才动手已经晚了 ——
-  // 上线 6 天内 SERP 上出现 7 个专用站。所以这里的核心字段是「还有几天发售」。
+  // 🛑 2026-09-21 用户反馈后改版（重要）：
+  //    旧版是卡片流，按"窗口"分组 → 结果顶部全是「未定档 / TBA」的 Roblox 条目，
+  //    **看不出哪个游戏最近发售**，等于没有信息量。
+  //    现在改成**表格 + 默认按发售日从近到远排序**，「距今」单独成列（带颜色），
+  //    未定档的默认折叠（无法按日期排序的东西不该占据版面）。
   //
-  // 🛑 关键约定：**每条必须给出可点链接**（商店页 / Google Trends / SERP）。
-  //    数据里 trends.status 可能是 not-queried（省配额）或 429（被限流）——
-  //    这时不显示曲线，但链接照给，由用户自己点过去判断。绝不允许因为"没测到"就把条目藏起来。
+  // 🛑 另一条约定不变：**每条必须给出可点链接**（商店页 / 来源页 / Trends / SERP / Discord）。
+  //    trends.status 可能是 not-queried（省配额）或 429（被限流）——不显示曲线，但链接照给。
+  //    绝不允许因为"没测到"就把条目藏起来。
   // ══════════════════════════════════════════════════════════════════════
   var WINDOW_LABEL = {
-    build: "🟢 黄金窗口（30~180 天）",
-    close: "🟡 临门（≤30 天）",
+    build: "🟢 黄金窗口",
+    close: "🟡 临门 ≤30 天",
     far: "⚪ 远期 / 未定档",
-    "too-late": "🔴 已来不及（≤7 天）",
+    "too-late": "🔴 已来不及 ≤7 天",
     live: "🔵 已上线",
   };
+  var W_ORDER = { build: 0, close: 1, far: 2, "too-late": 3, live: 4 };
   var TRENDS_LABEL = {
-    "not-queried": "需求：未测（点链接自己看）",
-    "429": "需求：Trends 限流（点链接自己看）",
-    empty: "需求：无趋势数据",
-    error: "需求：查询失败",
-    ok: "需求：已测",
+    "not-queried": "未测",
+    "429": "限流",
+    empty: "无数据",
+    error: "失败",
+    ok: "已测",
   };
-  var PRECISION_LABEL = { quarter: "季度", year: "仅年份", unknown: "未定档", day: "" };
+  var PRECISION_LABEL = { quarter: "季度", year: "仅年份", month: "仅月份", unknown: "未定档", day: "" };
 
-  function watchLinkChips(it) {
+  /** 距今文案（正数=还有几天，0/负=已到发售日） */
+  function daysText(it) {
+    if (it.releaseInDays == null) return "未定档";
+    var d = it.releaseInDays;
+    if (d < 0) return "已发售 " + Math.abs(d) + " 天";
+    if (d === 0) return "就是今天";
+    return d + " 天后";
+  }
+
+  /** 表格里的链接列：永远给全，测不到也不影响点击 */
+  function watchLinks(it) {
     var L = it.links || {};
     var out = [];
     if (L.page) {
-      var isRbxPage = String(L.page).indexOf("roblox.com") > 0;
-      out.push('<a class="kwchip" target="_blank" rel="noopener" href="' + esc(L.page) + '">' +
-        (it.source === "roblox" ? (isRbxPage ? "Roblox 页" : "来源页") : "商店页") + "</a>");
+      var isRbx = String(L.page).indexOf("roblox.com") > 0;
+      out.push('<a target="_blank" rel="noopener" href="' + esc(L.page) + '">' +
+        (it.source === "roblox" ? (isRbx ? "Roblox 页" : "来源页") : "商店页") + "</a>");
     }
-    // Roblox 未发售的游戏往往还没建 Roblox 页，来源页（带倒计时/状态）才是能看的那一页
-    if (L.source && L.source !== L.page) {
-      out.push('<a class="kwchip" target="_blank" rel="noopener" title="第三方来源页：倒计时、状态与官方链接" href="' + esc(L.source) + '">来源页（BloxInformer）</a>');
-    }
-    if (L.discord) out.push('<a class="kwchip" target="_blank" rel="noopener" href="' + esc(L.discord) + '">Discord</a>');
-    if (L.trends) out.push('<a class="kwchip" target="_blank" rel="noopener" title="在 Google Trends 看该词的 7 天曲线" href="' + esc(L.trends) + '">Google Trends</a>');
-    if (L.serp) out.push('<a class="kwchip up" target="_blank" rel="noopener" title="看这个游戏现在有几个站占位（wiki / tier list / comps）" href="' + esc(L.serp) + '">查 wiki / 竞品</a>');
-    return out.join("");
+    if (L.source && L.source !== L.page) out.push('<a target="_blank" rel="noopener" href="' + esc(L.source) + '">BloxInformer</a>');
+    if (L.trends) out.push('<a target="_blank" rel="noopener" href="' + esc(L.trends) + '">Trends</a>');
+    if (L.serp) out.push('<a target="_blank" rel="noopener" href="' + esc(L.serp) + '">SERP</a>');
+    if (L.discord) out.push('<a target="_blank" rel="noopener" href="' + esc(L.discord) + '">Discord</a>');
+    return out.join(" · ");
   }
 
-  function watchCard(it) {
-    var st = it.trends || {};
-    var when;
-    if (it.source === "roblox") {
-      when = it.released ? "预计 " + esc(it.released) : "发售日未定";
-      if (it.releaseInDays != null) {
-        when += "（" + (it.releaseInDays <= 0 ? "已到发售日" : it.releaseInDays + " 天后") + "）";
-      }
-      var plr = PRECISION_LABEL[it.releasePrecision];
-      if (plr) when += " · 日期精度：" + plr;
-      if (it.players) when += " · 当前在线 " + fmtVol(it.players);
-    } else {
-      when = it.released ? "发售 " + esc(it.released) : "发售日未公布";
-      if (it.releaseInDays != null) {
-        when += "（" + (it.releaseInDays <= 0 ? "已到发售日" : it.releaseInDays + " 天后") + "）";
-      }
-      var pl = PRECISION_LABEL[it.releasePrecision];
-      if (pl) when += " · 日期精度：" + pl;
-    }
+  var WATCH_SORTS = {
+    // ⏱ 最近发售：有确切日期的按天数升序，未定档沉底（默认）
+    date: function (a, b) {
+      var da = a.releaseInDays == null ? 1e9 : a.releaseInDays;
+      var db = b.releaseInDays == null ? 1e9 : b.releaseInDays;
+      return da - db || (a.rank || 1e9) - (b.rank || 1e9);
+    },
+    // 🪟 窗口优先：黄金窗口最前
+    window: function (a, b) {
+      var wa = W_ORDER[a.window] == null ? 9 : W_ORDER[a.window];
+      var wb = W_ORDER[b.window] == null ? 9 : W_ORDER[b.window];
+      return wa - wb || WATCH_SORTS.date(a, b);
+    },
+    // 🔥 热度：Steam 愿望单序位（越小越热）；Roblox 无热度指标 → 按已有在线人数
+    heat: function (a, b) {
+      var ha = a.source === "steam" && a.rank ? a.rank : 1e6 - (a.players || 0);
+      var hb = b.source === "steam" && b.rank ? b.rank : 1e6 - (b.players || 0);
+      return ha - hb;
+    },
+    name: function (a, b) { return String(a.name).localeCompare(String(b.name)); },
+  };
+
+  function watchMatch(it) {
+    if (state.watchSrc !== "all" && it.source !== state.watchSrc) return false;
+    if (state.watchQ && String(it.name).toLowerCase().indexOf(state.watchQ) < 0) return false;
+    // 未定档默认折叠：它们无法按日期排序，堆在最前面只会淹掉有日期的条目
+    if (!state.watchTba && it.releaseInDays == null) return false;
+    return true;
+  }
+
+  function watchRowHtml(it, i) {
     var bits = [];
     if ((it.genres || []).length) bits.push(esc(it.genres.slice(0, 3).join(" / ")));
     if (it.developer) bits.push(esc(it.developer));
     if (it.price) bits.push(esc(it.price));
-    // Roblox 条目的状态来自 BloxInformer（In Development / Confirmed / Delayed…），是判断信号，必须显示
-    if (it.status) bits.push(esc(it.status));
-    if ((it.platforms || []).length) bits.push(esc(it.platforms.join(" / ")));
     if (it.source === "steam") bits.push(it.demo ? "有 Demo" : "无 Demo");
-    if (it.snapshotAt) bits.push("快照 " + String(it.snapshotAt).slice(0, 10));
-    var badge = (it.source === "roblox" ? "Roblox" : "Steam") +
-      (it.list ? " · " + esc(it.list) : "") + (it.rank ? " #" + it.rank : "");
-    var win = it.window || "";
-    var chart = (st.status === "ok" && (st.series || []).length > 1)
-      ? sparkSvg(st.series, "#3fb950") + '<div class="gmeta">7 天热度快照 · 峰值 ' + (st.peak == null ? "—" : st.peak) + (st.cached ? " · 取自缓存" : "") + "</div>"
-      : "";
-    return '<div class="gcard wk-card wk-' + esc(it.window || "far") + '">' +
-      '<div class="ghead"><h3>' + esc(it.name) + '</h3><span class="tag">' + badge + "</span></div>" +
-      '<div class="pk-verdict wk-window wk-' + esc(win) + '">' + (WINDOW_LABEL[win] || esc(win)) + " · " + when + "</div>" +
-      (bits.length ? '<div class="gmeta">' + bits.join(" · ") + "</div>" : "") +
-      '<div class="kwrow"><span class="kwlabel">' + (TRENDS_LABEL[st.status] || "需求：未测") + '</span>' + watchLinkChips(it) + "</div>" +
-      chart +
-      "</div>";
-  }
-
-  function watchMatch(it) {
-    if (state.watchWindow !== "all" && it.window !== state.watchWindow) return false;
-    if (state.watchSrc !== "all" && it.source !== state.watchSrc) return false;
-    if (state.watchQ && String(it.name).toLowerCase().indexOf(state.watchQ) < 0) return false;
-    return true;
+    if (it.status) bits.push(esc(it.status));
+    var src = it.source === "roblox"
+      ? "Roblox · " + esc(it.list || "BloxInformer") + (it.snapshotAt ? "（快照 " + String(it.snapshotAt).slice(0, 10) + "）" : "")
+      : "Steam" + (it.list ? " · " + esc(it.list) : "") + (it.rank ? " 愿望单#" + it.rank : "");
+    var pr = PRECISION_LABEL[it.releasePrecision] || "";
+    return "<tr>" +
+      '<td class="num dim">' + (i + 1) + "</td>" +
+      "<td><b>" + esc(it.name) + "</b>" + (bits.length ? '<div class="sub">' + bits.join(" · ") + "</div>" : "") + "</td>" +
+      '<td class="dim hide-sm">' + src + "</td>" +
+      "<td>" + esc(it.released || "—") + (pr ? ' <span class="tag">' + pr + "</span>" : "") + "</td>" +
+      '<td class="num ' + (it.window === "build" ? "up" : it.window === "close" ? "hot" : "dim") + '">' + daysText(it) + "</td>" +
+      '<td><span class="tag">' + (WINDOW_LABEL[it.window] || esc(it.window || "—")) + "</span></td>" +
+      '<td class="dim hide-sm">' + (TRENDS_LABEL[(it.trends || {}).status] || "未测") + "</td>" +
+      '<td class="dim">' + watchLinks(it) + "</td>" +
+      "</tr>";
   }
 
   function renderWatch() {
-    var el = $("watch-cards");
+    var el = $("watch-table");
     if (!el) return;
     if (!watch) { el.innerHTML = '<p class="empty">加载中…（若长期为空：先跑一次 <code>npm run watchlist</code>）</p>'; return; }
     var all = watch.items || [];
-    var rows = all.filter(watchMatch);
+    var dated = all.filter(function (x) { return x.releaseInDays != null; });
+    var rows = all.filter(watchMatch).slice().sort(WATCH_SORTS[state.watchSort] || WATCH_SORTS.date);
+    var st = watch.stats || {};
     var meta = $("watch-meta");
     if (meta) {
-      var st = watch.stats || {};
       meta.textContent = "共 " + all.length + " 条（Steam " + (st.steam || 0) + " / Roblox " + (st.roblox || 0) +
-        "）· 显示 " + rows.length + " · 更新 " + rel(watch.updated);
+        "）· 有发售日 " + dated.length + " · 未定档 " + (all.length - dated.length) +
+        (state.watchTba ? "（已展开）" : "（已折叠）") + " · 显示 " + rows.length;
     }
     var notes = $("watch-notes");
     if (notes) {
@@ -686,8 +763,11 @@
         return '<div class="wk-note">' + esc(n) + "</div>";
       }).join("");
     }
-    if (!rows.length) { el.innerHTML = '<p class="empty">该筛选下暂无候选（换个窗口/来源看看）</p>'; return; }
-    el.innerHTML = rows.map(watchCard).join("");
+    if (!rows.length) { el.innerHTML = '<p class="empty">该筛选下暂无候选（换来源，或点「显示未定档」）</p>'; return; }
+    el.innerHTML = '<div class="table-wrap"><table><thead><tr>' +
+      '<th class="num">#</th><th>游戏</th><th class="hide-sm">来源</th><th>发售日</th>' +
+      '<th class="num">距今</th><th>窗口</th><th class="hide-sm">需求</th><th>链接</th>' +
+      "</tr></thead><tbody>" + rows.map(watchRowHtml).join("") + "</tbody></table></div>";
   }
 
   // ── 关键词池 ──
@@ -792,6 +872,7 @@
   bindBar("cat-bar", "cat", function (v) { state.cat = v; });
   bindBar("vol-bar", "vol", function (v) { state.vol = Number(v); });
   bindBar("growth-bar", "growth", function (v) { state.growth = Number(v); });
+  bindBar("pick-sort", "psort", function (v) { state.pickSort = v; });
 
   $("noise-btn").addEventListener("click", function () {
     state.noise = !state.noise;
@@ -826,7 +907,7 @@
     Array.prototype.forEach.call(this.querySelectorAll("button"), function (x) { x.classList.toggle("on", x === b); });
     renderGames();
   });
-  // 🚀 潜伏列表：两个独立筛（窗口 / 来源），各自单选
+  // 🚀 潜伏列表：排序 / 来源两个单选组 + 未定档开关
   function bindWatchGroup(id, attr, key) {
     $(id).addEventListener("click", function (ev) {
       var b = ev.target.closest("button[data-" + attr + "]");
@@ -836,15 +917,26 @@
       renderWatch();
     });
   }
-  bindWatchGroup("watch-window", "window", "watchWindow");
+  bindWatchGroup("watch-sort", "wsort", "watchSort");
   bindWatchGroup("watch-src", "src", "watchSrc");
   $("watch-search").addEventListener("input", debounce(function (e) {
     state.watchQ = e.target.value.trim().toLowerCase();
     renderWatch();
   }, 180));
+  $("watch-tba").addEventListener("click", function () {
+    state.watchTba = !state.watchTba;
+    this.classList.toggle("on", state.watchTba);
+    renderWatch();
+  });
   $("watch-csv").addEventListener("click", function () {
     if (!watch) return;
-    downloadCsv("watchlist.csv", (watch.items || []).filter(watchMatch).map(function (it) {
+    // CSV 导出**不受"未定档折叠"影响**：导出要全（折叠只是看板上的降噪）
+    var csvRows = (watch.items || []).filter(function (it) {
+      if (state.watchSrc !== "all" && it.source !== state.watchSrc) return false;
+      if (state.watchQ && String(it.name).toLowerCase().indexOf(state.watchQ) < 0) return false;
+      return true;
+    }).sort(WATCH_SORTS[state.watchSort] || WATCH_SORTS.date);
+    downloadCsv("watchlist.csv", csvRows.map(function (it) {
       var L = it.links || {};
       return {
         name: it.name, source: it.source, list: it.list || "", rank: it.rank || "",

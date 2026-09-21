@@ -1,14 +1,16 @@
 /**
  * Roblox 官方数据补充层（零依赖、零密钥）
  *
- * 为什么需要：游戏雷达原先只有"热度"（曲线 / 曝光次数），没有"竞争强度"。
- * 而决定"这个游戏值不值得做攻略站"的**首要因素恰恰是竞争强度** ——
- * 实测案例（2026-09-21）：Royale High 访问量 1045 亿、好评 85.9%、2 天前还在更新，
- * 从"游戏好不好"看是满分，但从"我能不能挤进去"看是零分（需求同比 -38%、
- * 7 家专业站 8 小时内发稿、长尾被社区垄断）。
+ * 为什么需要：游戏雷达原先只有"热度"（曲线 / 曝光次数），没有官方体量数据。
+ * 建站推荐的评分要用到三样东西，都来自这里：**访问量（需求规模）、好评率（口碑）、上线日（新鲜度）**。
  *
- * 访问量是竞争强度最好的免费代理指标：访问量越大 → 攻略站越多、权重越高 → 越挤不进去。
- * 所以在评分里它是【扣分项】，而不是加分项（与 games.json 的 score 正好相反）。
+ * 🛑 2026-09-21 用户修正：**访问量是「需求」不是「竞争」**。
+ *    旧注释里写的"访问量越大越挤不进去"是错的推理：访问量只说明有多少人在找，
+ *    竞争强度必须独立测（人工 SERP 核查优先，其次用上线时长推断）。
+ *    所以访问量在新评分里是**正向项（需求规模）**，不再是扣分项。
+ *
+ * 实测参考（Royale High）：访问 1045 亿（需求拉满），但上线 9 年 + 需求同比 -38% +
+ * 7 家专业站 8 小时内发稿 —— 它是被**竞争与时长**否掉的，不是被访问量否掉的。
  *
  * 端点（实测确认可用，2026-09-21）：
  *   placeId  → universeId : apis.roblox.com/universes/v1/places/{placeId}/universe
@@ -17,7 +19,7 @@
  * 🛑 不要用 games.roblox.com/v2/games（新接口）—— 未鉴权时不可靠；
  *    也不要回退到旧的 gamesV2 群组接口，实测对所有组都返回空数组（见 skill 护栏 1）。
  */
-import { log, sleep, iso } from "./util.mjs";
+import { log, sleep, iso, dataPath, readJson, writeJson } from "./util.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const HDR = { "user-agent": UA, accept: "application/json" };
@@ -97,58 +99,154 @@ export async function fetchGameStats(id, { delayMs = 0 } = {}) {
   };
 }
 
+/** placeId → universeId 的永久缓存文件（映射关系不会变，只有"没查过"才需要请求） */
+function universeMapFile(cfg) {
+  return dataPath(cfg, ".roblox-universe-map.json");
+}
+
+const chunk = (arr, n) => {
+  const out = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+};
+
+/** 批量取 games 数据（一次最多 50 个 universeId） */
+async function fetchGamesByIds(ids, gapMs) {
+  const out = new Map();
+  const errors = [];
+  for (const part of chunk(ids, 50)) {
+    try {
+      const j = await getJson(`https://games.roblox.com/v1/games?universeIds=${part.join(",")}`, { label: "games(batch)" });
+      for (const d of j?.data || []) out.set(Number(d.id), d);
+    } catch (e) {
+      errors.push(`games 批量(${part.length} 个)：${e.message}`);
+    }
+    await sleep(gapMs);
+  }
+  return { map: out, errors };
+}
+
+/** 批量取投票数据（同样最多 50 个） */
+async function fetchVotesByIds(ids, gapMs) {
+  const out = new Map();
+  const errors = [];
+  for (const part of chunk(ids, 50)) {
+    try {
+      const j = await getJson(`https://games.roblox.com/v1/games/votes?universeIds=${part.join(",")}`, { label: "votes(batch)" });
+      for (const d of j?.data || []) out.set(Number(d.id), d);
+    } catch (e) {
+      errors.push(`votes 批量(${part.length} 个)：${e.message}`);
+    }
+    await sleep(gapMs);
+  }
+  return { map: out, errors };
+}
+
+/** 把批量接口返回的一条记录整形成前端用的 stats（缺失写 null，绝不写 0） */
+function shapeStats(d, v) {
+  const up = v?.upVotes ?? null;
+  const down = v?.downVotes ?? null;
+  const tot = (up ?? 0) + (down ?? 0);
+  return {
+    universeId: d.id ?? null,
+    visits: d.visits ?? null,
+    favoritedCount: d.favoritedCount ?? null,
+    playing: d.playing ?? null,
+    maxPlayers: d.maxPlayers ?? null,
+    created: d.created || null,
+    updated: d.updated || null,
+    creator: d.creator ? { id: d.creator.id, name: d.creator.name, type: d.creator.type } : null,
+    upVotes: up,
+    downVotes: down,
+    approval: tot ? Number(((up / tot) * 100).toFixed(1)) : null,
+  };
+}
+
 /**
- * 给游戏列表就地补官方数据。
+ * 给游戏列表就地补官方数据（**批量版**）。
  *
- * 三条重要设计（不要随手改）：
- *  ① **按需刷新**：访问量变化慢，它是"竞争强度"的代理指标，不需要每小时更新。
- *     默认 7 天刷新一次，避免每轮 20+ 次请求把配额浪费在几乎不变的数上。
+ * 🛑 2026-09-21 重写（用户要求"推荐列表要有实时性"）：
+ *    旧版**逐个游戏**请求（每个 3 次：place→universe + games + votes）+ 每个之间 sleep 900ms，
+ *    刷 40 个 = 120+ 次请求 + 36 秒 —— 所以只能定 7 天 TTL。这不成立：
+ *    `games.roblox.com/v1/games?universeIds=a,b,c…` **本身就支持一次 50 个**，
+ *    55 个游戏只要 2 批 = 2 次请求（加 votes 共 4 次）。既然请求数从 120 降到 4，
+ *    就**没有理由**再限制成 7 天 —— 现在默认 **1 小时** TTL，推荐列表因此每小时都是新的。
+ *
+ * 四条设计（不要随手改）：
+ *  ① **批量 + place→universe 永久缓存**：这是能把 TTL 从 7 天压到 1 小时的前提。
+ *     （限制频率的是请求数，不是"访问量变化慢"这个理由 —— 旧注释里的说法是错的。）
  *  ② **只补有 Roblox 链接的**：Steam / App Store 来源没有 Roblox 页，跳过即可（不编数据）。
- *  ③ **失败保留旧值**：网络抖动时沿用上一次的 stats，绝不写成 0 或 null 覆盖掉真数据。
+ *  ③ **失败保留旧值**：网络抖动时沿用上一次的 stats，绝不写成 0 或 null 覆盖真数据。
+ *  ④ **优先刷新分数高的**：配额万一不够，先保推荐页会展示的那批。
  */
 export async function enrichGameStats(items, cfg) {
   const g = cfg.games || {};
   if (g.statsEnabled === false) return { mode: "off", checked: 0, fetched: 0, skipped: 0, failed: 0 };
-  const ttlDays = g.statsRefreshDays ?? 7;
-  const maxPerRun = g.statsMaxPerRun ?? 40;
-  const delayMs = g.statsDelayMs ?? 900;
-  const ttlMs = ttlDays * 86400_000;
+  // 新配置优先（小时），老的 statsRefreshDays 仍兼容
+  const ttlHours = g.statsRefreshHours != null ? g.statsRefreshHours : (g.statsRefreshDays != null ? g.statsRefreshDays * 24 : 1);
+  const maxPerRun = g.statsMaxPerRun ?? 300;
+  const gapMs = g.statsDelayMs ?? 250; // 现在是"每批之间"的间隔，不是每个游戏之间
+  const ttlMs = ttlHours * 3600_000;
   const now = Date.now();
-
-  // 优先刷新"分数高"的：它们更可能被推荐，值得花请求
-  const pool = [...items]
-    .filter((it) => it && it.srcUrl && robloxIdFromUrl(it.srcUrl))
-    .sort((a, b) => (b.score || 0) - (a.score || 0));
-
-  let checked = 0;
-  let fetched = 0;
-  let skipped = 0;
-  let failed = 0;
   const errors = [];
 
-  for (const it of pool) {
-    const age = it.statsAt ? now - new Date(it.statsAt).getTime() : Infinity;
-    if (age < ttlMs) { skipped++; continue; }
-    if (fetched >= maxPerRun) { skipped++; continue; }
-    checked++;
-    try {
-      const s = await fetchGameStats(robloxIdFromUrl(it.srcUrl), { delayMs });
-      if (s) { it.stats = s; it.statsAt = iso(); fetched++; }
-      else { failed++; errors.push(`${it.name}: 无 games 记录`); }
-    } catch (e) {
-      // 保留旧 stats（不覆盖）—— 宁可用 7 天前的访问量，也不要留空
-      failed++;
-      errors.push(`${it.name}: ${e.message}`);
-    }
-    await sleep(delayMs);
+  const pool = items.filter((it) => it && it.srcUrl && robloxIdFromUrl(it.srcUrl));
+  const need = pool
+    .filter((it) => {
+      const age = it.statsAt ? now - new Date(it.statsAt).getTime() : Infinity;
+      return age >= ttlMs;
+    })
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, maxPerRun);
+  const skipped = items.length - need.length;
+  if (!need.length) {
+    log("dim", `  Roblox 数据：全部在 ${ttlHours}h 保鲜期内，跳过（${pool.length} 个有 Roblox 页）`);
+    return { mode: "on", checked: 0, fetched: 0, skipped, failed: 0, errors, requests: 0 };
   }
 
-  if (fetched || failed) {
-    log("dim", `  Roblox 数据：刷新 ${fetched} 个 · 沿用缓存 ${skipped} 个 · 失败 ${failed} 个`);
+  // ① placeId → universeId（永久缓存）
+  const mapFile = universeMapFile(cfg);
+  const cache = readJson(mapFile, { map: {} });
+  cache.map = cache.map || {};
+  const resolved = new Map();
+  let requests = 0;
+  for (const it of need) {
+    const placeId = robloxIdFromUrl(it.srcUrl);
+    if (cache.map[placeId]) { resolved.set(it, cache.map[placeId]); continue; }
+    try {
+      requests++;
+      const u = await getJson(`https://apis.roblox.com/universes/v1/places/${placeId}/universe`, { retries: 1, base: 800, label: "place→universe" });
+      if (u?.universeId) { cache.map[placeId] = u.universeId; resolved.set(it, u.universeId); }
+      else errors.push(`${it.name}: place→universe 无 universeId`);
+    } catch (e) {
+      errors.push(`${it.name}: ${e.message}`);
+    }
+    await sleep(gapMs);
   }
+  writeJson(mapFile, { updated: iso(), map: cache.map }, true);
+
+  const ids = [...new Set([...resolved.values()])];
+  const games = await fetchGamesByIds(ids, gapMs);
+  const votes = await fetchVotesByIds(ids, gapMs);
+  requests += chunk(ids, 50).length * 2;
+  errors.push(...games.errors, ...votes.errors);
+
+  let fetched = 0;
+  let failed = 0;
+  for (const it of need) {
+    const uid = resolved.get(it);
+    const d = uid ? games.map.get(uid) : null;
+    if (!d) { failed++; continue; } // 保留旧 stats（宁可用上次的数字，也不要留空）
+    it.stats = shapeStats(d, votes.map.get(uid));
+    it.statsAt = iso();
+    fetched++;
+  }
+  if (failed) errors.push(`${failed} 个没拿到 games 记录（沿用旧值）`);
+
+  log("dim", `  Roblox 数据：刷新 ${fetched} 个 · 沿用缓存 ${skipped} 个 · 失败 ${failed} 个 · 请求 ${requests} 次（批量）`);
   if (errors.length) {
     for (const e of errors.slice(0, 5)) log("dim", `    ! ${e}`);
     if (errors.length > 5) log("dim", `    …还有 ${errors.length - 5} 个`);
   }
-  return { mode: "on", checked, fetched, skipped, failed, errors };
+  return { mode: "on", checked: need.length, fetched, skipped, failed, errors, requests };
 }

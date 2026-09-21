@@ -386,21 +386,18 @@ export async function buildWatchlist(cfg, session) {
     });
   }
 
-  // ── 排序：潜伏窗口优先（build 最前），同窗口内按愿望单序位 / 在线人数 ──
+  // ── 排序：**发售日从近到远**（未定档沉底）。
+  //
+  // 🛑 2026-09-21 用户反馈后改的：旧版按"窗口"分组（build 优先），结果 Roblox 的
+  //    「未定档 / TBA」条目全部挤在清单最前面，看不出哪个游戏最近发售 = 没有信息量。
+  //    现在以"还有几天发售"为主键 —— 服务端这个顺序同时决定 maxItems 截断时保留谁，
+  //    所以有日期的条目必须先被保住。
   items.sort((a, b) => {
-    const wa = WINDOW_ORDER[a.window] == null ? 9 : WINDOW_ORDER[a.window];
-    const wb = WINDOW_ORDER[b.window] == null ? 9 : WINDOW_ORDER[b.window];
-    if (wa !== wb) return wa - wb;
-    if (a.source === "steam" && b.source === "steam") {
-      return (a.rank || 1e9) - (b.rank || 1e9) || (a.releaseInDays == null ? 1e9 : a.releaseInDays) - (b.releaseInDays == null ? 1e9 : b.releaseInDays);
-    }
-    if (a.source === "roblox" && b.source === "roblox") {
-      // 未发售的比"还有几天"；已上线的（rising）比在线人数
-      const da = a.releaseInDays == null ? 1e9 : a.releaseInDays;
-      const db = b.releaseInDays == null ? 1e9 : b.releaseInDays;
-      if (da !== db) return da - db;
-      return (b.players || 0) - (a.players || 0);
-    }
+    const da = a.releaseInDays == null ? 1e9 : a.releaseInDays;
+    const db = b.releaseInDays == null ? 1e9 : b.releaseInDays;
+    if (da !== db) return da - db;
+    if (a.source === "steam" && b.source === "steam") return (a.rank || 1e9) - (b.rank || 1e9);
+    if (a.source === "roblox" && b.source === "roblox") return (b.players || 0) - (a.players || 0);
     return a.source === "steam" ? -1 : 1;
   });
 

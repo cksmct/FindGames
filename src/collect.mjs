@@ -442,9 +442,10 @@ if (cfg.games.enabled) {
     return gameCandidate({ q: g.name, cats }, { latinOnly, excludeAAA }).ok;
   });
   if (list.length < ruleFiltered) log("dim", `  按当前规则清掉 ${ruleFiltered - list.length} 个不再符合条件的旧条目`);
-  // ── 补 Roblox 官方数据（访问量 / 好评率 / 上线时间 / 更新）──
-  // 这是"建站可做性"评分里【竞争强度】的唯一来源，必须写在 writeGames 之前。
-  // 零密钥（Roblox 公开接口），按需刷新（默认 7 天），失败保留旧值。
+  // ── 补 Roblox 官方数据（访问量 / 好评率 / 上线时间 / 更新 / 在线人数）──
+  // 这是"建站可做性"评分里【需求规模 / 口碑 / 新鲜度】三项的输入，必须写在 writeGames 之前。
+  // 零密钥（Roblox 公开接口）。批量请求（一次 50 个 universeId），所以默认**每小时**刷新：
+  // 55 个游戏稳态只要 2 次请求，不必再为了省配额把它压到 7 天。失败保留旧值。
   const statRes = await enrichGameStats(list, cfg);
 
   list.sort((a, b) => new Date(b.first) - new Date(a.first));

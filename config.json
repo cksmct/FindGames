@@ -51,9 +51,9 @@
     "relatedWords": 12,
     "excludeAAA": false,
     "statsEnabled": true,
-    "statsRefreshDays": 7,
-    "statsMaxPerRun": 40,
-    "statsDelayMs": 900,
+    "statsRefreshHours": 1,
+    "statsMaxPerRun": 300,
+    "statsDelayMs": 250,
     "competition": {
       "slayers 2": {
         "open": 1,

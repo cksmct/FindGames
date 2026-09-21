@@ -75,14 +75,21 @@
   </section>
 
   <section id="panel-pick" hidden>
-    <p class="hint">按<b>建站可做性</b>排序：找「需求够大、但还没被攻略站做透」的游戏。
-      注意它和「🎮 新游戏雷达」的排序是<b>反的</b> —— 那边越热越好；这里<b>太热是减分项</b>，
-      因为访问量越大意味着攻略站越多、权重越高，新站越排不上去。</p>
+    <p class="hint">按<b>建站可做性</b>排序：<b>需求规模</b>（访问量／在线人数，越大越好）
+      ＋ <b>内容面</b>（能做的页面数）＋ <b>新鲜度</b>（距上线多久，越老越难挤）
+      ，再乘 <b>竞争</b>（分高 = 竞争低；优先用人工 SERP 核查，其次用上线时长推断，都没有则标「竞争未测」）。
+      <b>流量大本身不是缺点</b> —— 扣分的是<b>竞争高</b>和<b>上线时间长</b>。
+      每张卡片都有「查竞争（SERP）」按钮：一眼数出前十有几个独立域名占位。</p>
     <div class="fbar" id="pick-bar">
       <span class="group">
         <button data-pick="all" class="on">全部</button>
         <button data-pick="todo">✅ 值得做</button>
         <button data-pick="nowords">⚠️ 缺攻略词</button>
+      </span>
+      <span class="group" id="pick-sort">
+        <button data-psort="verdict" class="on">🎯 结论优先</button>
+        <button data-psort="newest">🆕 最近上线</button>
+        <button data-psort="oldest">🕰 最早上线</button>
       </span>
       <span class="meta" id="pick-meta"></span>
     </div>
@@ -90,17 +97,15 @@
   </section>
 
   <section id="panel-watch" hidden>
-    <p class="hint">还没火的时候该盯谁：<b>Steam 愿望单序位</b> + <b>Roblox 官方「新晋」榜</b>。
-      窗口＝距发售还有几天：<b>30~180 天是建站黄金窗口</b>（够建站、够被收录）；≤30 天窗口很窄；
-      ≤7 天默认不进这张表（新站来不及排上去）。每条都带
-      <b>商店页 / Google Trends / SERP 直链</b> —— 字段标「未测」或被限流都不影响你点过去自己看。</p>
+    <p class="hint">还没火的时候该盯谁：<b>Steam 愿望单序位</b> + <b>Roblox 未发售清单</b>（第三方 BloxInformer）。
+      默认<b>按发售日从近到远排</b>，一眼看出「谁最先发售」；<b>未定档</b>的默认折叠（点右侧按钮展开）。
+      窗口 = 距发售天数：<b>30~180 天是建站黄金窗口</b>（够建站、够被收录）；≤7 天默认不进表（新站来不及排上去）。</p>
     <div class="fbar">
-      <span class="group" id="watch-window">
-        <button data-window="all" class="on">全部窗口</button>
-        <button data-window="build">🟢 黄金窗口</button>
-        <button data-window="close">🟡 临门</button>
-        <button data-window="far">⚪ 远期/未定档</button>
-        <button data-window="live">🔵 已上线</button>
+      <span class="group" id="watch-sort">
+        <button data-wsort="date" class="on">⏱ 最近发售</button>
+        <button data-wsort="window">🪟 窗口优先</button>
+        <button data-wsort="heat">🔥 热度</button>
+        <button data-wsort="name">🔤 名称</button>
       </span>
       <span class="group" id="watch-src">
         <button data-src="all" class="on">全部来源</button>
@@ -108,11 +113,12 @@
         <button data-src="roblox">仅 Roblox</button>
       </span>
       <input id="watch-search" type="search" placeholder="筛选名字…" />
+      <button id="watch-tba" class="toggle">显示未定档</button>
       <button id="watch-csv" class="ghost">导出 CSV（含全部链接）</button>
       <span class="meta" id="watch-meta"></span>
     </div>
     <div id="watch-notes" class="wk-notes"></div>
-    <div id="watch-cards"></div>
+    <div id="watch-table"></div>
   </section>
 
   <section id="panel-pool" hidden>
