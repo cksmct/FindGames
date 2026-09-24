@@ -134,8 +134,9 @@ export function loadGames(cfg) {
   return readJson(dataPath(cfg, "games.json")) || { updated: null, items: [] };
 }
 
-export function writeGames(cfg, items) {
-  writeJson(dataPath(cfg, "games.json"), { updated: iso(), items });
+export function writeGames(cfg, items, meta = {}) {
+  // meta 用来随产物下发"算法自述"（如 scoring）—— 前端据实展示，避免两处数字漂移
+  writeJson(dataPath(cfg, "games.json"), { updated: iso(), ...meta, items });
 }
 
 export function readState(cfg) {

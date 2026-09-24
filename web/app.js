@@ -495,6 +495,75 @@
   function clamp01(v) { return Math.max(0, Math.min(100, v)); }
   var avgOf = function (a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : 0; };
 
+  // ── 📖 评分规则展示（用户要求"把规则打在每个页面上"）──
+  // 原则：**数字从代码常量生成**（PICK_W / demandScore 的锚点），不手抄 —— 规则与实现才不会漂移。
+  // 雷达分与潜伏分的规则由后端随产物下发（games.scoring / watch.rules），单一事实源在算分函数旁边。
+  function rulesHtml(rules) {
+    if (!rules) return "";
+    var out = '<div class="rl-formula"><b>' + esc(rules.title || "评分规则") + "</b>" +
+      (rules.formula ? '<code>' + esc(rules.formula) + "</code>" : "") + "</div>";
+    (rules.weights || []).forEach(function (w) {
+      out += '<div class="rl-item"><b>' + esc(w[0]) + "（权重 " + w[1] + "）</b>" + (w[2] ? "：" + esc(w[2]) : "") + "</div>";
+    });
+    (rules.items || []).forEach(function (x) { out += '<div class="rl-item">' + esc(x) + "</div>"; });
+    (rules.caveats || []).forEach(function (x) { out += '<div class="rl-item rl-warn">⚠️ ' + esc(x) + "</div>"; });
+    if (rules.bands) out += '<div class="rl-item"><b>分档</b>：' + esc(rules.bands) + "</div>";
+    if (rules.note) out += '<div class="rl-note">' + esc(rules.note) + "</div>";
+    return out;
+  }
+  function fillRules(id, html) { var el = $(id); if (el) el.innerHTML = html; }
+
+  /** 建站推荐的规则：权重来自 PICK_W，锚点来自 demandScore/freshAgeScore/compRoom —— 与实现同文件 */
+  /**
+   * 建站推荐的规则（**每次渲染时现算**，不是一次性常量）：
+   * 竞争那一行要用 games.json 下发的 SERP 档位 —— 单一事实源在后端 `src/lib/serp.mjs`，
+   * 前端只负责展示，绝不手抄一份（手抄过就抄错过一次，见 demandAnchorsText 的注释）。
+   */
+  function pickRules() {
+    var sr = (games && games.serp) || null;
+    var serpTxt = sr
+      ? "自动 SERP 核查（" + (sr.query || "<游戏名> codes") + "：" + (sr.bands || "前十独立域名数分档") + "）"
+      : "自动 SERP 核查（后端每轮把「<游戏名> codes」前十的独立域名数写进条目，见 src/lib/serp.mjs）";
+    var caveats = [
+      "「上线时间」被计了两遍：新鲜度(16) + 竞争(16) 都以官方上线日为输入（竞争项在有人工/SERP 核查时不看年龄）—— 老游戏沉底是设计意图，但这条占掉约三分之一的权重",
+      "Roblox 的需求未按上线年龄归一：同样 1000 万访问，上线 1 个月和上线 3 年同分（终身访问量口径的固有偏差）",
+      "三套需求锚点与内容面档位是启发式（方向对、数值拍定），不是数据回归拟合的结果",
+      "0 与「未测」端到端分开：数据层缺失写 null，展示层也不把 0 渲染成 —（否则\"真的是 0\"与\"没抓到\"无法区分）",
+    ];
+    // SERP 核查的自述（含"只覆盖拿不到上线日的条目"这类边界）直接来自后端，避免两处漂移
+    if (sr && sr.caveats) caveats = caveats.concat(sr.caveats);
+    if (sr && sr.note) caveats.push(sr.note);
+    return {
+      title: "建站可做性 0~100 ＝ 六项加权平均 × 人工竞争乘数",
+      formula: "总分 = Σ(分项 × 权重) ÷ Σ权重 × 乘数；竞争测不到就不给总分 —— 绝不把缺项的权重让给其它项",
+      weights: [
+        ["需求规模", PICK_W.demand, demandAnchorsText()],
+        ["内容面", PICK_W.surface, "已挖到的攻略词数：≥8=100 · ≥5=80 · ≥3=55 · ≥1=30 · 0 词=未测"],
+        ["新鲜度", PICK_W.fresh, "距上线：≤30 天=100 · 1 年≈40 · 5 年≈10（只认官方上线日，绝不用\"首次发现时间\"）"],
+        ["竞争", PICK_W.comp, "分高=竞争低。优先级：人工 SERP 核查 > " + serpTxt + " > 上线时长推断（≤180 天=100 · ≤1 年=80 · ≤2 年=60 · ≤4 年=40 · ≤8 年=20 · 更久=5）> 未测"],
+        ["需求动能", PICK_W.momentum, "7 天曲线后 1/4 vs 前 1/4（从零起飞=100；无曲线=未测）"],
+        ["口碑", PICK_W.quality, "好评率 50%→0 · 95%→100；手游用星级（≥4.5★→100 · 3.5★→50 · ≤2.5★→0；0 人评=未测）"],
+      ],
+      caveats: caveats,
+      note: "不同平台必须用不同规则：Roblox=终身访问量、Steam=当前在线、手游=评分人数+星级（装机量与首发日 Play 不提供）。三套锚点绝不混用 —— 数量级差 4~6 倍，混用会让一边永远满分、另一边永远 0 分。",
+    };
+  }
+  /**
+   * 需求锚点文本 —— **数字从 demandScore 算出**，绝不手抄。
+   * 🛑 2026-09-24 review 踩到：手抄的 Steam 锚点写成 "100≈21 · 1000≈43"，而代码是 log10(v)/3.7×100
+   *    → 实际 54 / 81。规则块正是给人看的那一层，抄错就等于用错口径去解释分数。
+   *    （Roblox / 手游那两组当时恰好抄对了，纯属运气 —— 所以统一改成"从公式生成"。）
+   */
+  function demandAnchorsText() {
+    var rbx = [1e5, 1e6, 1e7, 1e8].map(function (v) { return fmtCount(v) + "=" + Math.round(demandScore(v, "roblox")); });
+    var stm = [100, 1000, 5000].map(function (v) { return fmtCount(v) + "≈" + Math.round(demandScore(v, "steam")); });
+    var mob = [100, 1e4, 1e6].map(function (v) { return fmtCount(v) + "=" + Math.round(demandScore(v, "mobile")); });
+    return "三套锚点，绝不混用 —— Roblox：终身访问量（" + rbx.join(" · ") +
+      "）；Steam：当前在线（" + stm.join(" · ") +
+      "，缺失退回评价数时锚点未换算，大作会被低估）；iOS/Android：评分人数（" + mob.join(" · ") +
+      "，装机量不公开，这是唯一代理）";
+  }
+
   /**
    * 需求规模（单调递增，log 归一）。三个平台的口径不同，**必须分开锚点**：
    *   Roblox：终身访问量 —— 1e5→0 · 1e6→33 · 1e7→66 · 1e8→100
@@ -558,7 +627,9 @@
    *    拿不到就返回 null，让竞争项标「未测」，而不是编一个"新鲜=竞争低"。
    */
   function ageDaysOf(g) {
-    var c = g.stats && g.stats.created;
+    // 优先官方上线日（stats.created）；没有官方数据的来源（itch 的 createDate 等）退回 srcCreated。
+    // 两者都是"作品真正的上架时间"；绝不用 g.first（那只是我们数据库里的时间）。
+    var c = (g.stats && g.stats.created) || g.srcCreated;
     if (!c) return null;
     var d = (Date.now() - new Date(c).getTime()) / 86400000;
     return isFinite(d) ? d : null;
@@ -571,15 +642,28 @@
     if (ageDays <= 1825) return clamp01(40 - ((ageDays - 365) / 1460) * 30);
     return clamp01(10 - ((ageDays - 1825) / 1825) * 10);
   }
+  /** open 1~5 → 分数。人工核查与自动 SERP 核查**共用同一张表**，两套口径才可比 */
+  var OPEN_SCORE = [10, 25, 50, 75, 100];
+  function openScore(v) { return OPEN_SCORE[Math.max(1, Math.min(5, Math.round(v))) - 1]; }
+  /** 竞争来源文案（人工 / 自动 SERP / 上线时长推断 / 未测） */
+  var COMP_LABEL = { manual: "人工核查", serp: "自动 SERP 核查", age: "上线时长推断", unknown: "未测" };
+  /** 自动 SERP 核查结果的有效期：后端 7 天重测一轮，这里再兜一道 —— 超过 30 天就当作没有（宁可标未测） */
+  var SERP_STALE_DAYS = 30;
   /**
    * 竞争（分高 = 竞争低 = 好挤进去）。
-   * 优先级：人工 SERP 核查（最准）> 上线时长推断 > 未测(null)。
+   * 优先级：人工 SERP 核查（最准）> **自动 SERP 核查**（后端写进 g.serp，见 src/lib/serp.mjs）> 上线时长推断 > 未测(null)。
    * 🛑 绝不拿访问量推断竞争 —— 那是需求，不是竞争。
+   * 自动 SERP 这一档是 2026-09-24 为**安卓**加的：它拿不到官方上线日 → 本来竞争项恒为未测 → 总分只能是 null。
    */
   function compRoom(g, ageDays) {
     var mc = manualComp(g.name);
-    if (mc && mc.open != null) {
-      return { score: [10, 25, 50, 75, 100][Math.max(1, Math.min(5, Math.round(mc.open))) - 1], source: "manual" };
+    if (mc && mc.open != null) return { score: openScore(mc.open), source: "manual" };
+    var sc = g.serp;
+    if (sc && sc.open != null && sc.at && (Date.now() - new Date(sc.at).getTime()) / 86400000 <= SERP_STALE_DAYS) {
+      return {
+        score: openScore(sc.open), source: "serp",
+        domains: sc.domains, hosts: sc.hosts || [], query: sc.query || "", at: sc.at,
+      };
     }
     if (ageDays == null) return { score: null, source: "unknown" };
     var s = ageDays <= 180 ? 100
@@ -612,7 +696,10 @@
     }
     var parts = {
       demand: demandScore(demandRaw, demandKind),
-      surface: surfaceScore(g.words),
+      // 🛑 0 与「未测」分开（2026-09-24 review 发现的 bug）：没挖到词可能是"真的没词"，
+      //    也可能只是"从来没取过相关词"（目录直收条目 / 取词失败）。后者给 0 分会把
+      //    "信息缺失"伪装成"内容面为 0"—— 标 null（未测），加权时跳过并显示在缺项里。
+      surface: (g.words || []).length ? surfaceScore(g.words) : null,
       fresh: freshAgeScore(ageDays),
       comp: comp.score,
       momentum: momentumScore(g.series),
@@ -664,8 +751,20 @@
     return "⚠️ 像是限时活动：先确认结束时间 —— 窗口太短的话新站来不及排上去（本评分不区分持久需求与一次性活动）";
   }
 
-  /** 查竞争用的一次点击：SERP 里看这个游戏现在有几个独立域名占位 */
+  /** 自动竞争核查用的查询词（随 games.json 下发，单一事实源在 src/lib/serp.mjs） */
+  function serpQueryOf(name) {
+    var sr = (games && games.serp) || null;
+    return String((sr && sr.query) || "{q} codes").replace("{q}", name);
+  }
+  /**
+   * 查竞争的一次点击：**与自动通道同一个查询词**，两边的数字才可比。
+   * （自动通道走 DuckDuckGo 作代理，人工看的是 Google —— 真实战场，所以以人眼为准。）
+   */
   function serpSearchUrl(name) {
+    return "https://www.google.com/search?q=" + encodeURIComponent(serpQueryOf(name));
+  }
+  /** 查长尾（更宽的一眼看法）：wiki / tier list / comps / guide —— 看有没有人已经在做站 */
+  function longtailSearchUrl(name) {
     return "https://www.google.com/search?q=" + encodeURIComponent("\"" + name + "\" wiki tier list comps guide");
   }
 
@@ -684,7 +783,7 @@
     // 🛑 竞争测不到就不下结论 —— 但要给"怎么补"的动作（点「查竞争」看 SERP），
     //    而不是像旧版那样用访问量硬推断一个"巨头级"。
     if (r.comp.score == null) {
-      return { k: "unknown", t: "竞争未测", why: "没有官方上线数据，也没填人工竞争判断 —— 点「查竞争」看 SERP 再决定" };
+      return { k: "unknown", t: "竞争未测", why: "既没有官方上线日、也没有人工/自动 SERP 核查结果（自动核查每轮最多补 12 条，没轮到就仍是未测）—— 点「查竞争」看 SERP 再决定" };
     }
     if (st.approval != null && st.approval < 60) return { k: "no", t: "口碑偏低", why: "好评 " + st.approval + "%，游戏本身在流失玩家" };
     // 手游没有好评率，只有星级 —— 同一个判断换个口径（≤3.0★ 且**有人评**；
@@ -697,7 +796,7 @@
     if (r.ageDays != null && r.ageDays > 1460 && r.score >= 65) {
       return { k: "warn", t: "上线超 4 年", why: "长尾大概率已固化（新鲜度与竞争项已扣分），建议先做 1~2 页试水" };
     }
-    if (r.score >= 65) return { k: "yes", t: "值得做", why: "需求够 + 竞争未饱和（竞争来源：" + (r.comp.source === "manual" ? "人工核查" : "上线时长推断") + "）" };
+    if (r.score >= 65) return { k: "yes", t: "值得做", why: "需求够 + 竞争未饱和（竞争来源：" + (COMP_LABEL[r.comp.source] || "未测") + "）" };
     if (r.score >= 45) return { k: "warn", t: "可小试", why: "有条件但不够硬，建议先做 1~2 页试水" };
     return { k: "no", t: "不建议", why: "" };
   }
@@ -720,7 +819,7 @@
       return '<a class="kwchip" target="_blank" rel="noopener" href="' + exploreUrl(w, g.chart_geo) + '">' + esc(w) + "</a>";
     }).join("");
     var age = r.ageDays == null ? "未取得" : (r.ageDays < 30 ? Math.round(r.ageDays) + " 天" : (r.ageDays / 365).toFixed(1) + " 年");
-    var compSrc = { manual: "人工核查", age: "上线时长推断", unknown: "未测" }[r.comp.source] || "未测";
+    var compSrc = COMP_LABEL[r.comp.source] || "未测";
     // 平台口径不同，展示也必须分开，否则会把"评分人数"写成"访问量"：
     //   Roblox → 终身访问量 + 好评率
     //   Steam  → 此刻在线 + 评价数 + 好评率 + 发售日
@@ -742,8 +841,12 @@
         (st.updated ? " · 更新 " + esc(String(st.updated).slice(0, 10)) : "") +
         (st.price ? " · " + esc(st.price) : "");
     } else {
-      metaLine = "需求 访问 " + fmtCount(st.visits) + " · 好评 " +
-        (st.approval == null ? "未取得" : st.approval + "%") + " · 上线 " +
+      // Roblox 的 visits 是**终身累计**：同样 1000 万，上线 1 个月和上线 3 年的热度完全不同。
+      // 打分仍用终身量（见规则块的已知偏差），但这里把「月均」算出来给人看 —— 口径差异要可见，不能只藏在公式里。
+      var perMo = (st.visits != null && r.ageDays) ? Math.round(st.visits / Math.max(1, r.ageDays / 30)) : null;
+      metaLine = "需求 访问 " + fmtCount(st.visits) +
+        (perMo != null ? "（月均≈" + fmtCount(perMo) + "）" : "") +
+        " · 好评 " + (st.approval == null ? "未取得" : st.approval + "%") + " · 上线 " +
         (st.created ? esc(String(st.created).slice(0, 10)) : "未取得") + "（" + age + "）";
     }
     return '<div class="gcard pk-card">' +
@@ -757,11 +860,22 @@
         (r.manual.note ? " · " + esc(r.manual.note) : "") + "</div>" : "") +
       bars +
       '<div class="gmeta">' + metaLine + "</div>" +
-      '<div class="gmeta">竞争来源 ' + esc(compSrc) + " · 攻略词 " + (g.words || []).length + " 个</div>" +
+      '<div class="gmeta">竞争来源 ' + esc(compSrc) +
+      (r.comp.domains != null ? "（" + r.comp.domains + " 个独立域名占位" +
+        (r.comp.hosts && r.comp.hosts.length ? "：" + esc(r.comp.hosts.slice(0, 3).join(" · ")) : "") + "）" : "") +
+      " · 攻略词 " + (g.words || []).length + " 个</div>" +
+      // 竞争未测 → 给出"填一行就有分"的可复制片段（人工核查仍是首选口径，比机器数域名更准）
+      (r.comp.score == null
+        ? '<div class="gmeta pk-dim">竞争未测 → 点「查竞争（SERP）」数一下前十有几个独立域名占位，' +
+          "再把这一行加进 config.json 的 <code>games.competition</code>，下一轮就有分：<br>" +
+          '<code>"' + esc(g.name) + '": {"open": 3},</code>' +
+          "　（open 5=几乎没人做 · 4=1~2 个站 · 3=3~4 个 · 2=5~7 个 · 1=≥8 个）</div>"
+        : "") +
       '<div class="kwrow">' +
       (g.srcUrl ? '<a class="kwchip" target="_blank" rel="noopener" href="' + esc(g.srcUrl) + '">' +
         esc(SRC_LABEL[g.src] || "作品") + " 页</a>" : "") +
-      '<a class="kwchip up" target="_blank" rel="noopener" title="数一下前十有几个独立域名占位，就是竞争强度的实测" href="' + serpSearchUrl(g.name) + '">查竞争（SERP）</a>' +
+      '<a class="kwchip up" target="_blank" rel="noopener" title="数一下前十有几个独立域名占位，就是竞争强度的实测（与自动通道同一个查询词）" href="' + serpSearchUrl(g.name) + '">查竞争（SERP）</a>' +
+      '<a class="kwchip" target="_blank" rel="noopener" title="更宽的一眼看法：wiki / tier list / comps / guide 有没有人已经在做" href="' + longtailSearchUrl(g.name) + '">查长尾</a>' +
       '<a class="kwchip" target="_blank" rel="noopener" href="' + exploreUrl(g.name, g.chart_geo) + '">Google Trends</a>' +
       "</div>" +
       (words ? '<div class="kwrow"><span class="kwlabel">可做的词</span>' + words + "</div>" : "") +
@@ -782,10 +896,20 @@
     var rows = all;
     if (state.pick === "todo") rows = all.filter(function (x) { return x.v.k === "yes"; });
     else if (state.pick === "nowords") rows = all.filter(function (x) { return !(x.g.words || []).length; });
+    // 🔍 竞争待核查：把"看得见、判不了"的那批集中起来（下面是它们专属的排序）
+    else if (state.pick === "nocomp") rows = all.filter(function (x) { return x.r.comp.score == null; });
     // 排序：
     //   verdict（默认）先按结论档位、同档按分数 —— 避免"可小试 63 分"被"不建议 67 分"压下去
     //   newest / oldest 按**上线日**（正是"新鲜度"项的输入）—— 想抢新游戏就用这个
     rows = rows.slice().sort(function (a, b) {
+      // 竞争待核查视图按**需求**降序（总分恰恰是缺的那个，用不了）—— 最值钱的先看
+      if (state.pick === "nocomp") {
+        var da = a.r.parts.demand, db = b.r.parts.demand;
+        if (da == null && db == null) return 0;
+        if (da == null) return 1;
+        if (db == null) return -1;
+        return db - da;
+      }
       if (state.pickSort === "newest" || state.pickSort === "oldest") {
         var va = a.r.ageDays, vb = b.r.ageDays;
         // 无上线数据的一律沉底（两个都是 null 也是一样）。
@@ -1127,6 +1251,9 @@
   bindBar("vol-bar", "vol", function (v) { state.vol = Number(v); });
   bindBar("growth-bar", "growth", function (v) { state.growth = Number(v); });
   bindBar("pick-sort", "psort", function (v) { state.pickSort = v; });
+  // 🛑 之前漏了这行：`#pick-bar` 的三个筛选按钮（全部/值得做/缺攻略词）**点了没反应** —— 死 UI。
+  //    现在补上绑定，并新增「🔍 竞争待核查」。
+  bindBar("pick-bar", "pick", function (v) { state.pick = v; state.rowsShown = 200; });
 
   // 🎮 平台筛选（两页共用）：任一页点了，两个按钮组一起同步，并重渲染当前页
   ["game-src", "pick-src"].forEach(function (id) {
@@ -1245,6 +1372,7 @@
   // 先按 URL hash 落位（#games/roblox 这类地址可直接收藏/分享），再拉数据；
   // 三份产物是异步各自的，所以每加载完一份都会按 state.tab 决定要不要重渲染（见下）。
   initFromHash();
+  fillRules("rules-pick-body", rulesHtml(pickRules()));   // 建站推荐的规则在前端常量里（与实现同文件）；games.json 到达后会再填一次（要用后端下发的 SERP 档位）
   fetchJson("data/trends.json").then(function (d) {
     trends = d;
     CATS = d.cats || {};
@@ -1263,6 +1391,10 @@
     games = d;
     FRESH.games = d.updated || null;
     renderFresh();
+    // 雷达分数的算法自述（随产物下发；缺失时给兜底文案，不静默空白）
+    fillRules("rules-games-body", rulesHtml(d.scoring || { title: "雷达分数", note: "本份数据未带算法说明（旧产物），规则见 README。" }));
+    // 推荐页的规则块要**重填一次**：竞争那一行引用 games.json 下发的自动 SERP 档位（后端是唯一事实源）
+    fillRules("rules-pick-body", rulesHtml(pickRules()));
     updateGsrcCounts();   // 平台按钮上直接显示各来源条数（看清分布，别被单平台刷屏）
     if (state.tab === "games") renderGames();
     if (state.tab === "pick") renderPick();
@@ -1272,6 +1404,7 @@
     watch = d;
     FRESH.watch = d.updated || null;
     renderFresh();
+    fillRules("rules-watch-body", rulesHtml(d.rules || { title: "潜伏评分", note: "本份数据未带算法说明（旧产物），规则见 README。" }));
     if (state.tab === "watch") renderWatch();
   }).catch(function () {});
   // 词池用于行内"相关词"展开，后台静默加载

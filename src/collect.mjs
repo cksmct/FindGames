@@ -20,7 +20,7 @@ import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio } from "./lib/interest.mjs";
 import {
   noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo,
-  feedbackVerdict, FEEDBACK_BOOST_PTS,
+  feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES,
 } from "./lib/detect.mjs";
 import { judgeCandidates } from "./lib/judge.mjs";
 import {
@@ -33,7 +33,8 @@ import { collectSourceCandidates } from "./lib/sources.mjs";
 import { enrichGameStats } from "./lib/roblox.mjs";
 import { enrichSteamStats } from "./lib/steam.mjs";
 import { enrichMobileStats } from "./lib/mobile.mjs";
-import { pushQueue, peekQueue, dropQueue } from "./lib/queue.mjs";
+import { enrichSerpComp, SERP_RULES } from "./lib/serp.mjs";
+import { pushQueue, peekQueue, dropQueue, loadQueue } from "./lib/queue.mjs";
 import { buildWatchlist } from "./lib/watchlist.mjs";
 
 const t0 = Date.now();
@@ -270,6 +271,65 @@ if (cfg.games.enabled) {
     }
     if (bumped) log("dim", `  来源重申 ${bumped} 个已追踪游戏，刷新 last/sightings`);
   }
+  // ── 目录直收（2026-09-24 实测标定后新增）──
+  //
+  // 🛑 标定结果（24 个队列候选，来源混合、间隔 3s）：
+  //    有曲线 4 个 · **无曲线数据 20 个（83%）** · 429 只碰到 1 次瞬时（重试即成功）。
+  //    → 队列排得慢**不是配额问题**（接口容得下更多），而是**大多数候选根本没有可验证的热度数据**。
+  //      它们每轮被白跑一遍 → 出队 → 永远进不了站；跑再勤也看不到"完整数据"。
+  //
+  // 所以给"来源型目录条目"开一条**有界的直收通道**：不要求曲线，直接入库，
+  // 并如实标注（reason + 需求动能未测）。理由：这些是**目录里的作品本体**（榜单/新游页抓来的），
+  // 不是热搜噪音；它们的价值在"更早被发现"，而曲线只是"需求动能"这一个维度的输入。
+  // 有界 = 每轮总量上限 + 单来源上限，避免一个来源把 games.json 灌满。
+  const cd = Object.assign({ enabled: true, maxPerRun: 60, perSourceCap: 25, minPrio: 2 }, cfg.games.catalogDirect || {});
+  let directAdded = 0;
+  if (cd.enabled) {
+    const perSrc = {};
+    const done = [];
+    const scan = peekQueue(cfg, Math.max(cfg.games.sourceBatch || 120, cd.maxPerRun * 4));
+    for (const it of scan) {
+      if (directAdded >= cd.maxPerRun) break;
+      const key = String(it.name || "").toLowerCase();
+      if (!key || known.has(key)) continue;
+      if (!it.source) continue;                       // 热搜词不吃这条通道（它们靠曲线）
+      if (feedbackVerdict(it.name, cfg.feedback) === "block") continue;
+      // 🛑 2026-09-24 实测纠偏：**低优先级 ≠ 不该收**。
+      //    原规则「prio < minPrio 一律不收」把 Google Play **整源**挡在门外：
+      //    Play 没有新游入口 → 全部条目都是热榜 → queue.mjs 一律给 prio 1
+      //    → 实测队列里 509 条 googleplay **无一条有资格**；唯一剩下的曲线通道只放进来 6 条，
+      //      且全是全球大作（Township / Fortnite / Royal Match / Whiteout Survival …）——
+      //      方向与"发现小游戏"完全相反（曲线门槛本质是**出名度门槛**：有曲线的必然已出名）。
+      //    现在：仍按 minPrio 把关，但 `allowLowPrioSources` 里的来源豁免 ——
+      //    它们已经通过"是目录里的作品本体"这一关，缺的只是趋势数据；榜单名次本身就是排序信号。
+      //    （googleplay 保持 prio 1 是对的：那条 prio 只管"曲线验证顺序"，别把稀缺的 Trends 配额花在饱和热榜上。）
+      const lowPrioOk = (cd.allowLowPrioSources || []).includes(String(it.source || ""));
+      if (!lowPrioOk && (it.prio || 0) < cd.minPrio) continue;
+      if ((perSrc[it.source] || 0) >= cd.perSourceCap) continue;
+      perSrc[it.source] = (perSrc[it.source] || 0) + 1;
+      directAdded++;
+      known.set(key, {
+        name: it.name,
+        series: [],                                    // 没有曲线 → 需求动能显示"未测"（不是 0）
+        chart_at: iso(),                               // 记时间：6 小时后会再尝试取曲线（若它后来有量，能被补上）
+        related_at: iso(),
+        chart_geo: (cfg.games.geos || ["US"])[0],
+        first: iso(), last: iso(), sightings: 1, hype: 0,
+        reason: "目录直收（" + it.source + (it.kind ? ":" + it.kind : "") + " · 无 Trends 曲线）",
+        src: it.source,
+        srcUrl: it.url || "",
+        srcList: it.kind || it.list || "",
+        srcCreated: it.created || "",
+        direct: true,
+        cats: [], geos: [(cfg.games.geos || ["US"])[0]], rising: [], words: [],
+      });
+      done.push(key);
+    }
+    if (done.length) {
+      const out = dropQueue(cfg, done);
+      log("info", `目录直收：${done.length} 条直接入库并出队（${Object.entries(perSrc).map(([k, v]) => k + " " + v).join(" · ")}）${out ? " · 出队 " + out : ""}`);
+    }
+  }
   for (const it of peekQueue(cfg, cfg.games.sourceBatch || 120)) {
     const key = String(it.name).toLowerCase();
     if (candMap.has(key)) continue;
@@ -328,7 +388,21 @@ if (cfg.games.enabled) {
     (b.vol || 0) - (a.vol || 0);
   // 配额按 sourceShare 分给两个入口：来源（Roblox/Steam 目录）优先 —— 那才是原站口径的"新游戏"；
   // 热搜候选保留一份，因为它能抓到目录之外的爆款（也是我们比原站多的一条腿）。
-  const cap = cfg.games.maxCurvesPerRun || 12;
+  // ── 自适应曲线预算（2026-09-24）──
+  // `maxCurvesPerRun` 是**上限**（有积压时才用），`minCurvesPerRun` 是**空闲档**。
+  // 为什么需要：排空队列时要把预算开到 120，但清空之后队列里没东西可验，
+  // 静态的 120 会每轮空烧配额（转去反复刷已知游戏的曲线）。让它随积压量滑动：
+  //   积压 2000 → 顶到 120 ｜ 积压 300 → ~124→120 ｜ 积压 0 → 回落到 24（≈原来的轻量节奏）
+  const backlogForBudget = loadQueue(cfg).items.length;
+  const capMax = cfg.games.maxCurvesPerRun ?? 24;
+  const capMin = cfg.games.minCurvesPerRun ?? 24;
+  // ⚠️ 必须处理 `--max-curves 2` 这类"上限比空闲档还小"的调用（快速测试用）：那时直接用上限，不能反过来把它顶到 24
+  const cap = capMax <= capMin
+    ? capMax
+    : Math.max(capMin, Math.min(capMax, capMin + Math.round(backlogForBudget / 3)));
+  if (cap !== capMax || backlogForBudget > 0) {
+    log("dim", `  曲线预算：积压 ${backlogForBudget} → 本轮 ${cap}（空闲档 ${capMin} / 上限 ${capMax}，随积压自适应）`);
+  }
   const capSrc = Math.max(1, Math.round(cap * (cfg.games.sourceShare ?? 0.7)));
   const srcOk = candsOk.filter((c) => c.trusted).sort((a, b) => prio(a) - prio(b));
   const trendOk = candsOk.filter((c) => !c.trusted).sort(byTrend);
@@ -460,6 +534,19 @@ if (cfg.games.enabled) {
     if (out) log("dim", `  来源队列出队 ${out} 个`);
   }
 
+  // ── 队列进度与 ETA：给"还要多久清空"一个数字，而不是感觉 ──
+  // 关键：要减掉**本轮新增的入队量**（进 > 出时永远清不完，必须如实说，不能报一个假的乐观数字）。
+  {
+    const left = loadQueue(cfg).items.length;
+    const cleared = directAdded + doneSrc.length;
+    const inflow = queued.added || 0;
+    const net = cleared - inflow;
+    const eta = net > 0
+      ? `约 ${Math.ceil(left / net)} 轮（采集每小时一轮 → 约 ${Math.ceil(left / net)} 小时）`
+      : `**净增**（本轮进 ${inflow} / 出 ${cleared}）→ 按当前节奏不会清空，只会涨到队列上限后开始过期`;
+    log("info", `队列：剩余 ${left} · 本轮清 ${cleared}（直收 ${directAdded} + 曲线 ${doneSrc.length}）· 本轮新增 ${inflow} → ${eta}`);
+  }
+
   let list = Array.from(known.values());
   const cutoff = Date.now() - 30 * 86400_000;
   list = list.filter((g) => new Date(g.first).getTime() >= cutoff);
@@ -483,6 +570,21 @@ if (cfg.games.enabled) {
     return gameCandidate({ q: g.name, cats }, { latinOnly, excludeAAA }).ok;
   });
   if (list.length < ruleFiltered) log("dim", `  按当前规则清掉 ${ruleFiltered - list.length} 个不再符合条件的旧条目`);
+  // ── 体积护栏（2026-09-24）──
+  // 开了"目录直收"之后，发现量会真实反映出来（每轮十几到几十条），而看板要**整份加载** games.json：
+  // 不设上限的话一个月能涨到几万条 → 页面加载不动。
+  // 淘汰策略：先保住**有曲线的**（可评估的那批），再按首次发现时间新旧，超出部分如实计数。
+  // ⚠️ 这里的 `games.maxItems`（games.json 条数上限）与 `pool.maxItems`（关键词池上限）**同名不同义**，
+  //    两个都在 config.json 里 —— 改的时候别看错行。保留 `|| 3000`：写 0 时走默认值，而不是把列表清空。
+  const gymMax = cfg.games.maxItems || 3000;
+  if (list.length > gymMax) {
+    const before = list.length;
+    list = list.slice().sort((a, b) =>
+      (((b.series || []).length > 1 ? 1 : 0) - ((a.series || []).length > 1 ? 1 : 0)) ||
+      (new Date(b.first) - new Date(a.first)));
+    list = list.slice(0, gymMax);
+    log("dim", `  games.json 体积护栏：${before} → ${gymMax} 条（优先保留有曲线的条目）`);
+  }
   // ── 补 Roblox 官方数据（访问量 / 好评率 / 上线时间 / 更新 / 在线人数）──
   // 这是"建站可做性"评分里【需求规模 / 口碑 / 新鲜度】三项的输入，必须写在 writeGames 之前。
   // 零密钥（Roblox 公开接口）。批量请求（一次 50 个 universeId），所以默认**每小时**刷新：
@@ -498,8 +600,19 @@ if (cfg.games.enabled) {
   // 与前一层的分工：这一层只认来源明确的 appstore / googleplay 条目，绝不跨平台按名字找同名。
   const mobRes = await enrichMobileStats(list, cfg);
 
+  // ── 竞争的**自动 SERP 核查**（2026-09-24 新增）──
+  // 为什么：安卓条目拿不到官方上线日（实测 Play 无首发日）→ 竞争项只能标「未测」
+  // → 按既有护栏**总分为 null**，在🎯建站推荐里"看得见、判不了"。这里用可得的口径补上：
+  // 「<游戏名> codes」前十的独立域名数（= 人工核查的那一步，机器来做）。
+  // 有界：`maxPerRun 12` / 间隔 `gapMs 3000` / 成功缓存 `ttlDays 7`；失败**不写缓存**（限流≠没竞争）。
+  const serpRes = await enrichSerpComp(list, cfg);
+  if (serpRes.tested || serpRes.cached) {
+    log("info", `自动竞争核查（SERP）：本轮测 ${serpRes.tested}（成功 ${serpRes.ok} · 失败 ${serpRes.failed}）· 沿用缓存 ${serpRes.cached}`);
+  }
+
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
-  writeGames(cfg, list);
+  // 雷达分数的算法自述随产物下发 → 前端"评分规则"折叠块据实展示（单一事实源在 detect.mjs）
+  writeGames(cfg, list, { scoring: SCORE_RULES, serp: SERP_RULES });
   log("ok", `输出 data/games.json（${list.length} 个，本轮新增 ${added}，挖到攻略词 ${kwAdded} 个）`);
   if (statRes.mode === "on") {
     const rbx = list.filter((x) => x.stats?.visits != null).length;

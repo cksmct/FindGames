@@ -279,6 +279,22 @@ const STATUS_TIERS = [
   { re: /maybe cancelled|cancelled|canceled/i, score: 5, label: "可能取消" },
 ];
 
+/**
+ * 潜伏评分的**算法自述**：随 watchlist.json 下发（单一事实源在这里）。
+ */
+export const UPCOMING_RULES = {
+  title: "潜伏评分 = 还没发售时「该不该盯」",
+  formula: "score = 发布确定性 ×0.35 + 日期精确度 ×0.25 + 内容面 ×0.2 + 社区地基 ×0.2",
+  items: [
+    "发布确定性（0~100）：已确认/有发售日 100 · Beta/Early Access 82 · 开发中 55 · 早期原型 40 · 已延期 30 · 可能取消 5 · 未标注 45",
+    "日期精确度：确切日期 100 · 只有月份 70 · 只有季度 55 · 只有年份 40 · 未定档 15",
+    "内容面（按类型取最高档）：宠物收集/RPG/开放世界 92（有图鉴·配队·流派可写）· 模拟/策略/体育 70 · 动作/射击/解谜 52 · obby/派对/社交 28 · 无类型标注 30",
+    "社区地基：Discord +8 · YouTube +6 · Roblox 群组 +6（上限 20）",
+  ],
+  bands: "≥75 = 值得潜伏；已延期 / 可能取消 → 风险档；距发售 ≤7 天 → 窗口已过（新站来不及）",
+  note: "这是「上线前」的分；游戏上线后走「🎯 建站推荐」那套（需求/内容面/新鲜度/竞争）。两套不能互相比。",
+};
+
 /** @param {object} g normalizeEntry 的输出（含 status/genres/social/releasePrecision/releaseInDays） */
 export function scoreUpcoming(g) {
   const reasons = [];

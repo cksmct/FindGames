@@ -66,6 +66,7 @@
       <b>这一页只回答「发现了什么」</b>（按发现时间/信号/分数排）；<b>「哪个值得做」在 🎯 建站推荐</b> ——
       两页是<b>同一批数据</b>（`data/games.json`）的两种视图。平台按钮上直接写着各来源的条数：
       Roblox 通常最多（候选量高一个数量级），不想看它就直接点别的平台。</p>
+    <details class="rules" id="rules-games"><summary>📖 这个分数是什么（雷达分 ≠ 可做性）</summary><div id="rules-games-body" class="rules-body"></div></details>
     <div class="fbar" id="game-src">
       <span class="group">
         <button data-gsrc="all" data-label="全部平台" class="on">全部平台</button>
@@ -97,13 +98,15 @@
       <b>流量大本身不是缺点</b> —— 扣分的是<b>竞争高</b>和<b>上线时间长</b>。
       每张卡片都有「查竞争（SERP）」按钮：一眼数出前十有几个独立域名占位。
       手机端（iOS / Android）的口径不同：<b>需求规模看评分人数</b>、<b>口碑看星级</b>（没有好评率），
-      且 Android <b>拿不到首发日</b> → 如实标「未测」。
+      且 Android <b>拿不到首发日</b> → 如实标「未测」（竞争改由<b>自动 SERP 核查</b>或人工补，见「🔍 竞争待核查」）。
       <b>本页与 🎮 新游戏雷达是同一批数据</b>：雷达看「发现了什么」，这里看「哪个值得做」；平台筛选两页共用。</p>
+    <details class="rules" id="rules-pick"><summary>📖 评分规则（权重 · 三套平台锚点 · 已知偏差）</summary><div id="rules-pick-body" class="rules-body"></div></details>
     <div class="fbar" id="pick-bar">
       <span class="group">
         <button data-pick="all" class="on">全部</button>
         <button data-pick="todo">✅ 值得做</button>
         <button data-pick="nowords">⚠️ 缺攻略词</button>
+        <button data-pick="nocomp">🔍 竞争待核查</button>
       </span>
       <span class="group" id="pick-src">
         <button data-gsrc="all" data-label="全部平台" class="on">全部平台</button>
@@ -132,6 +135,7 @@
       Play 没有可抓的新游入口、也没有首发日 → 判不了"上线几天"，只能在雷达/推荐页按评分人数 + 星级评估。
       默认<b>按发售日从近到远排</b>，一眼看出「谁最先发售」；<b>未定档</b>的默认折叠（点右侧按钮展开）。
       窗口 = 距发售天数：<b>30~180 天是建站黄金窗口</b>（够建站、够被收录）；≤7 天默认不进表（新站来不及排上去）。</p>
+    <details class="rules" id="rules-watch"><summary>📖 潜伏评分怎么算（四项加权 + 分档）</summary><div id="rules-watch-body" class="rules-body"></div></details>
     <div class="fbar">
       <span class="group" id="watch-sort">
         <button data-wsort="date" class="on">⏱ 最近发售</button>
@@ -169,8 +173,11 @@
 
 <footer>
   <p>数据每小时自动更新 · 来源：Google Trends 实时上升热搜 · Roblox 榜单 · Steam 商店 ·
-    App Store（iOS，23 地区）· Google Play（Android，分类热门榜）· itch.io · Poki ·
+    App Store（iOS，23 地区）· Google Play（Android，14 个分类热门榜）· itch.io · Poki · CrazyGames ·
     搜索量/涨幅为官方分桶相对值</p>
+  <p class="dim">保留期（到期自动消失，无需人工清理）：实时热词 <b>24 小时</b>（每轮重写）·
+    7 天留档与关键词池 <b>7 天</b>（按"最后一次出现"计，持续出现的词会一直保留）·
+    游戏雷达 <b>30 天</b>（按"首次发现"计）· 候选队列 <b>21 天</b></p>
 </footer>
 <script src="app.js"></script>
 </body>

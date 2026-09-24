@@ -24,6 +24,10 @@ const PRIO = (it) => {
   if (it.source === "roblox") return 4;
   if (it.source === "appstore") return String(it.kind || "").startsWith("new") ? 3 : 1;
   if (it.source === "itch" || it.source === "poki" || it.source === "crazygames") return 2;
+  // 🛑 这个 prio 只管「曲线验证顺序」，**不是**收录门槛（2026-09-24 实测纠偏）。
+  //    Play 没有新游入口 → 条目全是热榜 → 一律 prio 1，本意是"别把 Trends 配额花在饱和热榜上"。
+  //    但它一度被当成"不让它进 games.json"的门槛，结果整源 509 条一条都进不来（唯一放行的曲线通道
+  //    只收进 6 条全球大作）。收录与否现在由 collect.mjs 的 `catalogDirect.allowLowPrioSources` 决定。
   if (it.source === "googleplay") return 1;
   if (it.kind === "new" || it.kind === "upcoming") return 3;
   return 1;

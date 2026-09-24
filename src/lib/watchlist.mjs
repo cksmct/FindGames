@@ -18,7 +18,7 @@
  */
 import { dataPath, readJson, writeJson, iso, log, sleep } from "./util.mjs";
 import { fetchSteamPopularUpcoming, fetchSteamList, fetchRobloxSortGames, fetchIosNewGames } from "./sources.mjs";
-import { loadRobloxUpcoming, normalizeEntry, scoreUpcoming } from "./roblox-upcoming.mjs";
+import { loadRobloxUpcoming, normalizeEntry, scoreUpcoming, UPCOMING_RULES } from "./roblox-upcoming.mjs";
 import { linkUpcomingToRoblox } from "./roblox.mjs";
 import { fetchIosBatch } from "./mobile.mjs";
 import { pushQueue } from "./queue.mjs";
@@ -646,6 +646,7 @@ export async function buildWatchlist(cfg, session) {
     defaultGeo: cfg.trendsDefaultGeo || geo,
     stats,
     notes,
+    rules: UPCOMING_RULES,   // 算法自述随产物下发（前端据实展示，单一事实源在 scoreUpcoming 旁边）
     items: limited,
   };
   writeJson(dataPath(cfg, "watchlist.json"), doc);

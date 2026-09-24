@@ -545,6 +545,16 @@ const PLAY_CATS = [
   ["GAME_ARCADE", "街机"],
   ["GAME_RACING", "竞速"],
   ["GAME_SPORTS", "体育"],
+  // ↓ 2026-09-24 实测新增（每个都是 200 且能解析出 app）：**小游戏主要藏在这些冷门子类里**，
+  //   大类的头部全是重度大作，而文字/棋牌/卡牌/问答/音乐/教育这几类的榜尾才是"小游戏"那一段。
+  //   实测条数：WORD 109 · BOARD 92 · CARD 90 · TRIVIA 31 · MUSIC 87 · EDUCATIONAL 105。
+  //   （试过但 404 的别再加：GAME_PRETEND_PLAY / GAME_MOVIE / GAME_FAMILY。）
+  ["GAME_WORD", "文字"],
+  ["GAME_BOARD", "棋牌桌游"],
+  ["GAME_CARD", "卡牌"],
+  ["GAME_TRIVIA", "问答"],
+  ["GAME_MUSIC", "音乐"],
+  ["GAME_EDUCATIONAL", "教育"],
 ];
 
 /**
