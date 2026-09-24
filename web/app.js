@@ -78,10 +78,24 @@
   var state = {
     tab: "hot", geo: "ALL", cat: "all", vol: 0, growth: 0,
     noise: false, watch: false, q: "", rowsShown: 200, poolQ: "", gameSort: "first", pick: "all", pickSort: "verdict",
+    gsrc: "all",
     watchSort: "date", watchSrc: "all", watchQ: "", watchTba: false,
   };
   var trends = null, history = null, games = null, pool = null, poolIndex = null, watch = null;
   var CATS = {}, GEOS = [];
+
+  // ── 数据新鲜度：三份产物各自的"更新于"都显示在页头 ──
+  // 用户关心的是"我现在看到的是不是最新的"：热词来自 trends.json，雷达来自 games.json，
+  // 潜伏列表来自 watchlist.json —— 它们是**三份独立产物**，时间戳必须分别显示，不能只给一个。
+  var FRESH = {};
+  function renderFresh() {
+    var el = $("fresh-extra");
+    if (!el) return;
+    var bits = [];
+    if (FRESH.games) bits.push("雷达 " + rel(FRESH.games));
+    if (FRESH.watch) bits.push("潜伏 " + rel(FRESH.watch));
+    el.textContent = bits.length ? " · " + bits.join(" · ") : "";
+  }
   // 对比基准词：来自 config.json 的 trendsCompare，由 trends.json 透出
   // 所有点出去的 Google Trends 链接都会带上它，形成"该词 vs 基准词"的对比图
   var COMPARE = "";
@@ -317,8 +331,12 @@
     score: function (a, b) { return (b.score || 0) - (a.score || 0) || new Date(b.first) - new Date(a.first); },
   };
   var GAME_SORT_LABEL = { first: "最新发现", last: "最新信号", score: "分数" };
-  // 来源徽标：Roblox 榜单 / Steam 商店 —— 点出去看原始作品页（原站没有这一步）
-  var SRC_LABEL = { roblox: "Roblox", steam: "Steam" };
+  // 来源徽标：榜单来源 → 点出去看原始作品页（原站没有这一步）
+  var SRC_LABEL = {
+    roblox: "Roblox", steam: "Steam",
+    appstore: "iOS", googleplay: "Android",
+    itch: "itch.io", poki: "Poki", crazygames: "CrazyGames",
+  };
   function srcLink(g) {
     var label = SRC_LABEL[g.src] || g.src;
     if (g.srcList) label += " · " + g.srcList;
@@ -326,13 +344,89 @@
     return '<a class="srclink" target="_blank" rel="noopener" href="' + g.srcUrl + '">' + esc(label) + "</a>";
   }
 
+  // ── 🎮 平台筛选（新游戏雷达 与 建站推荐 共用同一个条件）──
+  //
+  // 为什么必须做：来源扩到 6 个之后，Roblox 的候选量比其它平台高一个数量级
+  // （实测 games.json 里 roblox 74 · steam 3 · 各手机/网页来源 1~2），
+  // 不筛的话列表**永远是 Roblox 刷屏**，等于其它来源看不见。
+  //
+  // 两页共用同一个 `state.gsrc`（它们本来就是同一批 data/games.json 的两种视图），
+  // 所以在任一页切换，另一页的按钮也要同步点亮 —— 否则切过去按钮状态是错的。
+  var GSRC_LABEL = {
+    all: "全部平台", roblox: "Roblox", steam: "Steam",
+    appstore: "iOS", googleplay: "Android", itch: "itch.io", poki: "Poki",
+    crazygames: "CrazyGames", other: "热搜/其他",
+  };
+  /** 归一化来源键：认得的六个平台照原样，其余（含热搜候选的空 src）都归 `other` */
+  function gsrcKey(g) {
+    var s = String((g && g.src) || "");
+    return SRC_LABEL[s] ? s : "other";
+  }
+  function gsrcMatch(g) {
+    return state.gsrc === "all" || gsrcKey(g) === state.gsrc;
+  }
+  function eachGsrcBtn(fn) {
+    ["game-src", "pick-src"].forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      Array.prototype.forEach.call(el.querySelectorAll("button[data-gsrc]"), fn);
+    });
+  }
+  /** 按钮上直接写各平台的条数 —— 用户要的就是"别让 Roblox 霸占"，得先看得见分布 */
+  function updateGsrcCounts() {
+    if (!games) return;
+    var cnt = { all: 0 };
+    (games.items || []).forEach(function (g) {
+      var k = gsrcKey(g);
+      cnt.all++;
+      cnt[k] = (cnt[k] || 0) + 1;
+    });
+    eachGsrcBtn(function (b) {
+      var k = b.dataset.gsrc;
+      var base = b.dataset.label || k;
+      var n = cnt[k] || 0;
+      b.textContent = base + (k === "all" ? " " + cnt.all : n ? " " + n : "");
+      // 该平台一条都没有时置灰：点进去只会看到空列表，不如提前说清楚
+      b.disabled = k !== "all" && !n;
+    });
+  }
+  function syncGsrc() {
+    eachGsrcBtn(function (b) { b.classList.toggle("on", b.dataset.gsrc === state.gsrc); });
+  }
+
+  // ── 「按平台分开浏览」：把平台筛选写进 URL hash，可以直接收藏 / 分享某个平台的视图 ──
+  //     #games/roblox  → 新游戏雷达 · 只看 Roblox
+  //     #pick/appstore → 建站推荐 · 只看 iOS
+  //     #games         → 新游戏雷达 · 全部平台
+  var HASH_TABS = ["hot", "hist", "pick", "watch", "games", "pool"];
+  function syncHash() {
+    if (state.tab !== "games" && state.tab !== "pick") return;
+    var want = "#" + state.tab + (state.gsrc === "all" ? "" : "/" + state.gsrc);
+    try {
+      if (location.hash !== want && typeof history !== "undefined" && history.replaceState) {
+        history.replaceState(null, "", want);
+      }
+    } catch (e) { /* 无 history 的环境（如测试桩）忽略 */ }
+  }
+  /** 启动时按 hash 直接进入某个平台视图（这样"分开浏览"就是一个个可收藏的地址） */
+  function initFromHash() {
+    var parts = String(location.hash || "").replace(/^#/, "").split("/");
+    var tab = parts[0];
+    var src = parts[1];
+    if (HASH_TABS.indexOf(tab) < 0) return;
+    if (src && GSRC_LABEL[src]) { state.gsrc = src; syncGsrc(); }
+    if (tab !== state.tab) switchTab(tab);
+  }
+
   function renderGames() {
     var el = $("game-cards");
     if (!games) { el.innerHTML = '<p class="empty">加载中…</p>'; return; }
-    var sorted = (games.items || []).slice().sort(GAME_SORTS[state.gameSort] || GAME_SORTS.first);
+    // 🎮 先按平台过滤，再排序切片 —— 否则 Roblox 的几十条会把其它平台全挤下去
+    var sorted = (games.items || []).filter(gsrcMatch).sort(GAME_SORTS[state.gameSort] || GAME_SORTS.first);
     var items = sorted.slice(0, state.rowsShown);
     var meta = $("game-meta");
-    if (meta) meta.textContent = "共 " + sorted.length + " 个 · 排序：" + (GAME_SORT_LABEL[state.gameSort] || "最新发现");
+    if (meta) meta.textContent = "共 " + sorted.length + " 个 · 平台：" + (GSRC_LABEL[state.gsrc] || "全部平台") +
+      " · 排序：" + (GAME_SORT_LABEL[state.gameSort] || "最新发现");
     el.innerHTML = items.map(function (g) {
       var age = (Date.now() - new Date(g.first).getTime()) / 864e5;
       var chart = (g.series || []).length > 1
@@ -402,16 +496,25 @@
   var avgOf = function (a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : 0; };
 
   /**
-   * 需求规模（单调递增，log 归一）。两个平台的口径不同，**必须分开锚点**：
+   * 需求规模（单调递增，log 归一）。三个平台的口径不同，**必须分开锚点**：
    *   Roblox：终身访问量 —— 1e5→0 · 1e6→33 · 1e7→66 · 1e8→100
    *   Steam ：当前在线人数（拿不到就用评价数当代理）—— 1→0 · 100→54 · 5000→100
-   * 🛑 不能用同一条曲线：Roblox 的访问量是"终身累计"，Steam 的 CCU 是"此刻在线"，
-   *    数量级差 4~5 个数量级，混用会让一边永远满分、另一边永远 0 分。
+   *   App Store / Google Play：**评分人数**（两家都不公开装机量）—— 1e2→0 · 1e3→25 · 1e4→50 · 1e5→75 · 1e6→100
+   * 🛑 不能用同一条曲线：Roblox 是"终身累计"、Steam 是"此刻在线"、手游是"评分数"，
+   *    数量级差 4~6 个数量级，混用会让一边永远满分、另一边永远 0 分。
    */
   function demandScore(v, kind) {
     if (v == null || v <= 0) return null;
     if (kind === "steam") return clamp01((Math.log10(v) / 3.7) * 100);
+    if (kind === "mobile") return clamp01(((Math.log10(v) - 2) / 4) * 100);
     return clamp01((Math.log10(v) - 5) * 33);
+  }
+  /** 平台判定：`stats.platform` 是唯一事实源（手机端由 mobile.mjs 写入 ios/android） */
+  function platformOf(st) {
+    var p = (st && st.platform) || "";
+    if (p === "steam" || p === "ios" || p === "android") return p;
+    if (st && st.visits != null) return "roblox";
+    return "none";
   }
   /** 内容面：已挖到的攻略词数量 ≈ 可直接做的页面数 */
   function surfaceScore(words) {
@@ -435,6 +538,16 @@
   function qualityScore(approval) {
     if (approval == null) return null;
     return clamp01(((approval - 50) / 45) * 100);
+  }
+  /**
+   * 口碑（手游）：用**星级**而非好评率 —— App Store / Play 只给 0~5 星，没有好评/差评二分。
+   * 锚点：≥4.5★ → 100 · 3.5★ → 50 · ≤2.5★ → 0。
+   * 🛑 `ratings === 0` 是"刚上架还没人评"，**不是口碑差** → 返回 null（未测），
+   *    否则每个新上架的手游都会被当成"口碑 0 分"而永远推不出来。
+   */
+  function mobileQuality(st) {
+    if (st.ratings == null || st.ratings <= 0 || st.rating == null) return null;
+    return clamp01(((st.rating - 2.5) / 2) * 100);
   }
   /**
    * 上线时长（天）：**只认官方上线日 stats.created**（Roblox 接口给的）。
@@ -479,20 +592,31 @@
 
   function rankability(g) {
     var st = g.stats || {};
-    var isSteam = st.platform === "steam";
+    var plt = platformOf(st);
     var ageDays = ageDaysOf(g);
     var comp = compRoom(g, ageDays);
-    // Steam 优先用当前在线；CCU 为 0/缺失时退回评价数（评价数 ≈ 销量代理）
-    var demandRaw = isSteam
-      ? (st.playing != null && st.playing > 0 ? st.playing : st.reviews)
-      : st.visits;
+    // 需求口径按平台分开（见 demandScore 的注释）：
+    //   steam → 当前在线，缺失退回评价数（评价数 ≈ 销量代理）
+    //   ios / android → 评分人数（两家都不公开装机量，这是唯一可得的规模代理）
+    //   roblox → 终身访问量
+    var demandRaw, demandKind;
+    if (plt === "steam") {
+      demandRaw = st.playing != null && st.playing > 0 ? st.playing : st.reviews;
+      demandKind = "steam";
+    } else if (plt === "ios" || plt === "android") {
+      demandRaw = st.ratings != null && st.ratings > 0 ? st.ratings : null;
+      demandKind = "mobile";
+    } else {
+      demandRaw = st.visits;
+      demandKind = "roblox";
+    }
     var parts = {
-      demand: demandScore(demandRaw, isSteam ? "steam" : "roblox"),
+      demand: demandScore(demandRaw, demandKind),
       surface: surfaceScore(g.words),
       fresh: freshAgeScore(ageDays),
       comp: comp.score,
       momentum: momentumScore(g.series),
-      quality: qualityScore(st.approval),
+      quality: (plt === "ios" || plt === "android") ? mobileQuality(st) : qualityScore(st.approval),
     };
     // 🛑 竞争测不到就不给总分，**绝不做权重归一化**。
     //    踩过的坑：把缺失项的权重让给其它项后，sony playstation / fc 27 / gta 6 / fifa 27
@@ -563,6 +687,11 @@
       return { k: "unknown", t: "竞争未测", why: "没有官方上线数据，也没填人工竞争判断 —— 点「查竞争」看 SERP 再决定" };
     }
     if (st.approval != null && st.approval < 60) return { k: "no", t: "口碑偏低", why: "好评 " + st.approval + "%，游戏本身在流失玩家" };
+    // 手游没有好评率，只有星级 —— 同一个判断换个口径（≤3.0★ 且**有人评**；
+    // 0 人评是"刚上架还没人评"，不能当口碑差，否则新上架的手游全被否掉）
+    if ((st.platform === "ios" || st.platform === "android") && st.ratings > 0 && st.rating != null && st.rating < 3.0) {
+      return { k: "no", t: "口碑偏低", why: "评分 " + st.rating + "★（" + fmtCount(st.ratings) + " 人评），手游的留存问题会直接反映在星级上" };
+    }
     if (!(g.words || []).length) return { k: "warn", t: "没挖到攻略词", why: "没有可做页面的词 —— 可能需求弱，也可能只是本轮还没挖到" };
     // 上线很久 → 长尾多半已固化：不否决，但降档（"上线时间长是负面因素"的兑现）
     if (r.ageDays != null && r.ageDays > 1460 && r.score >= 65) {
@@ -592,16 +721,31 @@
     }).join("");
     var age = r.ageDays == null ? "未取得" : (r.ageDays < 30 ? Math.round(r.ageDays) + " 天" : (r.ageDays / 365).toFixed(1) + " 年");
     var compSrc = { manual: "人工核查", age: "上线时长推断", unknown: "未测" }[r.comp.source] || "未测";
-    // 平台口径不同，展示也要分开（Steam 是"此刻在线 + 评价数"，Roblox 是"终身访问量"）
-    var metaLine = st.platform === "steam"
-      ? "需求 在线 " + fmtCount(st.playing) +
+    // 平台口径不同，展示也必须分开，否则会把"评分人数"写成"访问量"：
+    //   Roblox → 终身访问量 + 好评率
+    //   Steam  → 此刻在线 + 评价数 + 好评率 + 发售日
+    //   手游    → 评分人数 + 星级（**没有好评率**；Android 连首发日都没有 → 如实标未测）
+    var metaLine;
+    if (st.platform === "steam") {
+      metaLine = "需求 在线 " + fmtCount(st.playing) +
         " · 评价 " + fmtCount(st.reviews) +
         " · 好评 " + (st.approval == null ? "未取得" : st.approval + "%") +
         " · 发售 " + (st.releaseText ? esc(st.releaseText) : "未取得") +
-        (st.price ? " · " + esc(st.price) : "")
-      : "需求 访问 " + fmtCount(st.visits) + " · 好评 " +
+        (st.price ? " · " + esc(st.price) : "");
+    } else if (st.platform === "ios" || st.platform === "android") {
+      var plat = st.platform === "ios" ? "iOS" : "Android";
+      metaLine = "需求 评分 " + (st.ratings ? fmtCount(st.ratings) + " 人" : "未取得（还没人评）") +
+        " · 评分 " + (st.rating == null || !st.ratings ? "未取得" : st.rating + "★") +
+        " · 上线 " + (st.created
+          ? esc(String(st.created).slice(0, 10)) + "（" + age + "）"
+          : "未取得" + (st.createdUnknown ? "（" + esc(plat + "：" + st.createdUnknown) + "）" : "")) +
+        (st.updated ? " · 更新 " + esc(String(st.updated).slice(0, 10)) : "") +
+        (st.price ? " · " + esc(st.price) : "");
+    } else {
+      metaLine = "需求 访问 " + fmtCount(st.visits) + " · 好评 " +
         (st.approval == null ? "未取得" : st.approval + "%") + " · 上线 " +
         (st.created ? esc(String(st.created).slice(0, 10)) : "未取得") + "（" + age + "）";
+    }
     return '<div class="gcard pk-card">' +
       '<div class="ghead"><h3>' + esc(g.name) + '</h3><span class="score pk-' + v.k + '">' +
       (r.score == null ? "—" : r.score) + "</span></div>" +
@@ -615,7 +759,8 @@
       '<div class="gmeta">' + metaLine + "</div>" +
       '<div class="gmeta">竞争来源 ' + esc(compSrc) + " · 攻略词 " + (g.words || []).length + " 个</div>" +
       '<div class="kwrow">' +
-      (g.srcUrl ? '<a class="kwchip" target="_blank" rel="noopener" href="' + esc(g.srcUrl) + '">Roblox 页</a>' : "") +
+      (g.srcUrl ? '<a class="kwchip" target="_blank" rel="noopener" href="' + esc(g.srcUrl) + '">' +
+        esc(SRC_LABEL[g.src] || "作品") + " 页</a>" : "") +
       '<a class="kwchip up" target="_blank" rel="noopener" title="数一下前十有几个独立域名占位，就是竞争强度的实测" href="' + serpSearchUrl(g.name) + '">查竞争（SERP）</a>' +
       '<a class="kwchip" target="_blank" rel="noopener" href="' + exploreUrl(g.name, g.chart_geo) + '">Google Trends</a>' +
       "</div>" +
@@ -629,7 +774,8 @@
   function renderPick() {
     var el = $("pick-cards");
     if (!games) { el.innerHTML = '<p class="empty">加载中…</p>'; return; }
-    var all = (games.items || []).map(function (g) {
+    // 与「新游戏雷达」共用同一个平台筛选（同一批数据、两种视图）
+    var all = (games.items || []).filter(gsrcMatch).map(function (g) {
       var r = rankability(g);
       return { g: g, r: r, v: pickVerdict(g, r) };
     });
@@ -657,7 +803,7 @@
     var shown = rows.slice(0, state.rowsShown);
     var yes = all.filter(function (x) { return x.v.k === "yes"; }).length;
     var judgeable = all.filter(function (x) { return x.r.score != null; }).length;
-    $("pick-meta").textContent = "共 " + all.length + " 个 · 可评估 " + judgeable +
+    $("pick-meta").textContent = "共 " + all.length + " 个（平台：" + (GSRC_LABEL[state.gsrc] || "全部平台") + "）· 可评估 " + judgeable +
       " 个 · 值得做 " + yes + " 个 · 显示 " + shown.length;
     el.innerHTML = shown.map(function (x) { return pickRow(x.g); }).join("") ||
       '<p class="empty">没有符合条件的游戏</p>';
@@ -686,12 +832,13 @@
   // ══════════════════════════════════════════════════════════════════════
   var WINDOW_LABEL = {
     build: "🟢 黄金窗口",
+    fresh: "🆕 新上架（手游）",
     close: "🟡 临门 ≤30 天",
     far: "⚪ 远期 / 未定档",
     "too-late": "🔴 已来不及 ≤7 天",
     live: "🔵 已上线",
   };
-  var W_ORDER = { build: 0, close: 1, far: 2, "too-late": 3, live: 4 };
+  var W_ORDER = { build: 0, fresh: 1, close: 2, far: 3, "too-late": 4, live: 5 };
   var TRENDS_LABEL = {
     "not-queried": "未测",
     "429": "限流",
@@ -701,13 +848,23 @@
   };
   var PRECISION_LABEL = { quarter: "季度", year: "仅年份", month: "仅月份", unknown: "未定档", day: "" };
 
-  /** 距今文案（正数=还有几天，0/负=已到发售日） */
+  /** 距今文案（正数=还有几天，0/负=已到发售日 / 手游已上架几天） */
   function daysText(it) {
     if (it.releaseInDays == null) return "未定档";
     var d = it.releaseInDays;
-    if (d < 0) return "已发售 " + Math.abs(d) + " 天";
+    if (d < 0) return (it.source === "appstore" ? "已上架 " : "已发售 ") + Math.abs(d) + " 天";
     if (d === 0) return "就是今天";
     return d + " 天后";
+  }
+
+  /**
+   * 排序主键（必须与服务端 watchlist.mjs 的 primaryKey 一致）：
+   * iOS 的"刚上架"用**已上线天数**当主键 —— 语义上「3 天前上架」与「3 天后发售」都是"3 天的事"，
+   * 都是现在该动手的信号，混排才能一眼看出"最近发生了什么"。
+   */
+  function watchPrimary(x) {
+    if (x.source === "appstore") return x.daysSince == null ? 1e9 : x.daysSince;
+    return x.releaseInDays == null ? 1e9 : x.releaseInDays;
   }
 
   /** 表格里的链接列：永远给全，测不到也不影响点击 */
@@ -717,7 +874,8 @@
     if (L.page) {
       var isRbx = String(L.page).indexOf("roblox.com") > 0;
       out.push('<a target="_blank" rel="noopener" href="' + esc(L.page) + '">' +
-        (it.source === "roblox" ? (isRbx ? "Roblox 页" : "来源页") : "商店页") + "</a>");
+        (it.source === "roblox" ? (isRbx ? "Roblox 页" : "来源页")
+          : it.source === "appstore" ? "App Store 页" : "商店页") + "</a>");
     }
     if (L.source && L.source !== L.page) out.push('<a target="_blank" rel="noopener" href="' + esc(L.source) + '">BloxInformer</a>');
     if (L.trends) out.push('<a target="_blank" rel="noopener" href="' + esc(L.trends) + '">Trends</a>');
@@ -729,9 +887,7 @@
   var WATCH_SORTS = {
     // ⏱ 最近发售：有确切日期的按天数升序，未定档沉底（默认）
     date: function (a, b) {
-      var da = a.releaseInDays == null ? 1e9 : a.releaseInDays;
-      var db = b.releaseInDays == null ? 1e9 : b.releaseInDays;
-      return da - db || (a.rank || 1e9) - (b.rank || 1e9);
+      return watchPrimary(a) - watchPrimary(b) || (a.rank || 1e9) - (b.rank || 1e9);
     },
     // 🪟 窗口优先：黄金窗口最前
     window: function (a, b) {
@@ -778,6 +934,10 @@
     if (it.developer) bits.push(esc(it.developer));
     if (it.price) bits.push(esc(it.price));
     if (it.source === "steam") bits.push(it.demo ? "有 Demo" : "无 Demo");
+    // 手游：评分人数 = 需求规模代理，星级 = 口碑；`ratings = 0` 是"还没人评"而不是"口碑差"
+    if (it.source === "appstore") {
+      bits.push(it.ratings ? "评分 " + (it.rating == null ? "—" : it.rating + "★") + "（" + fmtCount(it.ratings) + " 人）" : "评分 未取得（刚上架还没人评）");
+    }
     if (it.status) bits.push(esc(it.status));
     // 官方关联结果（搜索/来源页解析出来的）：把置信度与拒绝原因如实显示，别让人以为都是确认过的
     var CONF = { high: "高", medium: "中", low: "低" };
@@ -786,7 +946,9 @@
     if (it.live && it.liveStats) bits.push("访问 " + fmtCount(it.liveStats.visits) + " · 在线 " + fmtCount(it.liveStats.playing));
     var src = it.source === "roblox"
       ? "Roblox · " + esc(it.list || "BloxInformer") + (it.dataAt ? "（数据 " + String(it.dataAt).slice(0, 16).replace("T", " ") + "）" : "")
-      : "Steam" + (it.list ? " · " + esc(it.list) : "") + (it.rank ? " 愿望单#" + it.rank : "");
+      : it.source === "appstore"
+        ? "iOS · " + esc(it.list || "新上架") + (it.rank ? " #" + it.rank : "") + (it.geo ? " · " + esc(it.geo) : "")
+        : "Steam" + (it.list ? " · " + esc(it.list) : "") + (it.rank ? " 愿望单#" + it.rank : "");
     var pr = PRECISION_LABEL[it.releasePrecision] || "";
     // 已经能玩的 → 窗口一律显示「已上线」（它的"还有几天"已经没有意义了）
     var win = it.live ? "live" : it.window;
@@ -844,7 +1006,7 @@
     var meta = $("watch-meta");
     if (meta) {
       meta.textContent = "共 " + all.length + " 条（Steam " + (st.steam || 0) + " / Roblox " + (st.roblox || 0) +
-        "）· 有发售日 " + dated.length + " · 未定档 " + (all.length - dated.length) +
+        " / iOS 新上架 " + (st.appstore || 0) + "）· 有发售日 " + dated.length + " · 未定档 " + (all.length - dated.length) +
         (state.watchTba ? "（已展开）" : "（已折叠）") + " · 显示 " + rows.length;
     }
     renderWatchStats();
@@ -922,6 +1084,7 @@
   function switchTab(tab) {
     state.tab = tab;
     state.rowsShown = 200;
+    syncHash();   // 当前页（含平台）写进 URL：切页/切平台都是可收藏的地址
     $("panel-hot").hidden = tab !== "hot";
     $("panel-hist").hidden = tab !== "hist";
     $("panel-pick").hidden = tab !== "pick";
@@ -964,6 +1127,21 @@
   bindBar("vol-bar", "vol", function (v) { state.vol = Number(v); });
   bindBar("growth-bar", "growth", function (v) { state.growth = Number(v); });
   bindBar("pick-sort", "psort", function (v) { state.pickSort = v; });
+
+  // 🎮 平台筛选（两页共用）：任一页点了，两个按钮组一起同步，并重渲染当前页
+  ["game-src", "pick-src"].forEach(function (id) {
+    var el = $(id);
+    if (!el) return;
+    el.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-gsrc]");
+      if (!b || b.disabled) return;
+      state.gsrc = b.dataset.gsrc;
+      state.rowsShown = 200;   // 换平台 = 新的列表，重置"显示更多"的展开量
+      syncGsrc();
+      syncHash();              // 地址栏跟着变成 #games/<平台>，可直接收藏
+      if (state.tab === "pick") renderPick(); else renderGames();
+    });
+  });
 
   $("noise-btn").addEventListener("click", function () {
     state.noise = !state.noise;
@@ -1037,12 +1215,15 @@
         assessReasons: it.assess ? it.assess.reasons.join(" | ") : "",
         status: it.status || "",
         genres: (it.genres || []).join("|"), developer: it.developer || "", price: it.price || "", demo: it.demo ? 1 : 0,
+        // 手游专用：评分人数（需求代理）与星级（口碑）；列里保留空值以便 Excel 里筛
+        rating: it.rating == null ? "" : it.rating, ratings: it.ratings == null ? "" : it.ratings,
+        daysSince: it.daysSince == null ? "" : it.daysSince,
         trendsStatus: (it.trends && it.trends.status) || "",
         store: L.page || "", trends: L.trends || "", serp: L.serp || "",
       };
     }), ["name", "source", "list", "rank", "window", "assessScore", "assessBand", "assessReasons", "status",
-        "released", "releaseInDays", "releasePrecision", "players", "genres", "developer", "price", "demo",
-        "trendsStatus", "store", "trends", "serp"]);
+        "released", "releaseInDays", "daysSince", "releasePrecision", "players", "genres", "developer", "price", "demo",
+        "rating", "ratings", "trendsStatus", "store", "trends", "serp"]);
   });
   $("pool-csv").addEventListener("click", function () {
     if (!pool) return;
@@ -1061,6 +1242,9 @@
   });
 
   // ── 启动 ──
+  // 先按 URL hash 落位（#games/roblox 这类地址可直接收藏/分享），再拉数据；
+  // 三份产物是异步各自的，所以每加载完一份都会按 state.tab 决定要不要重渲染（见下）。
+  initFromHash();
   fetchJson("data/trends.json").then(function (d) {
     trends = d;
     CATS = d.cats || {};
@@ -1077,12 +1261,17 @@
   });
   fetchJson("data/games.json").then(function (d) {
     games = d;
+    FRESH.games = d.updated || null;
+    renderFresh();
+    updateGsrcCounts();   // 平台按钮上直接显示各来源条数（看清分布，别被单平台刷屏）
     if (state.tab === "games") renderGames();
     if (state.tab === "pick") renderPick();
   }).catch(function () {});
   // 潜伏列表：独立文件（data/watchlist.json），零 Trends 配额，随每小时采集一起刷新
   fetchJson("data/watchlist.json").then(function (d) {
     watch = d;
+    FRESH.watch = d.updated || null;
+    renderFresh();
     if (state.tab === "watch") renderWatch();
   }).catch(function () {});
   // 词池用于行内"相关词"展开，后台静默加载

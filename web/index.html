@@ -23,7 +23,7 @@
       <p class="tag">全球热词 · 7 天留档 · 新游戏雷达 · 关键词池</p>
     </div>
   </div>
-  <div class="meta"><span id="updated">加载中…</span></div>
+  <div class="meta"><span id="updated">加载中…</span><span id="fresh-extra"></span></div>
 </header>
 
 <nav id="tabs">
@@ -62,7 +62,23 @@
 
   <section id="panel-games" hidden>
     <p class="hint">识别到的是<b>新游戏名（作品本体）</b>，不是攻略词。曲线是该游戏<b>被发现时点</b>的 7 天搜索热度快照（相对值 0-100）。
-      想找可做页面的攻略词（xxx codes / tier list 之类），请去<b>「关键词池」</b>。</p>
+      想找可做页面的攻略词（xxx codes / tier list 之类），请去<b>「关键词池」</b>。<br />
+      <b>这一页只回答「发现了什么」</b>（按发现时间/信号/分数排）；<b>「哪个值得做」在 🎯 建站推荐</b> ——
+      两页是<b>同一批数据</b>（`data/games.json`）的两种视图。平台按钮上直接写着各来源的条数：
+      Roblox 通常最多（候选量高一个数量级），不想看它就直接点别的平台。</p>
+    <div class="fbar" id="game-src">
+      <span class="group">
+        <button data-gsrc="all" data-label="全部平台" class="on">全部平台</button>
+        <button data-gsrc="roblox" data-label="Roblox">Roblox</button>
+        <button data-gsrc="steam" data-label="Steam">Steam</button>
+        <button data-gsrc="appstore" data-label="iOS">iOS</button>
+        <button data-gsrc="googleplay" data-label="Android">Android</button>
+        <button data-gsrc="itch" data-label="itch.io">itch.io</button>
+        <button data-gsrc="poki" data-label="Poki">Poki</button>
+        <button data-gsrc="crazygames" data-label="CrazyGames">CrazyGames</button>
+        <button data-gsrc="other" data-label="热搜/其他">热搜/其他</button>
+      </span>
+    </div>
     <div class="fbar" id="game-sort">
       <span class="group">
         <button data-sort="first" class="on">🆕 最新发现</button>
@@ -79,12 +95,26 @@
       ＋ <b>内容面</b>（能做的页面数）＋ <b>新鲜度</b>（距上线多久，越老越难挤）
       ，再乘 <b>竞争</b>（分高 = 竞争低；优先用人工 SERP 核查，其次用上线时长推断，都没有则标「竞争未测」）。
       <b>流量大本身不是缺点</b> —— 扣分的是<b>竞争高</b>和<b>上线时间长</b>。
-      每张卡片都有「查竞争（SERP）」按钮：一眼数出前十有几个独立域名占位。</p>
+      每张卡片都有「查竞争（SERP）」按钮：一眼数出前十有几个独立域名占位。
+      手机端（iOS / Android）的口径不同：<b>需求规模看评分人数</b>、<b>口碑看星级</b>（没有好评率），
+      且 Android <b>拿不到首发日</b> → 如实标「未测」。
+      <b>本页与 🎮 新游戏雷达是同一批数据</b>：雷达看「发现了什么」，这里看「哪个值得做」；平台筛选两页共用。</p>
     <div class="fbar" id="pick-bar">
       <span class="group">
         <button data-pick="all" class="on">全部</button>
         <button data-pick="todo">✅ 值得做</button>
         <button data-pick="nowords">⚠️ 缺攻略词</button>
+      </span>
+      <span class="group" id="pick-src">
+        <button data-gsrc="all" data-label="全部平台" class="on">全部平台</button>
+        <button data-gsrc="roblox" data-label="Roblox">Roblox</button>
+        <button data-gsrc="steam" data-label="Steam">Steam</button>
+        <button data-gsrc="appstore" data-label="iOS">iOS</button>
+        <button data-gsrc="googleplay" data-label="Android">Android</button>
+        <button data-gsrc="itch" data-label="itch.io">itch.io</button>
+        <button data-gsrc="poki" data-label="Poki">Poki</button>
+        <button data-gsrc="crazygames" data-label="CrazyGames">CrazyGames</button>
+        <button data-gsrc="other" data-label="热搜/其他">热搜/其他</button>
       </span>
       <span class="group" id="pick-sort">
         <button data-psort="verdict" class="on">🎯 结论优先</button>
@@ -97,7 +127,9 @@
   </section>
 
   <section id="panel-watch" hidden>
-    <p class="hint">还没火的时候该盯谁：<b>Steam 愿望单序位</b> + <b>Roblox 未发售清单</b>（第三方 BloxInformer）。
+    <p class="hint">还没火的时候该盯谁：<b>Steam 愿望单序位</b> + <b>Roblox 未发售清单</b>（第三方 BloxInformer）
+      + <b>iOS 新上架手游</b>（Apple 新游榜 + 真实上线日，窗口标「🆕 刚上架」）。<b>Android 不在这张表里</b>：
+      Play 没有可抓的新游入口、也没有首发日 → 判不了"上线几天"，只能在雷达/推荐页按评分人数 + 星级评估。
       默认<b>按发售日从近到远排</b>，一眼看出「谁最先发售」；<b>未定档</b>的默认折叠（点右侧按钮展开）。
       窗口 = 距发售天数：<b>30~180 天是建站黄金窗口</b>（够建站、够被收录）；≤7 天默认不进表（新站来不及排上去）。</p>
     <div class="fbar">
@@ -112,6 +144,7 @@
         <button data-src="all" class="on">全部来源</button>
         <button data-src="steam">仅 Steam</button>
         <button data-src="roblox">仅 Roblox</button>
+        <button data-src="appstore">仅 iOS 新上架</button>
       </span>
       <input id="watch-search" type="search" placeholder="筛选名字…" />
       <button id="watch-tba" class="toggle">显示未定档</button>
@@ -135,7 +168,9 @@
 </main>
 
 <footer>
-  <p>数据每小时自动更新 · 来源 Google Trends 实时上升热搜 · 搜索量/涨幅为官方分桶相对值</p>
+  <p>数据每小时自动更新 · 来源：Google Trends 实时上升热搜 · Roblox 榜单 · Steam 商店 ·
+    App Store（iOS，23 地区）· Google Play（Android，分类热门榜）· itch.io · Poki ·
+    搜索量/涨幅为官方分桶相对值</p>
 </footer>
 <script src="app.js"></script>
 </body>

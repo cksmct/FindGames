@@ -11,8 +11,10 @@ const KEY = (s) => String(s || "").trim().toLowerCase();
 /**
  * 队列优先级（4 最高）：
  *   4  Roblox 榜单      —— 原站的主要来源，最接近"新游戏"口径
- *   3  真·新上架        —— Steam 新发售/未发售、App Store「最新上架」
- *   1  榜单常客          —— Steam 特惠/热销、App Store 下载榜（多为饱和老游戏，验证价值低）
+ *   3  真·新上架        —— Steam 新发售/未发售、App Store「最新上架」、itch/Poki 的新作
+ *   2  网页小游戏       —— itch / Poki：竞争几乎为零的小游戏，验证的价值高于再验一遍热门榜
+ *   1  榜单常客          —— Steam 特惠/热销、App Store 下载榜、Google Play 分类热门榜
+ *                          （Play 没有可抓的"新游"入口，拿到的都是饱和热门游戏）
  */
 const PRIO = (it) => {
   // 显式 prio 优先：调用方明确说"这条更急"时必须听它的。
@@ -21,6 +23,8 @@ const PRIO = (it) => {
   if (it.prio) return it.prio;
   if (it.source === "roblox") return 4;
   if (it.source === "appstore") return String(it.kind || "").startsWith("new") ? 3 : 1;
+  if (it.source === "itch" || it.source === "poki" || it.source === "crazygames") return 2;
+  if (it.source === "googleplay") return 1;
   if (it.kind === "new" || it.kind === "upcoming") return 3;
   return 1;
 };
@@ -77,10 +81,50 @@ export function pushQueue(cfg, incoming, known) {
   return { added, bumped, total: q.items.length, seen };
 }
 
-/** 取优先级最高的 n 个（不删除：验证成功的下一轮会因"已追踪"被跳过，验证失败的自然过期） */
+/**
+ * 取优先级最高的 n 个（不删除：验证成功的下一轮会因"已追踪"被跳过，验证失败的自然过期）。
+ *
+ * 🛑 **按来源公平抽样（fairShare，默认开）—— 2026-09-24 实测教训**：
+ * 来源变多之后（Roblox / Steam / iOS / Android / itch / Poki 六个），
+ * 单纯"按优先级排序后取前 n"会让**单一来源吃光全部名额**：
+ * 实测 Roblox 一次产出 217 条且优先级最高，于是本轮 7 个验证名额全是 Roblox，
+ * 手游与网页小游戏**永远排不到**（队列里积压上千条，21 天后直接过期）——
+ * 等于新增的来源白加。改成按来源轮流各取一条，保证每轮每个来源都能轮到。
+ * 想要旧的"严格按优先级"行为：`games.queue.fairShare = false`。
+ */
 export function peekQueue(cfg, n) {
-  const items = loadQueue(cfg).items.slice().sort((a, b) => (b.prio || 0) - (a.prio || 0) || String(a.addedAt).localeCompare(String(b.addedAt)));
-  return items.slice(0, Math.max(0, n));
+  const limit = Math.max(0, n);
+  const items = loadQueue(cfg).items.slice()
+    .sort((a, b) => (b.prio || 0) - (a.prio || 0) || String(a.addedAt).localeCompare(String(b.addedAt)));
+  const g = (cfg && cfg.games) || {};
+  if ((g.queue && g.queue.fairShare) === false) return items.slice(0, limit);
+
+  // 按来源分桶（桶内已按优先级 + FIFO 排好），来源之间轮流转
+  const bySrc = new Map();
+  for (const it of items) {
+    const k = it.source || "unknown";
+    if (!bySrc.has(k)) bySrc.set(k, []);
+    bySrc.get(k).push(it);
+  }
+  // 先轮优先级高的来源（桶内首条的 prio 就是该来源的最急程度）
+  const order = Array.from(bySrc.keys())
+    .sort((a, b) => ((bySrc.get(b)[0] || {}).prio || 0) - ((bySrc.get(a)[0] || {}).prio || 0));
+  const cursor = new Map(order.map((k) => [k, 0]));
+  const out = [];
+  while (out.length < limit) {
+    let advanced = false;
+    for (const k of order) {
+      if (out.length >= limit) break;
+      const arr = bySrc.get(k);
+      const i = cursor.get(k);
+      if (i >= arr.length) continue;
+      cursor.set(k, i + 1);
+      out.push(arr[i]);
+      advanced = true;
+    }
+    if (!advanced) break; // 全部来源都取空了
+  }
+  return out;
 }
 
 /** 出队：把本轮已处理过的名字移出队列 */

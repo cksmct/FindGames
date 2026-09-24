@@ -32,6 +32,7 @@ import { translateToZh } from "./lib/translate.mjs";
 import { collectSourceCandidates } from "./lib/sources.mjs";
 import { enrichGameStats } from "./lib/roblox.mjs";
 import { enrichSteamStats } from "./lib/steam.mjs";
+import { enrichMobileStats } from "./lib/mobile.mjs";
 import { pushQueue, peekQueue, dropQueue } from "./lib/queue.mjs";
 import { buildWatchlist } from "./lib/watchlist.mjs";
 
@@ -45,7 +46,7 @@ if (args["only-games"]) { cfg._onlyGames = true; cfg.games.enabled = true; }
 if (args.translate) cfg.translate = true;
 if (args.minvol) cfg.minVol = Number(args.minvol);
 if (args["max-curves"]) cfg.games.maxCurvesPerRun = Number(args["max-curves"]);
-if (args["no-sources"]) cfg.games.sources = { roblox: false, steam: false };
+if (args["no-sources"]) cfg.games.sources = { roblox: false, steam: false, appstore: false, googleplay: false, itch: false, poki: false, crazygames: false };
 if (args["no-watchlist"]) cfg.watchlist = { ...(cfg.watchlist || {}), enabled: false };
 if (args["only-watchlist"]) cfg._onlyWatchlist = true;
 // 把浏览器里另存的 BloxInformer 页面直接喂进来（无视保鲜期检查，因为是你刚存的）
@@ -62,7 +63,7 @@ if (cfg.watchlist?.enabled !== false) {
     const wl = await buildWatchlist(cfg, session);
     if (wl) {
       const wn = Object.entries(wl.stats.windows || {}).map(([k, v]) => `${k}:${v}`).join(" ");
-      log("ok", `潜伏清单：共 ${wl.stats.total} 条（Steam ${wl.stats.steam} / Roblox ${wl.stats.roblox}）${wn ? " · 窗口 " + wn : ""} · Trends 检查 ${wl.stats.trendsChecked}`);
+      log("ok", `潜伏清单：共 ${wl.stats.total} 条（Steam ${wl.stats.steam} / Roblox ${wl.stats.roblox} / iOS 新上架 ${wl.stats.appstore || 0}）${wn ? " · 窗口 " + wn : ""} · Trends 检查 ${wl.stats.trendsChecked}`);
       for (const n of wl.notes.slice(0, 3)) log("dim", `  ${n}`);
     }
   } catch (e) {
@@ -371,7 +372,16 @@ if (cfg.games.enabled) {
     // 实测：不加这条例外，Starforged / Magoi / A Bizarre Race 这类新游戏
     //   ① 在 Trends 上本来就没有曲线 → 被整条丢弃；
     //   ② 或者恰好碰到 429 → 被当失败 → 盯了几个月的成果直接蒸发。
-    const promoted = c.srcInfo && c.srcInfo.via === "watchlist-live";
+    // 例外名单：这些来源"没有曲线"是**常态**，不该因此被丢掉
+    //   ① 潜伏清单盯到上线的（via=watchlist-live）
+    //   ② 手机端 / 网页小游戏的**新游**（iOS「最新上架」、itch/Poki 的新作）——
+    //      刚上架的游戏在 Trends 上本来就没有曲线，而它们恰恰是"零竞争"的那一段（2026-09-24 新增）
+    // 每轮条数由来源配额 capSrc 天然封顶，所以不会因为这两条例外把列表灌爆。
+    const freshCatalog = c.srcInfo && (
+      (c.srcInfo.source === "appstore" && /^new/.test(String(c.srcInfo.kind || ""))) ||
+      ((c.srcInfo.source === "itch" || c.srcInfo.source === "poki" || c.srcInfo.source === "crazygames") && c.srcInfo.kind === "new")
+    );
+    const promoted = !!(c.srcInfo && (c.srcInfo.via === "watchlist-live" || freshCatalog));
     const hasCurve = curve && curve.series.length >= 2 && curve.peak > 0;
 
     if (!hasCurve && !promoted) {
@@ -390,7 +400,7 @@ if (cfg.games.enabled) {
       }
       continue;
     }
-    if (curveErr) log("dim", `  ${c.q} 曲线拿不到（${curveErr.message}）→ 潜伏转正条目，用官方数据收录`);
+    if (curveErr) log("dim", `  ${c.q} 曲线拿不到（${curveErr.message}）→ 来源目录条目，用官方数据收录`);
 
     const hype = hasCurve ? hypeRatio(curve.series) : 0;
     const score = scoreKeyword({
@@ -421,10 +431,15 @@ if (cfg.games.enabled) {
       sightings: (prev?.sightings || 0) + 1,
       hype,
       score,
-      reason: prev?.reason || (promoted && !hasCurve ? "潜伏清单转正（Trends 暂无曲线）" : c.reason),
+      reason: prev?.reason || (promoted && !hasCurve
+        ? (c.srcInfo.via === "watchlist-live" ? "潜伏清单转正（Trends 暂无曲线）" : "新游目录收录（Trends 暂无曲线）")
+        : c.reason),
       src: prev?.src || (c.trusted ? c.srcInfo.source : ""),
       srcUrl: prev?.srcUrl || (c.trusted ? c.srcInfo.url : ""),
       srcList: prev?.srcList || (c.trusted ? c.srcInfo.kind || c.srcInfo.list || "" : ""),
+      // 来源自带上架日期的（itch 的 createDate / iOS 的 releaseDate）→ 存下来给"新鲜度"用，
+      // 别浪费：这几个小游戏平台**没有别的官方数据**，上架日期是唯一能判"竞争窗口"的输入。
+      srcCreated: prev?.srcCreated || (c.trusted && c.srcInfo.created ? String(c.srcInfo.created) : ""),
       cats: c.cats && c.cats.length ? c.cats : prev?.cats || [],
       geos: Array.from(new Set([...(prev?.geos || []), c.geo])).slice(0, 8),
       rising: rising.length ? rising : prev?.rising || [],
@@ -479,14 +494,26 @@ if (cfg.games.enabled) {
   // 注意 appdetails 不支持多 appid 批量 → 每个游戏 3 次请求，所以靠 TTL + 每轮上限控制。
   const steamRes = await enrichSteamStats(list, cfg);
 
+  // ── 补手机端官方数据（iOS：真实上线日/价格/评分人数；Android：只有评分，且**没有**首发日）──
+  // 与前一层的分工：这一层只认来源明确的 appstore / googleplay 条目，绝不跨平台按名字找同名。
+  const mobRes = await enrichMobileStats(list, cfg);
+
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
   writeGames(cfg, list);
   log("ok", `输出 data/games.json（${list.length} 个，本轮新增 ${added}，挖到攻略词 ${kwAdded} 个）`);
   if (statRes.mode === "on") {
     const rbx = list.filter((x) => x.stats?.visits != null).length;
     const stm = list.filter((x) => x.stats?.platform === "steam").length;
-    const unknown = list.filter((x) => !x.stats || (x.stats.visits == null && x.stats.platform !== "steam")).length;
-    log("dim", `  官方数据覆盖：Roblox ${rbx} · Steam ${stm} · 仍缺 ${unknown}/${list.length}（缺的多是热搜候选：AAA 或根本不是游戏）`);
+    const ios = list.filter((x) => x.stats?.platform === "ios").length;
+    const and = list.filter((x) => x.stats?.platform === "android").length;
+    // "有官方数据"的判定按平台分开 —— 手游没有 visits，不能因此被算进"仍缺"
+    const hasOfficial = (x) => !!x.stats && (x.stats.visits != null || x.stats.platform === "steam" ||
+      x.stats.platform === "ios" || x.stats.platform === "android");
+    const unknown = list.filter((x) => !hasOfficial(x)).length;
+    const srcMix = {};
+    for (const x of list) if (x.src) srcMix[x.src] = (srcMix[x.src] || 0) + 1;
+    log("dim", `  官方数据覆盖：Roblox ${rbx} · Steam ${stm} · iOS ${ios} · Android ${and} · 仍缺 ${unknown}/${list.length}（缺的多是热搜候选：AAA 或根本不是游戏）`);
+    log("dim", `  来源构成：${Object.entries(srcMix).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + " " + v).join(" · ") || "无来源型条目"}`);
   }
 }
 

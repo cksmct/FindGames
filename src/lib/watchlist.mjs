@@ -17,9 +17,10 @@
  *      当成真发售日会把清单按荒谬顺序排（实测 Released_DESC 榜 40 条里 15 条是占位值）。
  */
 import { dataPath, readJson, writeJson, iso, log, sleep } from "./util.mjs";
-import { fetchSteamPopularUpcoming, fetchSteamList, fetchRobloxSortGames } from "./sources.mjs";
+import { fetchSteamPopularUpcoming, fetchSteamList, fetchRobloxSortGames, fetchIosNewGames } from "./sources.mjs";
 import { loadRobloxUpcoming, normalizeEntry, scoreUpcoming } from "./roblox-upcoming.mjs";
 import { linkUpcomingToRoblox } from "./roblox.mjs";
+import { fetchIosBatch } from "./mobile.mjs";
 import { pushQueue } from "./queue.mjs";
 import { fetchInterest, hypeRatio } from "./interest.mjs";
 
@@ -92,10 +93,11 @@ export function windowOf(days) {
   if (days <= 180) return "build";
   return "far";
 }
-const WINDOW_ORDER = { build: 0, far: 1, live: 2, close: 3, "too-late": 4 };
+const WINDOW_ORDER = { build: 0, fresh: 1, far: 2, live: 3, close: 4, "too-late": 5 };
 /** 统计面板用的中文标签（顺序与 WINDOW_ORDER 一致） */
 const WINDOW_LABEL_ZH = {
   build: "🟢 黄金窗口 30~180 天",
+  fresh: "🆕 新上架 ≤60 天（手游）",
   close: "🟡 临门 ≤30 天",
   far: "⚪ 远期 / 未定档",
   "too-late": "🔴 已来不及 ≤7 天",
@@ -485,18 +487,105 @@ export async function buildWatchlist(cfg, session) {
     });
   }
 
+  // ── iOS：**新上架手游**（2026-09-24 新增，与用户约定）──
+  //
+  // 为什么手机端只有 iOS 能进这份清单：
+  //   · iOS 的 `newfreeapplications` / `newpaidapplications` 是"**最新上架**"，而且
+  //     `itunes.apple.com/lookup` 批量接口给得到**真实 releaseDate** → 能算"上线几天"，
+  //     这才是判"竞争窗口"的依据（不是"我们什么时候发现它"）；
+  //   · Android（Play）**没有可抓的"新游"入口、详情页也没有首发日** → 进不了潜伏线，
+  //     它只能在雷达/推荐页按"评分人数 + 星级"评估。这不是偷懒，是那个平台没这个数据。
+  const iosStat = { total: 0, dated: 0, undated: 0, tooOld: 0, kept: 0 };
+  {
+    const mob = Object.assign({ ios: true, maxAgeDays: 45, maxItems: 40, lookupBatch: 50 }, w.mobile || {});
+    if (mob.ios !== false) {
+      try {
+        const raw = await fetchIosNewGames(cfg, { geos: mob.geos });
+        iosStat.total = raw.length;
+        iosStat.picked = Math.min(raw.length, mob.maxLookup || 300);
+
+        // 真实上线日：批量 lookup（50 个/请求）。**拿不到就不猜** —— 没有官方上线日的条目判不了窗口，直接不进清单。
+        // ⚠️ 必须限量：top 榜 4 榜 × 多地区会让候选涨到上千，全量 lookup 的请求量不值得。
+        //    `fetchIosNewGames` 已按"新面孔优先、名次靠前优先"排好序，截断不会漏掉最该看的那批。
+        const picked = raw.slice(0, mob.maxLookup || 300);
+        const info = new Map();
+        const byId = new Map(picked.map((x) => [String(x.appid), x]));
+        const ids = Array.from(byId.keys()).filter(Boolean);
+        for (let i = 0; i < ids.length; i += (mob.lookupBatch || 50)) {
+          const chunk = ids.slice(i, i + (mob.lookupBatch || 50));
+          const cc = ((byId.get(chunk[0]) || {}).geo || "US").toLowerCase();
+          try {
+            const m2 = await fetchIosBatch(chunk, cc);
+            for (const [k, v] of m2) info.set(k, v);
+          } catch (e) {
+            notes.push("iOS 详情批量未取得：" + e.message + "（清单照常出，缺的字段标未测）");
+          }
+          await sleep(200);
+        }
+
+        const nowMs = now;
+        for (const it of picked) {
+          const st = info.get(String(it.appid));
+          const rel = (st && st.created) || "";
+          if (!rel) { iosStat.undated++; continue; }
+          const daysSince = Math.floor((nowMs - new Date(rel + "T00:00:00Z").getTime()) / 86400000);
+          if (daysSince < 0) continue;                                  // 预购 / 未上架：这里只收已经能玩的
+          if (daysSince > (mob.maxAgeDays || 45)) { iosStat.tooOld++; continue; }
+          const key = String(it.name).toLowerCase();
+          if (seenName.has(key)) continue;
+          if (iosStat.kept >= (mob.maxItems || 40)) break;   // 别让手机端条目把整份清单挤出局
+          seenName.add(key);
+          iosStat.dated++;
+          iosStat.kept++;
+          items.push({
+            id: "ios:" + it.appid,
+            name: it.name,
+            source: "appstore",
+            list: it.list,                 // 形如 `new-free US`
+            rank: it.rank,
+            appid: it.appid,
+            geo: it.geo,
+            released: rel,
+            releaseInDays: -daysSince,     // 负数 = 已经上线（与 Steam/Roblox 的"还有几天"共用一个字段）
+            daysSince,
+            window: "fresh",               // 新增窗口：🆕 刚上架
+            genres: (st && st.genres) || [],
+            developer: (st && st.developer) || "",
+            price: (st && st.price) || "",
+            rating: st ? st.rating : null,
+            ratings: st ? st.ratings : null,
+            url: it.url,
+            links: linkSet(it.name, it.url, geo, compare),
+            trends: { status: "not-queried" },
+          });
+        }
+        log("dim", `  iOS 新上架：榜上抓 ${iosStat.total} · 查详情 ${iosStat.picked} → 进清单 ${iosStat.dated}（无日期 ${iosStat.undated} / 超过 ${mob.maxAgeDays} 天 ${iosStat.tooOld}）`);
+      } catch (e) {
+        notes.push("iOS 新上架清单未取得：" + e.message);
+      }
+    }
+  }
+
   // ── 排序：**发售日从近到远**（未定档沉底）。
   //
   // 🛑 2026-09-21 用户反馈后改的：旧版按"窗口"分组（build 优先），结果 Roblox 的
   //    「未定档 / TBA」条目全部挤在清单最前面，看不出哪个游戏最近发售 = 没有信息量。
   //    现在以"还有几天发售"为主键 —— 服务端这个顺序同时决定 maxItems 截断时保留谁，
   //    所以有日期的条目必须先被保住。
+  //
+  // 🆕 2026-09-24：iOS 的"刚上架"条目用 `daysSince` 当同一个主键 ——
+  //    语义上「3 天前上架」和「3 天后发售」都是"3 天的事"，都是现在该动手的信号。
+  const primaryKey = (x) => {
+    if (x.source === "appstore") return x.daysSince == null ? 1e9 : x.daysSince;
+    return x.releaseInDays == null ? 1e9 : x.releaseInDays;
+  };
   items.sort((a, b) => {
-    const da = a.releaseInDays == null ? 1e9 : a.releaseInDays;
-    const db = b.releaseInDays == null ? 1e9 : b.releaseInDays;
+    const da = primaryKey(a);
+    const db = primaryKey(b);
     if (da !== db) return da - db;
     if (a.source === "steam" && b.source === "steam") return (a.rank || 1e9) - (b.rank || 1e9);
     if (a.source === "roblox" && b.source === "roblox") return (b.players || 0) - (a.players || 0);
+    if (a.source === "appstore" && b.source === "appstore") return (a.rank || 1e9) - (b.rank || 1e9);
     return a.source === "steam" ? -1 : 1;
   });
 
@@ -507,6 +596,8 @@ export async function buildWatchlist(cfg, session) {
   stats.trendsMode = tr.mode;
   stats.steam = limited.filter((x) => x.source === "steam").length;
   stats.roblox = limited.filter((x) => x.source === "roblox").length;
+  stats.appstore = limited.filter((x) => x.source === "appstore").length;
+  stats.ios = iosStat;
   stats.robloxUpcoming = rbxUpcoming ? rbxUpcoming.items.length : 0;
   stats.robloxDroppedPast = rbxDroppedPast;
   stats.robloxSource = rbxUpcoming ? rbxUpcoming.source : "none";
@@ -517,6 +608,16 @@ export async function buildWatchlist(cfg, session) {
   for (const it of limited) stats.windows[it.window] = (stats.windows[it.window] || 0) + 1;
 
   notes.push("Steam 不公开愿望单数量：popularcomingsoon 的名次只作**热度代理**，不是绝对需求。");
+  if (iosStat.total) {
+    notes.push(`iOS 手游：来源 Apple 的 newfree/newpaid（Apple 在推的新面孔）+ topfree/topgrossing（**真·刚上线就冲榜**）` +
+      `，再用 lookup 拿**真实上线日**过滤（榜上 ${iosStat.total} → 查详情 ${iosStat.picked} → 有日期 ${iosStat.dated}、无日期跳过 ${iosStat.undated}、超过 ${(w.mobile && w.mobile.maxAgeDays) || 60} 天 ${iosStat.tooOld}）。` +
+      "窗口标「🆕 新上架」；评分人数是需求代理、星级是口碑（0 人评 = 刚上架，不是口碑差）。");
+    notes.push("🛑 **不要相信 Apple 的 new* feed 就等于「刚上线」**：实测 2026-09-24 该 feed 的 `updated` 是新的，" +
+      "但里面每个游戏的上线日都停在 **2026-07-03~07-08**（113/114 条挤在 76~83 天）—— 它返回的是**冻结的旧批次**。" +
+      "所以本清单靠 **lookup 的真实 releaseDate** 判窗口，而不是靠它在不在 new 榜上。");
+    notes.push("⚠️ **Android 进不了这份清单**：Google Play 没有可抓的「新游」入口，详情页也没有首发日 → 判不了「上线几天」。" +
+      "它只能在「🎮 新游戏雷达 / 🎯 建站推荐」里按评分人数 + 星级评估（竞争需人工点 SERP 核查）。");
+  }
   notes.push("Steam 没有「3~6 个月后发售的高愿望单」官方榜（实测深翻页仍是近月发售的游戏）——所以远期候选只能靠人工渠道（官方公告 / 预告片 / 社区）补，本清单偏「近月高热度」。");
   if (rbxUpcoming && rbxStat) {
     notes.push("Roblox 侧是**未发售清单**：Roblox 官方没有这类公开列表（官方 up-and-coming 是「已上线刚起量」），数据来自第三方 BloxInformer Release Hub，" +
