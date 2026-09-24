@@ -17,7 +17,7 @@
 import path from "node:path";
 import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, writeJson, dataPath } from "./lib/util.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
-import { fetchInterest, hypeRatio, enrichCompare } from "./lib/interest.mjs";
+import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh } from "./lib/interest.mjs";
 import {
   noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo,
   feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES,
@@ -600,16 +600,29 @@ if (cfg.games.enabled) {
   // 与前一层的分工：这一层只认来源明确的 appstore / googleplay 条目，绝不跨平台按名字找同名。
   const mobRes = await enrichMobileStats(list, cfg);
 
-  // ── 「vs 基准词」同尺度对比（2026-09-24 新增）──
+  // ── 曲线保鲜（2026-09-24 新增）──
+  // 卡片的曲线是**发现那一刻的快照**，之后从不更新 → 一个几天前爆过、现在已经没人搜的游戏，
+  // 卡片上还挂着漂亮的曲线、还占着高分。这里按 `hours` 定期重取：
+  //   · 重取成功且有量 → 覆盖曲线（卡片跟着更新，动能与推荐分也跟着重算）
+  //   · 重取成功但**没有量** → `coolStreak++`，连续 `coolStreak` 次 → 标 `cooled`（❄️ 已转凉）
+  //   · 重取**失败**（429 等）→ 什么都不改 —— 限流 ≠ 这游戏凉了（负缓存禁令）
+  const crRes = await enrichCurveRefresh(list, session, cfg);
+  if (crRes.eligible) {
+    log("info", `曲线保鲜：本轮 ${crRes.tested}（刷新 ${crRes.ok} · 转凉 ${crRes.cooled} · 失败 ${crRes.failed}）· ` +
+      `待保鲜 ${crRes.eligible}${crRes.skipped ? ` · 留到下一轮 ${crRes.skipped}` : ""}`);
+  }
+
+  // ── 「vs 基准词」同尺度对比（2026-09-24 新增，**同日已停用**）──
   // 每张卡的迷你曲线是**各卡自己归一化**的（峰值恒 100）→ 卡片之间比不了大小（小词的平线会被拉得和大词一样高）。
   // 这里把最多 4 个候选 + 1 个基准词（`config.trendsCompare`，页面链接用的也是它）放进**同一次** Trends 请求，
   // 拿到共享尺度后算出 `g.cmp`（峰值比 / 周均比）—— 页面那行"一眼可比"的数字来自这里。
   // 有界：每轮 `maxPerRun` 8 个、4 个一组（每组 2 次请求）、间隔 4s、成功缓存 7 天；
   // 失败（429 / 列数不符）**不写 `g.cmp`** → 页面显示「未测」，绝不编一个比值。
   const cmpRes = await enrichCompare(list, session, cfg);
-  if (cmpRes.batches || cmpRes.cached) {
-    log("info", `vs ${cfg.trendsCompare || "基准词"}：本轮 ${cmpRes.batches} 组（成功 ${cmpRes.ok} · 失败 ${cmpRes.failed}）· 沿用缓存 ${cmpRes.cached}` +
-      (cmpRes.skipped ? ` · 超预算留到下一轮 ${cmpRes.skipped}` : ""));
+  if (cmpRes.eligible) {
+    const pct = ((cmpRes.measured / cmpRes.eligible) * 100).toFixed(1);
+    log("info", `vs ${cfg.trendsCompare || "基准词"}：本轮 ${cmpRes.batches} 组（成功 ${cmpRes.ok} · 失败 ${cmpRes.failed}）· ` +
+      `覆盖率 ${cmpRes.measured}/${cmpRes.eligible}（${pct}%）` + (cmpRes.skipped ? ` · 留到下一轮 ${cmpRes.skipped}` : ""));
   }
 
   // ── 竞争的**自动 SERP 核查**（2026-09-24 新增）──

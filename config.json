@@ -217,12 +217,21 @@
     },
     "timeframe": "now 7-d",
     "sampleEveryHours": 4,
-    "compareYardstick": {
+    "curveRefresh": {
       "enabled": true,
+      "hours": 48,
+      "maxPerRun": 10,
+      "gapMs": 2500,
+      "rateLimitStop": 2,
+      "coolStreak": 2
+    },
+    "compareYardstick": {
+      "enabled": false,
       "batch": 4,
-      "maxPerRun": 16,
+      "maxPerRun": 40,
       "ttlDays": 7,
-      "gapMs": 4000
+      "gapMs": 2500,
+      "rateLimitStop": 2
     },
     "minVol": 200,
     "strongSignal": {

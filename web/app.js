@@ -74,57 +74,24 @@
     );
   }
 
-  /**
-   * 「vs 基准词」那一行（2026-09-24 新增）。
-   * 为什么必须有：上面的迷你曲线是**按该词自己峰值归一化**的（`sparkSvg` 用自己的 min/max → 峰值恒 100），
-   * 所以**卡片高度互相不可比**（小词的平线会被拉得和大词一样高）。
-   * 这一行的数字来自**同一次 Trends 请求里的共享尺度**，是目前唯一可比的口径；
-   * 后端每轮按组测一部分（`src/lib/interest.mjs` 的 `enrichCompare`），没测到就如实显示「未测」。
-   */
-  /** 基准对比结果的**新鲜度门禁**：超过 30 天当没有（宁可标未测，也不拿一个月前的比值当现状） */
-  var CMP_STALE_DAYS = 30;
-  function cmpOf(g) {
-    var c = g && g.cmp;
-    if (!c || !c.at) return null;
-    if ((Date.now() - new Date(c.at).getTime()) / 86400000 > CMP_STALE_DAYS) return null;
-    return c;
-  }
-  function cmpRowHtml(g) {
-    var c = cmpOf(g);
-    if (!c) return "";
-    var base = esc(c.with || COMPARE || "基准词");
-    if (c.ratioPeak == null) {
-      return '<div class="cmprow">vs ' + base + '：<span class="dim">不可测（' + esc(c.note || "基准取整为 0") + '）</span></div>';
-    }
-    var fmt = function (r) {
-      if (r == null) return "—";
-      // 🛑 0 不是"没有热度"，而是"在共享尺度上为 0"（Trends 只给整数，且这是 Google 的 hasData 口径）
-      //    → 只能给一个下界。基准峰值恒为本组最大值（=100），所以最小可分辨的一档就是 1/100。
-      if (r === 0) return "<0.01×";
-      if (r >= 1) return r.toFixed(2) + "×";
-      if (r >= 0.01) return r.toFixed(3) + "×";
-      return r.toFixed(4) + "×";
-    };
-    // 对比条用**对数宽度**（0.001× ~ 10×）：量级差一眼看得出，线性宽度会把小词全压成一条线
-    var bar = function (ratio, cls) {
-      var pct = Math.max(1.5, Math.min(100, ((Math.log10(Math.max(ratio, 0.001)) + 3) / 4) * 100));
-      return '<i class="cmpbar ' + cls + '" style="width:' + pct.toFixed(1) + '%"></i>';
-    };
-    return '<div class="cmprow">vs ' + base + '（同尺度实测）：<b>峰值 ' + fmt(c.ratioPeak) + "</b>" +
-      " · 周均 " + fmt(c.ratioAvg) +
-      '<span class="dim">' + (c.geo ? " · " + esc(c.geo) : "") +
-      (c.termPeak === 0
-        ? (c.termHasData === false
-          ? " · 这 7 天 Google 没有该词的可报告数据（已按「无需求」否决）"
-          : c.termHasData === true
-            ? " · 峰值在共享尺度上被取整为 0（已按「无需求」否决）"
-            : " · 为 0（低于取整下限或窗口内无数据；已按「无需求」否决）")
-        : " · 取整会让小词偏粗") + "</span></div>" +
-      '<div class="cmpwrap">' +
-      '<span class="cmplab">本词</span><span class="cmptrack">' + bar(c.ratioPeak, "me") + "</span>" +
-      '<span class="cmplab">' + base + '</span><span class="cmptrack">' + bar(1, "base") + "</span>" +
-      "</div>";
-  }
+  // ══════════════════════════════════════════════════════════════════════
+  // ⛔ 已回退：「vs 基准词（GPTs）」同尺度对比（2026-09-24）
+  //
+  // 曾经做过：把候选 + 基准词放进**同一次 Trends 请求**（共享 0~100 尺度），
+  //   页面显示「峰值 / 周均 = GPTs 的 X×」+ 对数对比条，并加了一个排序。
+  //
+  // 🛑 回退原因（实测）：**2/3 的条目算出来是 0**（36 条里 24 条），而"0"里混着两种完全不同的东西：
+  //   ① 该词在这 7 天窗口里根本没有可报告数据 —— 实测 `Fishing Inc` **单独取也没有数据**，
+  //      说明这是"这游戏已经凉了"，不是尺度问题；
+  //   ② 有数据，但被共享尺度取整成 0（GPTs 太大 → 分辨率下限 = GPTs 的 1%）。
+  //   把两类都读成"没需求"会**大面积错杀**（而我们盯的恰恰是小游戏），
+  //   所以整个口径停用：后端 `compareYardstick.enabled: false`（代码留在 `src/lib/interest.mjs`，随时可复启）。
+  // ⚠️ 若将来要重启：**换一个量级接近的基准词**（GPTs 对多数新游偏大），并且**不要拿 0 当硬否决**。
+  //
+  // 💡 顺带发现的真问题（比基准词更有价值）：① 里的"这词现在没数据了"其实就是**"已经凉了"的信号**，
+  //   但它不需要基准词也能测 —— 刷新条目自己的曲线即可
+  //   （当前卡片的曲线是**发现那一刻的快照**，`chart_at` 之后从不更新）。
+  // ══════════════════════════════════════════════════════════════════════
 
   // ── 状态 ──
   var state = {
@@ -381,21 +348,8 @@
     first: function (a, b) { return new Date(b.first) - new Date(a.first); },
     last: function (a, b) { return new Date(b.last || b.first) - new Date(a.last || a.first); },
     score: function (a, b) { return (b.score || 0) - (a.score || 0) || new Date(b.first) - new Date(a.first); },
-    // 相对基准词的强度（`g.cmp.ratioPeak`，后端同尺度实测）。
-    // 排序口径：正比值降序 > **未测**（还不知道）> **实测为 0**（已经知道没需求 → 沉到最底）。
-    // 绝不拿 0 冒充"未测"，也绝不把 0 当成小正数混在中间。
-    vsbase: function (a, b) {
-      var key = function (x) {
-        var c = cmpOf(x);
-        if (!c || c.ratioPeak == null) return -1;    // 未测
-        return c.ratioPeak === 0 ? -2 : c.ratioPeak; // 实测 0 → 比未测更靠后
-      };
-      var ka = key(a), kb = key(b);
-      if (ka !== kb) return kb - ka;
-      return new Date(b.first) - new Date(a.first);
-    },
   };
-  var GAME_SORT_LABEL = { first: "最新发现", last: "最新信号", score: "分数", vsbase: "相对基准强度" };
+  var GAME_SORT_LABEL = { first: "最新发现", last: "最新信号", score: "分数" };
   // 来源徽标：榜单来源 → 点出去看原始作品页（原站没有这一步）
   var SRC_LABEL = {
     roblox: "Roblox", steam: "Steam",
@@ -490,12 +444,8 @@
     var sorted = (games.items || []).filter(gsrcMatch).sort(GAME_SORTS[state.gameSort] || GAME_SORTS.first);
     var items = sorted.slice(0, state.rowsShown);
     var meta = $("game-meta");
-    // 按基准强度排序时，把"已测几个"如实说出来 —— 没测到的不参与排名（显示在末尾），不是 0
-    var measured = state.gameSort === "vsbase"
-      ? sorted.filter(function (x) { return x.cmp && x.cmp.ratioPeak != null; }).length : null;
     if (meta) meta.textContent = "共 " + sorted.length + " 个 · 平台：" + (GSRC_LABEL[state.gsrc] || "全部平台") +
-      " · 排序：" + (state.gameSort === "vsbase" && COMPARE ? "相对 " + COMPARE + " 的强度" : (GAME_SORT_LABEL[state.gameSort] || "最新发现")) +
-      (measured != null ? "（已测 " + measured + " / " + sorted.length + "，其余沉底）" : "");
+      " · 排序：" + (GAME_SORT_LABEL[state.gameSort] || "最新发现");
     el.innerHTML = items.map(function (g) {
       var age = (Date.now() - new Date(g.first).getTime()) / 864e5;
       var chart = (g.series || []).length > 1
@@ -504,6 +454,11 @@
         : '<div class="nochart">' + (age < 7 ? "曲线采集中…" : "暂无曲线") + "</div>";
       var times = "首次发现 " + rel(g.first) + (g.last !== g.first ? " · 最新信号 " + rel(g.last) : "") +
         ((g.sightings || 1) > 1 ? " · 上榜 ×" + g.sightings : "");
+      // ❄️ 曲线保鲜的结论：重取**成功但拿不到量**才算转凉（取数失败不算 —— 见 interest.mjs）
+      var cooled = g.cooled
+        ? '<div class="pk-verdict pk-flag">❄️ 曲线已转凉：保鲜重取连续 ' + (g.coolStreak || 2) + " 次没有量（最近 " +
+          String(g.cooled_at || "").slice(0, 10) + "）—— 大概率已经过气，别急着投产能</div>"
+        : "";
       // 攻略词：每个词点出去都是「该词 vs 基准词」的对比图
       // （单个新词/长尾词单独看几乎是一条平线，配上基准词才有可比性）
       var hot = {};
@@ -523,7 +478,8 @@
         '<div class="gmeta">' + times + (g.reason ? " · " + esc(g.reason) : "") +
         (g.chart_geo ? " · 曲线地区 " + esc(g.chart_geo) : "") +
         (g.src ? " · " + srcLink(g) : "") + "</div>" +
-        chart + cmpRowHtml(g) + kwHtml +
+        cooled +
+        chart + kwHtml +
         '<div class="gmeta"><a href="' + exploreUrl(g.name, g.chart_geo) + '" target="_blank" rel="noopener">查看趋势' +
         (COMPARE ? "（vs " + esc(COMPARE) + "）" : "") + " →</a></div></div>";
     }).join("") || '<p class="empty">还没发现新游戏，多跑几轮采集</p>';
@@ -597,7 +553,7 @@
       "「上线时间」被计了两遍：新鲜度(16) + 竞争(16) 都以官方上线日为输入（竞争项在有人工/SERP 核查时不看年龄）—— 老游戏沉底是设计意图，但这条占掉约三分之一的权重",
       "Roblox 的需求未按上线年龄归一：同样 1000 万访问，上线 1 个月和上线 3 年同分（终身访问量口径的固有偏差）",
       "三套需求锚点与内容面档位是启发式（方向对、数值拍定），不是数据回归拟合的结果",
-      "「与基准词同尺度实测为 0」是**直接否决**（2026-09-24 用户口径），不是扣分：实测这种 0 大多是 Google 整个窗口都没有该词的可报告数据（hasData 全 false）→ 没有可抢的搜索需求",
+      "❄️ 曲线保鲜：卡片曲线是「发现那一刻的快照」，超过 curveRefresh.hours（默认 48h）会重取；重取**成功但连续 2 次没有量** → 标「已转凉」并在推荐页降到「观察」。取数失败（429）不算转凉",
       "0 与「未测」端到端分开：数据层缺失写 null，展示层也不把 0 渲染成 —（否则\"真的是 0\"与\"没抓到\"无法区分）",
     ];
     // SERP 核查的自述（含"只覆盖拿不到上线日的条目"这类边界）直接来自后端，避免两处漂移
@@ -607,8 +563,7 @@
       title: "建站可做性 0~100 ＝ 六项加权平均 × 人工竞争乘数",
       formula: "总分 = Σ(分项 × 权重) ÷ Σ权重 × 乘数；竞争测不到就不给总分 —— 绝不把缺项的权重让给其它项",
       weights: [
-        ["需求规模", PICK_W.demand, demandAnchorsText() +
-          "。另有硬否决：与基准词同尺度实测为 0（Google 都说这窗口没有可报告的量）→ 直接不做，不参与计分"],
+        ["需求规模", PICK_W.demand, demandAnchorsText()],
         ["内容面", PICK_W.surface, "已挖到的攻略词数：≥8=100 · ≥5=80 · ≥3=55 · ≥1=30 · 0 词=未测"],
         ["新鲜度", PICK_W.fresh, "距上线：≤30 天=100 · 1 年≈40 · 5 年≈10（只认官方上线日，绝不用\"首次发现时间\"）"],
         ["竞争", PICK_W.comp, "分高=竞争低。优先级：人工 SERP 核查 > " + serpTxt + " > 上线时长推断（≤180 天=100 · ≤1 年=80 · ≤2 年=60 · ≤4 年=40 · ≤8 年=20 · 更久=5）> 未测"],
@@ -851,20 +806,14 @@
     if (st.comingSoon) {
       return { k: "unknown", t: "未发售", why: "还没上线 —— 这类走「🚀 潜伏列表」那条线评估（窗口 + 潜伏评分）" };
     }
-    // 🛑 **无搜索需求 = 直接否决**（2026-09-24 用户口径：「和 GPTs 比是 0 的，我不需要做」）。
-    //    依据是 Google 的 `hasData`：`false` = 整个窗口都没有该词的可报告数据
-    //    （实测 Fishing Inc 169 个点全是 false）；即使 hasData 为 true，峰值在共享尺度上被取整成 0
-    //    也说明"相对基准低了两个数量级以上"。两类都算「没有可抢的搜索需求」，不给做。
-    var cmpv = cmpOf(g);
-    if (cmpv && cmpv.ratioPeak === 0) {
+    // ❄️ 曲线保鲜：重取**成功但连续拿不到量** = 需求在退潮 → 降到「观察」档。
+    //    不硬否：一是留人工/业务判断的空间，二是"连续 N 次"已经排除了一次性的取数异常
+    //    （真正的一次性异常是"取数失败"，那根本不会累加冷却计数）。
+    if (g.cooled) {
       return {
-        k: "no",
-        t: "无搜索需求（vs " + (cmpv.with || "基准") + " 为 0）",
-        why: "同尺度实测：" + (cmpv.termHasData === false
-          ? "这 7 天 Google 没有该词的可报告数据"
-          : cmpv.termHasData === true
-            ? "有数据，但峰值相对基准被取整为 0（低了两个数量级以上）"
-            : "为 0（低于取整下限，或这 7 天没有数据）") + " —— 没有可抢的搜索需求，不值得建站",
+        k: "warn", t: "曲线已转凉",
+        why: "曲线保鲜重取连续 " + (g.coolStreak || 2) + " 次拿不到量（" + String(g.cooled_at || "").slice(0, 10) +
+          "）—— 需求在退潮，先别投产能",
       };
     }
     // 🛑 竞争测不到就不下结论 —— 但要给"怎么补"的动作（点「查竞争」看 SERP），
@@ -947,7 +896,6 @@
         (r.manual.note ? " · " + esc(r.manual.note) : "") + "</div>" : "") +
       bars +
       '<div class="gmeta">' + metaLine + "</div>" +
-      cmpRowHtml(g) +   // 「vs 基准」也是需求侧的证据，放在这里解释"为什么被否"
       '<div class="gmeta">竞争来源 ' + esc(compSrc) +
       (r.comp.domains != null ? "（" + r.comp.domains + " 个独立域名占位" +
         (r.comp.hosts && r.comp.hosts.length ? "：" + esc(r.comp.hosts.slice(0, 3).join(" · ")) : "") + "）" : "") +
@@ -1483,9 +1431,6 @@
     fillRules("rules-games-body", rulesHtml(d.scoring || { title: "雷达分数", note: "本份数据未带算法说明（旧产物），规则见 README。" }));
     // 推荐页的规则块要**重填一次**：竞争那一行引用 games.json 下发的自动 SERP 档位（后端是唯一事实源）
     fillRules("rules-pick-body", rulesHtml(pickRules()));
-    // 排序按钮上直接写清基准词是谁（改 config.trendsCompare 时这里跟着变，不用改 HTML）
-    var vsBtn = document.querySelector('button[data-sort="vsbase"]');
-    if (vsBtn) vsBtn.textContent = "⚖️ 相对 " + (COMPARE || "基准") + " 强度";
     updateGsrcCounts();   // 平台按钮上直接显示各来源条数（看清分布，别被单平台刷屏）
     if (state.tab === "games") renderGames();
     if (state.tab === "pick") renderPick();

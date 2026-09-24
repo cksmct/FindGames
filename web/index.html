@@ -63,9 +63,9 @@
   <section id="panel-games" hidden>
     <p class="hint">识别到的是<b>新游戏名（作品本体）</b>，不是攻略词。曲线是该游戏<b>被发现时点</b>的 7 天搜索热度快照（相对值 0-100）。
       想找可做页面的攻略词（xxx codes / tier list 之类），请去<b>「关键词池」</b>。<br />
-      ⚠️ 每张卡的曲线是<b>按该词自己峰值归一化</b>的（峰值恒 100），所以<b>卡片之间不能比高低</b>；
-      要看谁更热，看卡片上的 <b>「vs 基准词（同尺度实测）」</b> 那一行 —— 那是同一次 Trends 请求里的共同尺度。<br />
-      <b>这一页只回答「发现了什么」</b>（按发现时间/信号/分数/基准强度排）；<b>「哪个值得做」在 🎯 建站推荐</b> ——
+      ⚠️ 每张卡的曲线是<b>按该词自己峰值归一化</b>的（峰值恒 100），所以<b>卡片之间不能比高低</b> ——
+      要比大小只能点「查看趋势」出去看（同尺度对比曾做过，实测 2/3 命中 0 → 已回退，见 README）。<br />
+      <b>这一页只回答「发现了什么」</b>（按发现时间/信号/分数排）；<b>「哪个值得做」在 🎯 建站推荐</b> ——
       两页是<b>同一批数据</b>（`data/games.json`）的两种视图。平台按钮上直接写着各来源的条数：
       Roblox 通常最多（候选量高一个数量级），不想看它就直接点别的平台。</p>
     <details class="rules" id="rules-games"><summary>📖 这个分数是什么（雷达分 ≠ 可做性）</summary><div id="rules-games-body" class="rules-body"></div></details>
@@ -87,7 +87,6 @@
         <button data-sort="first" class="on">🆕 最新发现</button>
         <button data-sort="last">📡 最新信号</button>
         <button data-sort="score">🔥 分数</button>
-        <button data-sort="vsbase">⚖️ 相对基准强度</button>
       </span>
       <span class="meta" id="game-meta"></span>
     </div>

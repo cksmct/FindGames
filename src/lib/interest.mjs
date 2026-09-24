@@ -195,7 +195,41 @@ const peakOf = (a) => (a && a.length ? Math.max(...a) : 0);
 const avgOf = (a) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
 
 /**
+ * 按来源**公平抽样**（`enrichCompare` / `enrichCurveRefresh` 共用）。
+ *
+ * 🛑 为什么不能只按分数排序取前 N：实测"纯分数排序"会把 Roblox 饿死 ——
+ *    它有 119 条曲线、只被抽到 5 条（4.2%），而同期的 itch/poki 都在 28%+，
+ *    因为 Roblox 条目分数普遍偏低、数量却最多。和 `queue.mjs` 的 fairShare 同一个道理：
+ *    想让"每个来源都被轮到"，就得让来源轮着来。
+ */
+function pickFairShare(sorted, max) {
+  const bySrc = new Map();
+  for (const g of sorted) {
+    const k = g.src || "(heat)";
+    if (!bySrc.has(k)) bySrc.set(k, []);
+    bySrc.get(k).push(g);
+  }
+  const cursors = new Map(Array.from(bySrc.keys()).map((k) => [k, 0]));
+  const out = [];
+  while (out.length < max) {
+    let advanced = false;
+    for (const k of bySrc.keys()) {
+      if (out.length >= max) break;
+      const arr = bySrc.get(k), i = cursors.get(k);
+      if (i >= arr.length) continue;
+      cursors.set(k, i + 1);
+      out.push(arr[i]);
+      advanced = true;
+    }
+    if (!advanced) break;                                  // 所有来源都取完了
+  }
+  return out;
+}
+
+/**
  * 给雷达条目加"相对基准词的强度"（写入 `g.cmp`）—— 页面上一眼可比的那一行就是它。
+ * ⛔ 已停用（2026-09-24 同日回退）：实测 2/3 命中 0，0 里混着"已经凉了"与"基准太大取整"两类，
+ * 当否决用会大面积错杀。原因与重启要点见 `web/app.js` 顶部的回退记录与 README。
  *
  * 为什么必须有：每张卡的迷你曲线是**按自己峰值归一化**的（`sparkSvg` 用自己的 min/max），
  * 峰值恒为 100 → **卡片高度互相不可比**（小词的平线会被拉得和大词一样高）。
@@ -208,10 +242,11 @@ const avgOf = (a) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : 
 export async function enrichCompare(items, session, cfg) {
   const g = (cfg && cfg.games) || {};
   const c = Object.assign(
-    { enabled: true, batch: 4, maxPerRun: 8, ttlDays: 7, gapMs: 4000 },
+    { enabled: true, batch: 4, maxPerRun: 40, ttlDays: 7, gapMs: 2500, rateLimitStop: 2 },
     g.compareYardstick || {}
   );
-  const out = { batches: 0, ok: 0, failed: 0, cached: 0, skipped: 0 };
+  // `measured` / `eligible` 是给日志和页面看"覆盖率"的：可测 = 有曲线且有量、又不是基准词自己
+  const out = { batches: 0, ok: 0, failed: 0, cached: 0, skipped: 0, limited: 0, measured: 0, eligible: 0 };
   // 基准词**只有一处事实源**：`config.trendsCompare`（页面上「查看趋势（vs XXX）」用的也是它）。
   // compareYardstick.baseline 只在需要临时换个基准时才写。
   const base = String(c.baseline || (cfg && cfg.trendsCompare) || "").trim();
@@ -232,9 +267,10 @@ export async function enrichCompare(items, session, cfg) {
     if (it.cmp && it.cmp.at && now - new Date(it.cmp.at).getTime() < ttl) { out.cached++; continue; }
     todo.push(it);
   }
-  todo.sort((a, b) => (b.score || 0) - (a.score || 0));              // 先测"更值得看"的
-  const picked = todo.slice(0, c.maxPerRun || 8);
+  todo.sort((a, b) => (b.score || 0) - (a.score || 0));
+  const picked = pickFairShare(todo, c.maxPerRun || 40);
   out.skipped = todo.length - picked.length;
+  out.eligible = todo.length + out.cached;
 
   const size = Math.max(1, Math.min(4, c.batch || 4));                // 4 个候选 + 基准 = 5（Trends 上限）
   for (let i = 0; i < picked.length; i += size) {
@@ -271,11 +307,112 @@ export async function enrichCompare(items, session, cfg) {
         parts.push((it.cmp.ratioPeak == null ? "不可测" : it.cmp.ratioPeak + "×") + " " + it.name);
       }
       log("dim", `    vs ${base}（${geo}）：${parts.join(" · ")}`);
+      out.limited = 0;                                      // 成功即清零"连续限流"计数
     } catch (e) {
       out.failed += group.length;
+      const limited = /429/.test(String(e.message));
+      if (limited) out.limited++;
       log("warn", `    vs ${base} 取数失败（${names.join(" / ")}）：${e.message} —— 不写缓存，保持「未测」`);
+      // 🛑 连续限流就本轮提前收工（和曲线循环同一策略）：继续打只是浪费配额，还会把自己打进更长的封禁。
+      //    剩下的候选留在下一轮 —— 覆盖率是靠"每轮都补一点"慢慢铺满的，不是靠一轮硬刚。
+      if (limited && out.limited >= (c.rateLimitStop || 2)) {
+        log("warn", `    vs ${base} 连续 ${out.limited} 组限流 → 本轮提前结束（剩余 ${picked.length - i - group.length} 个留给下一轮）`);
+        break;
+      }
     }
-    await sleep(c.gapMs || 4000);
+    await sleep(c.gapMs || 2500);
+  }
+  out.measured = out.cached + out.ok;
+  return out;
+}
+
+/**
+ * **曲线保鲜**（2026-09-24 新增）：重取"有曲线"条目的曲线，让卡片别再挂着过期快照。
+ *
+ * 为什么需要：卡片的曲线是**发现那一刻的快照**（`chart_at`），之后从不更新 ——
+ * 于是一个 5 天前爆过、现在已经没人搜的游戏，卡片上还挂着那条漂亮曲线。
+ * 更糟的是它会**顶着一个高分留在推荐页**（分数用的是旧曲线推出来的动能）。
+ *
+ * 判定"转凉"的口径（**必须与"取数失败"严格分开**）：
+ *   · 请求成功、但曲线为空 / 全为 0  → `coolStreak++`；连续 `coolStreak` 次（默认 2）→ 标 `cooled: true`
+ *   · 请求成功且有量             → 覆盖 `series / points / peak / hype / chart_at`，并清零 `coolStreak`、
+ *                                  若原先标了 `cooled` 就**撤掉**（复活）
+ *   · 请求失败（429 / 结构异常）  → **什么都不改**（保持原曲线、不累加 `coolStreak`）——
+ *                                  限流不等于"这游戏凉了"，这是本项目一贯的负缓存禁令
+ * 有界：每轮最多 `maxPerRun`（默认 10）、间隔 `gapMs`、连续 `rateLimitStop` 次限流即本轮收工；
+ *       只取曲线（`withRelated: false`）→ 每条 2 次请求。
+ *
+ * 📌 待验证的改进（今天配额已被打满，没法测）：同一次请求里放**同一个词的 7 天 + 28 天两个窗口**
+ *    （`comparisonItem` 里同一 keyword 不同 time），若可行则一次拿到"新鲜曲线 + 真实衰减"，
+ *    比现在只看"有没有量"更灵敏。验证脚本思路：看 multiline 是否返回 2 列。
+ */
+export async function enrichCurveRefresh(items, session, cfg) {
+  const g = (cfg && cfg.games) || {};
+  const c = Object.assign(
+    { enabled: true, hours: 48, maxPerRun: 10, gapMs: 2500, rateLimitStop: 2, coolStreak: 2 },
+    g.curveRefresh || {}
+  );
+  const out = { tested: 0, ok: 0, failed: 0, limited: 0, cooled: 0, skipped: 0, eligible: 0 };
+  if (!c.enabled || !session) return out;
+
+  const now = Date.now();
+  const maxAge = (c.hours || 48) * 3600000;
+  const geoDefault = (g.geos || ["US"])[0];
+
+  const todo = [];
+  for (const it of items || []) {
+    if (!it || !it.name) continue;
+    if ((it.series || []).length < 2) continue;                       // 没曲线 → 不归这条通道管
+    const at = it.chart_at || it.first;
+    if (at && now - new Date(at).getTime() < maxAge) continue;        // 快照还新鲜
+    todo.push(it);
+  }
+  // 最旧的快照优先（它们最可能是"过期的漂亮曲线"）；同级按分数
+  todo.sort((a, b) => new Date(a.chart_at || a.first) - new Date(b.chart_at || b.first)
+    || (b.score || 0) - (a.score || 0));
+  const picked = pickFairShare(todo, c.maxPerRun || 10);
+  out.eligible = todo.length;
+  out.skipped = todo.length - picked.length;
+
+  for (const it of picked) {
+    out.tested++;
+    try {
+      const d = await fetchInterest(session, it.name, it.chart_geo || geoDefault, {
+        timeframe: g.timeframe || "now 7-d",
+        sampleEveryHours: g.sampleEveryHours || 4,
+        withRelated: false,                                            // 只保鲜曲线，不重取相关词（省一半请求）
+      });
+      const series = (d && d.series) || [];
+      const alive = series.length >= 2 && series.some((v) => Number(v) > 0);
+      if (!alive) {
+        it.coolStreak = (it.coolStreak || 0) + 1;
+        it.cooled_at = iso();
+        it.cool_geo = it.chart_geo || geoDefault;
+        if (it.coolStreak >= (c.coolStreak || 2)) it.cooled = true;
+        out.cooled++;
+        log("dim", `    ❄️ ${it.name}：重取无数据（连续 ${it.coolStreak} 次）${it.cooled ? " → 标记「已转凉」" : "（还差 1 次）"}`);
+      } else {
+        it.series = series;
+        if (d.points && d.points.length) it.points = d.points;
+        it.peak = d.peak;
+        it.hype = hypeRatio(series);                                   // 动能随新曲线更新（雷达分也会跟着重算）
+        it.chart_at = iso();
+        it.chart_geo = it.chart_geo || geoDefault;
+        it.coolStreak = 0;
+        if (it.cooled) { delete it.cooled; delete it.cooled_at; }       // 有量就复活：撤掉标记
+        out.ok++;
+      }
+    } catch (e) {
+      out.failed++;
+      const limited = /429|限流/.test(String(e.message));
+      if (limited) out.limited++;
+      log("warn", `    ❄️ ${it.name} 曲线保鲜失败（**保持原样，不算转凉**）：${e.message}`);
+      if (limited && out.limited >= (c.rateLimitStop || 2)) {
+        log("warn", `    连续 ${out.limited} 次限流 → 本轮保鲜提前结束（剩余留给下一轮）`);
+        break;
+      }
+    }
+    await sleep(c.gapMs || 2500);
   }
   return out;
 }
