@@ -17,7 +17,7 @@
 import path from "node:path";
 import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, writeJson, dataPath } from "./lib/util.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
-import { fetchInterest, hypeRatio } from "./lib/interest.mjs";
+import { fetchInterest, hypeRatio, enrichCompare } from "./lib/interest.mjs";
 import {
   noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo,
   feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES,
@@ -599,6 +599,18 @@ if (cfg.games.enabled) {
   // ── 补手机端官方数据（iOS：真实上线日/价格/评分人数；Android：只有评分，且**没有**首发日）──
   // 与前一层的分工：这一层只认来源明确的 appstore / googleplay 条目，绝不跨平台按名字找同名。
   const mobRes = await enrichMobileStats(list, cfg);
+
+  // ── 「vs 基准词」同尺度对比（2026-09-24 新增）──
+  // 每张卡的迷你曲线是**各卡自己归一化**的（峰值恒 100）→ 卡片之间比不了大小（小词的平线会被拉得和大词一样高）。
+  // 这里把最多 4 个候选 + 1 个基准词（`config.trendsCompare`，页面链接用的也是它）放进**同一次** Trends 请求，
+  // 拿到共享尺度后算出 `g.cmp`（峰值比 / 周均比）—— 页面那行"一眼可比"的数字来自这里。
+  // 有界：每轮 `maxPerRun` 8 个、4 个一组（每组 2 次请求）、间隔 4s、成功缓存 7 天；
+  // 失败（429 / 列数不符）**不写 `g.cmp`** → 页面显示「未测」，绝不编一个比值。
+  const cmpRes = await enrichCompare(list, session, cfg);
+  if (cmpRes.batches || cmpRes.cached) {
+    log("info", `vs ${cfg.trendsCompare || "基准词"}：本轮 ${cmpRes.batches} 组（成功 ${cmpRes.ok} · 失败 ${cmpRes.failed}）· 沿用缓存 ${cmpRes.cached}` +
+      (cmpRes.skipped ? ` · 超预算留到下一轮 ${cmpRes.skipped}` : ""));
+  }
 
   // ── 竞争的**自动 SERP 核查**（2026-09-24 新增）──
   // 为什么：安卓条目拿不到官方上线日（实测 Play 无首发日）→ 竞争项只能标「未测」

@@ -217,6 +217,13 @@
     },
     "timeframe": "now 7-d",
     "sampleEveryHours": 4,
+    "compareYardstick": {
+      "enabled": true,
+      "batch": 4,
+      "maxPerRun": 16,
+      "ttlDays": 7,
+      "gapMs": 4000
+    },
     "minVol": 200,
     "strongSignal": {
       "belowVol": 1000,
