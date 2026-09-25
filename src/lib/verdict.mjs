@@ -47,6 +47,9 @@ const HOOK = `
     PRE_W: __auditPick("PRE_W"),
     COMP_LABEL: __auditPick("COMP_LABEL"),
     PICK_LABEL: __auditPick("PICK_LABEL"),
+    // 口径常量（2026-09-25）：缺项按中性值计入固定分母 —— 工具直接取，别自己写一份
+    PICK_NEUTRAL: __auditPick("PICK_NEUTRAL"),
+    PICK_W_TOTAL: __auditPick("PICK_W_TOTAL"),
     // 前端两个「分数明细」渲染函数（2026-09-25）：只为冒烟验证不抛错，不重算分数
     scoreDetail: __auditPick("scoreDetail"),
     pickDetail: __auditPick("pickDetail"),

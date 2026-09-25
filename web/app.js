@@ -535,10 +535,30 @@
   // 7 家专业站 8 小时内发稿 + 长尾被社区垄断 → 这是**竞争与时长**否掉的，
   // 不是"因为它访问量太大"否掉的。
   // ══════════════════════════════════════════════════════════════════════
-  var PICK_W = { demand: 20, surface: 16, lead: 24, comp: 14, momentum: 8, fresh: 8, quality: 10 };
+  // 🆕 2026-09-25：**发现提前量从加权维度改成加分项**（用户口径：「提前量可以说是加分项，没有就 0 分」）。
+  //   为什么改：它原来权重最高（24/100），但实测几乎恒为负 —— 可算的 1525 条里 lead>0 只有 7 条（0.5%）、
+  //   中位 −4.6 天，于是「权重第一的维度」对绝大多数条目只是恒定的低分拖累：既没区分度，又压掉真实差异。
+  //   现在：leadBonus = round(leadScore × 0.12) → 100→+12 · 90→+11 · 80→+10 · 55→+7 · 35→+4 · 15→+2 · 5→+1；
+  //   无数据 / 老游戏（>365 天，该维度不适用）→ **+0**（不是"未测"，就是 0，符合"没有就 0 分"）。
+  //   🛑 **晚发现的惩罚不在这里重复罚**：已由 lag 乘数（晚于首个专站 ×0.3~1.15）与新鲜度两项承担。
+  var PICK_W = { demand: 20, surface: 16, comp: 14, momentum: 8, fresh: 8, quality: 10 };
+  var LEAD_BONUS_MAX = 12;
+  var LEAD_BONUS_SCALE = LEAD_BONUS_MAX / 100;
+  /**
+   * 🆕 2026-09-25 **缺项怎么算**：按中性值 50 补进固定分母（PICK_W_TOTAL），而**不是**"按有值维度归一化"。
+   * 为什么不能用归一化（实测过，同一天）：归一化下"只有一项有值、且恰好是 100"的噪音条直接拿满分 ——
+   *   线上 2217 条立刻冒出 8 条 itch 小游戏并列 100 分排第一（TurboNinja Preview / Sapamuk (Demo) / Dear Fridge, …），
+   *   与旧版事故同形（preScore 的注释：Caravan SandWitch / 10000000 靠"只有 momentum"并列 100）。
+   * 中性值的效果：缺证据的条目只能落在中位附近，**不可能靠缺项冲到前面**；缺项在卡片上照样标明（角标 + 明细）。
+   * 语义上它是"保守假设"：不知道就当中等，比当满分诚实，也比当 0 分公平。
+   */
+  var PICK_NEUTRAL = 50;
+  var PICK_W_TOTAL = 0;
+  for (var _pw in PICK_W) PICK_W_TOTAL += PICK_W[_pw];
   var PICK_LABEL = {
-    demand: "需求规模", surface: "内容面", lead: "发现提前量(我方时机)",
-    comp: "竞争(分高=竞争低)", momentum: "需求动能", fresh: "新鲜度(上线时长)", quality: "口碑",
+    demand: "需求规模", surface: "内容面", comp: "竞争(分高=竞争低)",
+    momentum: "需求动能", fresh: "新鲜度(上线时长)", quality: "口碑",
+    lead: "发现提前量(加分项)",
   };
 
   function clamp01(v) { return Math.max(0, Math.min(100, v)); }
@@ -640,18 +660,19 @@
     if (sr && sr.caveats) caveats = caveats.concat(sr.caveats);
     if (sr && sr.note) caveats.push(sr.note);
     return {
-      title: "建站可做性 0~100 ＝ 六项加权平均 × 人工竞争乘数",
-      formula: "总分 = Σ(分项 × 权重) ÷ Σ权重 × 乘数；竞争测不到就不给总分 —— 绝不把缺项的权重让给其它项",
+      title: "建站可做性 0~100 ＝ 六项加权平均 × 乘数 ＋ 发现提前量加分(0~+12)",
+      formula: "总分 = Σ(分项 × 权重) ÷ Σ权重(固定) × 乘数 ＋ 提前量加分；🆕 缺项不再让总分为空：缺的那几项按**中性 50** 计入固定分母并在卡片上标「参考」（2026-09-25 用户口径：数据不全也要给分；但**不做有值维度归一化** —— 实测那样会让「只有一项有值」的噪音条拿满分并列第一）。🛑 竞争缺项同样按 50 计入，但结论仍是「竞争未测」、卡片标「上界」—— 不会升级成值得做；有值维度 <2 项才不给分（真的判不了）",
       weights: [
         ["需求规模", PICK_W.demand, demandAnchorsText()],
         ["内容面", PICK_W.surface, "已挖到的攻略词数：≥8=100 · ≥5=80 · ≥3=55 · ≥1=30 · 0 词=未测"],
-        ["发现提前量(我方时机)", PICK_W.lead, "官方上线日 − 我们首次发现日：发售前 ≥30 天=100 · 发售前 1 周=90 · 发售前 7 天内=80 · 上线后 1 周内=55 · 后 1 月内=35 · 后 3 月内=15 · 更晚=5。仅适用于上线 ≤1 年的游戏（老游戏该维度不适用、权重跳过）"],
+
         ["竞争", PICK_W.comp, "分高=竞争低。优先级：人工 SERP 核查 > " + serpTxt + " > 上线时长推断（**仅 >180 天的老条目**：≤1 年=40 · ≤2 年=25 · ≤4 年=15 · 更久=5；需求过饱和【亿级访问 / 千万评分】不给推断）> 未测。🛑 抢首发区间（≤180 天）**不用**上线时长推断 —— 实测「新」恰恰是竞争最拥挤的区间（Dressmaker 上线 4 天已有 8+ 个专站）"],
         ["需求动能", PICK_W.momentum, "7 天曲线后 1/4 vs 前 1/4（从零起飞=100；无曲线=未测）"],
         ["新鲜度(上线时长)", PICK_W.fresh, "**游戏**距上线：≤30 天=100 · 1 年≈40 · 5 年≈10（只认官方上线日，绝不用\"首次发现时间\"）"],
         ["口碑", PICK_W.quality, "好评率 50%→0 · 95%→100；手游用星级（≥4.5★→100 · 3.5★→50 · ≤2.5★→0；0 人评=未测）"],
       ],
       items: [
+        "🎁 **发现提前量 = 加分项（0~+12），不再是加权维度**（2026-09-25 改）：官方上线日 − 我们首次发现日 → 100→+12 · 90→+11 · 80→+10 · 55→+7 · 35→+4 · 15→+2 · 5→+1；**无数据 / 上线超 1 年 → +0**（不加分、也不占权重）。改的理由：它原权重最高(24)但实测几乎恒为负（可算 1525 条里 lead>0 只有 7 条、中位 −4.6 天）—— 只会拉平所有条目，没有区分度；晚发现的惩罚已由乘数②与新鲜度承担，这里不重复罚",
         "🛑 **两个全局乘数**（不参与加权，直接乘在总分上，两者独立）：① 对手发稿滞后 `lagHours`（人工填，衡量**对手多快**发稿 = 竞争烈度）→ ≤12h ×0.6 · ≤24h ×0.8 · ≥72h ×1.1；② 我方滞后 `ourLagDays`（自动算，衡量**我们比首个专站晚了多少**；**>30 天直接判「我们晚了」**）→ ≤3 天 ×1.15 · ≤14 天 ×1.0 · ≤30 天 ×0.85 · ≤60 天 ×0.65 · ≤120 天 ×0.45 · 更晚 ×0.3",
         "🛑 **「对手有多少个站」≠「我们比最早进场者晚了多少」** —— 决定成败的是后者。用户口径：「我们不惧怕竞争，只是不能比别人晚太多。」",
         "`ourLagDays` 的首个专站日期来自 Wayback CDX 最早快照，是**下界**（未被 Wayback 收录的域名查不到，实际可能更早）",
@@ -938,6 +959,8 @@
       demandRaw = st.visits;
       demandKind = "roblox";
     }
+    var leadScore = discoveryLeadScore(leadDays, ageDays);
+    var leadBonus = leadScore == null ? 0 : Math.round(leadScore * LEAD_BONUS_SCALE);
     var parts = {
       demand: demandScore(demandRaw, demandKind),
       // 🛑 0 与「未测」分开（2026-09-24 review 发现的 bug）：没挖到词可能是"真的没词"，
@@ -946,9 +969,7 @@
       surface: (g.words || []).length ? surfaceScore(g.words) : null,
       fresh: freshAgeScore(ageDays),
       comp: comp.score,
-      // 我方时机（2026-09-25 新增）：发售前发现加分、上线后晚发现扣分。
-      // 老游戏（>365 天）该维度返回 null → 权重跳过，不当成 0 分（否则等于判死老游戏）。
-      lead: discoveryLeadScore(leadDays, ageDays),
+      // 我方时机已移出加权维度 → 见上面的 LEAD_BONUS_*（加分项，无数据算 +0）
       momentum: momentumScore(g.series),
       quality: (plt === "ios" || plt === "android") ? mobileQuality(st) : qualityScore(st.approval),
     };
@@ -956,9 +977,10 @@
     //    踩过的坑：把缺失项的权重让给其它项后，sony playstation / fc 27 / gta 6 / fifa 27
     //    靠 内容面100 + 动能 + 新鲜度 凑出 99 分排到第一 —— 而它们恰恰是最做不了的那批。
     //    缺失不等于满分，也不等于 0，而是"判断不了"，必须如实显示为 —。
-    var sum = 0, wsum = 0, missing = [];
+    var sum = 0, wsum = 0, missing = [], known = 0;
     for (var k in PICK_W) {
       if (parts[k] == null) { missing.push(k); continue; }
+      known++;
       sum += parts[k] * PICK_W[k];
       wsum += PICK_W[k];
     }
@@ -975,14 +997,25 @@
     // （前者是"对手多快"，后者是"我们多晚"，两个不同的量）。无数据时 ×1，不猜不罚。
     var lag = lagMultOf(g);
     mult *= lag.mult;
-    if (comp.score == null) {
-      return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult, leadDays: leadDays, lag: lag, reason: "no-competition-data" };
+    // 🆕 2026-09-25 **缺项不再让总分为空**（用户口径：数据不全也要给分，缺的部分略掉但标明）：
+    //   ① 非竞争缺项本来就已「略过 + 标注」（按有值维度加权；缺项数在下一条 missing 里）；
+    //   ② **竞争缺项也给数字，但那个数字只是上界** —— 结论仍走「竞争未测」，不会升级成"值得做"。
+    //      为什么不敢把竞争当普通缺项：踩过的坑 —— 归一化曾让 sony playstation / gta 6 / fifa 27 靠
+    //      「内容面 100 + 动能 + 新鲜度」凑出 99 分排到第一，而它们恰恰是最做不了的那批。
+    //      收益：至少「未测」这一档内部有了可比顺序（旧版这一档 score 全为 null → 排序等于没排）。
+    // 证据太薄（有值维度 <2）仍然沉底 —— 那是真的判不了，不是"给个中间分"（与 preScore 的下限同一条原则）
+    if (known < 2) {
+      return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult,
+        leadDays: leadDays, leadBonus: leadBonus, leadScore: leadScore, lag: lag, incomplete: true,
+        bounds: comp.score == null ? "上界" : "", reason: known ? "too-few-dims" : "no-dims" };
     }
-    if (!wsum) return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult, leadDays: leadDays, lag: lag };
     return {
-      score: Math.round(clamp01((sum / wsum) * mult)),
+      score: Math.round(clamp01(((sum + PICK_NEUTRAL * (PICK_W_TOTAL - wsum)) / PICK_W_TOTAL) * mult + leadBonus)),
+      known: known,
       parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult,
-      leadDays: leadDays, lag: lag,
+      leadDays: leadDays, leadBonus: leadBonus, leadScore: leadScore, lag: lag,
+      incomplete: missing.length > 0,   // 图上标「参考」：有维度没算进总分
+      bounds: comp.score == null ? "上界" : "",   // 标注：竞争未测 → 这只是上界
       manual: mc ? { mult: manualMult, lagHours: mc.lagHours != null ? mc.lagHours : null, note: mc.note || "" } : null,
     };
   }
@@ -1019,7 +1052,9 @@
     if (r.parts.surface == null && r.parts.demand == null && r.parts.momentum == null) return null;
     var sum = 0;
     for (var k in PRE_W) {
-      var v = r.parts[k];
+      // 🆕 2026-09-25：lead 已移出加权维度（改成加分项）→ 这里改取 r.leadScore（同一个 0~100 口径）。
+      //   🛑 不改就会静默漂移：parts.lead 永远是 undefined → 待测优先度整体低 20 分。
+      var v = k === "lead" ? r.leadScore : r.parts[k];
       if (v != null) sum += v * PRE_W[k];
     }
     return Math.round(sum / 100);
@@ -1155,8 +1190,19 @@
     }
     // 🛑 竞争测不到就不下结论 —— 但要给"怎么补"的动作（点「查竞争」看 SERP），
     //    而不是像旧版那样用访问量硬推断一个"巨头级"。
+    // 🆕 2026-09-25 「数据不足」单独一档：有值维度 <2（线上 1396 条，绝大多数是"只有名字 + 一个上架日期"的目录条目）。
+    //    为什么不混进「竞争未测」：那会让人以为"只差竞争这一项"，实际是整体判不了；
+    //    为什么不给中间分：给个 50 分等于编造（用户要的"数据不全也给分"在 ≥2 项证据时已经成立）。
+    if (r.score == null && r.known != null && r.known < 2) {
+      return { k: "unknown", t: "数据不足（判不了）",
+        why: "有值维度只有 " + r.known + " 项（缺：" + r.missing.map(function (k) { return PICK_LABEL[k]; }).join(" · ") +
+          "）—— 评分至少要 2 项证据，缺证据时给分就是编造。补法：需求看源站页、相关词与曲线等采集配额（见「分数明细」）" };
+    }
     if (r.comp.score == null) {
-      return { k: "unknown", t: "竞争未测", why: "既没有官方上线日、也没有人工/自动 SERP 核查结果（自动核查每轮最多补 12 条，没轮到就仍是未测）—— 点「查竞争」看 SERP 再决定" };
+      return { k: "unknown", t: "竞争未测",
+        why: "既没有官方上线日、也没有人工/自动 SERP 核查结果（自动核查每轮最多补 12 条，没轮到就仍是未测）。" +
+          "卡片上的 " + (r.score == null ? "—" : r.score) + " 分是**上界参考**（缺竞争项，其余维度归一化后算的）—— " +
+          "点「查竞争」看 SERP 再决定" };
     }
     if (st.approval != null && st.approval < 60) return { k: "no", t: "口碑偏低", why: "好评 " + st.approval + "%，游戏本身在流失玩家" };
     // 手游没有好评率，只有星级 —— 同一个判断换个口径（≤3.0★ 且**有人评**；
@@ -1262,15 +1308,19 @@
     }
     metaLine += leadTxt;
     return '<div class="gcard pk-card">' +
-      '<div class="ghead"><h3>' + esc(g.name) + '</h3><span class="score pk-' + v.k + '">' +
-      (r.score == null ? "—" : r.score) + "</span></div>" +
+      '<div class="ghead"><h3>' + esc(g.name) + '</h3><span class="score pk-' + v.k + '" title="' + esc(scoreTip(r)) + '">' +
+      (r.score == null ? "—" : r.score) +
+      (r.bounds ? '<sup class="refmark">' + r.bounds + "</sup>" : (r.incomplete ? '<sup class="refmark">参考</sup>' : "")) +
+      "</span></div>" +
       '<div class="pk-verdict pk-' + v.k + '">' + v.t + (v.why ? " · " + esc(v.why) : "") + "</div>" +
       (evt ? '<div class="pk-verdict pk-flag">' + esc(evt) + "</div>" : "") +
       (r.leadDays != null && r.leadDays >= 7
-        ? '<div class="pk-verdict pk-flag">🚀 首发窗口：发售前 ' + Math.round(r.leadDays) + " 天已发现（lead 权重第一，先手是成功率最高的单一变量）</div>"
+        ? '<div class="pk-verdict pk-flag">🚀 首发窗口：发售前 ' + Math.round(r.leadDays) + " 天已发现（提前量加成 +" + (r.leadBonus == null ? 0 : r.leadBonus) + "；先手是成功率最高的单一变量）</div>"
         : "") +
       // 来自潜伏清单转正的条目：没有 Trend 曲线，需求动能项会是"缺项"，必须说明原因
       (/潜伏/.test(String(g.reason || "")) ? '<div class="pk-verdict pk-flag">来自「🚀 潜伏列表」转正（该游戏上线时被潜伏清单抓到；暂无 Google Trends 曲线，所以需求动能缺失）</div>' : "") +
+      (r.score == null ? '<div class="pk-verdict pk-flag">📉 分数：不给（有值维度 ' + (r.known == null ? 0 : r.known) +
+        "/6）—— 缺证据时给个中间分等于编造；缺的是：" + (r.missing || []).map(function (k) { return PICK_LABEL[k]; }).join(" · ") + "</div>" : "") +
       (r.manual ? '<div class="pk-verdict pk-flag">' + (r.manual.lagHours != null
         ? "人工竞争：对手发稿滞后 ×" + r.manual.mult + "（" + r.manual.lagHours + " 小时内发稿）"
         : "人工竞争：已人工核查竞争档（无发稿滞后记录 → 乘数 ×1）") +
@@ -1339,7 +1389,20 @@
   }
 
   /**
-   * 🆕 2026-09-25 分数明细（可做性分）：值 × 权重 = 贡献，再 ÷ 累计权重、× 两个乘数。
+   * 🆕 2026-09-25 分数角标的说明（title）：**缺了哪几项**、以及「上界」是什么意思。
+   * 为什么必须有：缺项也给分是用户明确要的，但不标明就会被当成「实测总分」用 ——
+   *   尤其竞争未测时，那个数字只是上界（实测竞争一旦饱和，分数会明显下降）。
+   */
+  function scoreTip(r) {
+    var miss = (r.missing || []).map(function (k) { return PICK_LABEL[k]; }).join(" · ");
+    var t = miss ? "缺项（按中性 50 计入固定分母）：" + miss : "六维都有值";
+    if (r.leadBonus) t += "　· 含发现提前量加分 +" + r.leadBonus;
+    if (r.bounds === "上界") t += "　🛑 竞争未测 → 这是上界：实测竞争一旦饱和，分数会明显下降";
+    return t;
+  }
+
+  /**
+   * 🆕 2026-09-25 分数明细（可做性分）：值 × 权重 = 贡献，再 ÷ 累计权重、× 两个乘数、+ 提前量加分。
    * 🛑 缺项（null）既不参与、也**不归一化**（历史事故：归一化能把 gta 6 凑到 99 分）—— 明细里如实写「缺项」。
    */
   function pickDetail(g, r, v) {
@@ -1348,21 +1411,29 @@
       var val = r.parts[k] == null ? null : r.parts[k];
       var w = PICK_W[k];
       if (val != null) { sum += val * w; wsum += w; }
-      rows += "<tr><td>" + PICK_LABEL[k] + '</td><td class="num">' + (val == null ? "—" : Math.round(val)) +
-        '</td><td class="num">' + w + '</td><td class="num">' + (val == null ? "缺项" : Math.round(val * w)) + "</td></tr>";
+      rows += "<tr><td>" + PICK_LABEL[k] + (val == null ? " ✱" : "") + '</td><td class="num">' + (val == null ? "—" : Math.round(val)) +
+        '</td><td class="num">' + w + '</td><td class="num">' + Math.round((val == null ? PICK_NEUTRAL : val) * w) + "</td></tr>";
     }
-    var avg = wsum ? sum / wsum : null;
+    rows += '<tr><td>发现提前量（加分项）</td><td class="num">' + (r.leadScore == null ? "无数据" : Math.round(r.leadScore)) +
+      '</td><td class="num">—</td><td class="num">+' + (r.leadBonus || 0) + "</td></tr>";
+    // 缺项按中性值补进固定分母（与 rankability 同一口径）：这样"有值维度少"不会虚高
+    var sumAll = sum + PICK_NEUTRAL * (PICK_W_TOTAL - wsum);
+    var avg = sumAll / PICK_W_TOTAL;
     var tail = [];
     if (r.manual && r.manual.lagHours != null) tail.push("×" + r.manual.mult + "（对手 " + r.manual.lagHours + " 小时内发稿）");
     if (r.lag && r.lag.mult !== 1) tail.push("×" + r.lag.mult + "（我方" + (r.lag.lagDays > 7 ? "晚于首个专站 " + Math.round(r.lag.lagDays) + " 天" : "未晚于首个专站") + "）");
-    var math = "Σ(值×权重) " + Math.round(sum) + " ÷ Σ权重 " + wsum + " = " + r1(avg) + (tail.length ? " → " + tail.join(" ") : "");
+    var math = "Σ(值×权重) " + Math.round(sumAll) + "（缺项按中性 " + PICK_NEUTRAL + " 计）÷ Σ权重 " + PICK_W_TOTAL + " = " + r1(avg) +
+      (tail.length ? " → " + tail.join(" ") : "") + " → " + r1(avg == null ? null : avg * r.mult) +
+      " + 提前量加分 " + (r.leadBonus || 0) + " = " + (r.score == null ? "—（给不出分）" : r.score);
     return '<details class="sdetail"><summary>分数明细（' + (r.score == null ? "—" : r.score) + " 怎么来的）</summary>" +
       '<table class="sd"><thead><tr><th>维度</th><th class="num">值</th><th class="num">权重</th><th class="num">值×权重</th></tr></thead><tbody>' +
       rows +
       '<tr class="sd-total"><td>加权</td><td class="num">—</td><td class="num">' + wsum + '</td><td class="num">' + Math.round(sum) + "</td></tr>" +
       "</tbody></table>" +
-      '<div class="sd-note">' + esc(math) + " = " + (r.score == null ? "—（给不出总分）" : r.score) +
-      (r.missing.length ? "<br>缺项（<b>未计入</b>，不是 0）：" + r.missing.map(function (k) { return PICK_LABEL[k]; }).join(" · ") : "") +
+      '<div class="sd-note">' + esc(math) +
+      (r.bounds === "上界" ? "<br>🛑 竞争未测 → 这个数是<b>上界</b>（缺竞争项，那 14 权重按中性 50 计入）" : "") +
+      (r.missing.length ? "<br>✱ 缺项按<b>中性 " + PICK_NEUTRAL + "</b> 计入固定分母（不是 0、也不是满分 —— 缺证据的条目只能落在中位附近）：" + r.missing.map(function (k) { return PICK_LABEL[k]; }).join(" · ") : "") +
+      (r.score == null ? "<br>🛑 有值维度不足 2 项 → 不给分（沉底）：证据太薄，给个中间分等于编造" : "") +
       (v && v.k === "no" && v.why ? "<br>硬否决：" + esc(v.why) : "") +
       "</div></details>";
   }
@@ -1391,6 +1462,19 @@
     //   verdict（默认）先按结论档位、同档按分数 —— 避免"可小试 63 分"被"不建议 67 分"压下去
     //   newest / oldest 按**上线日**（正是"新鲜度"项的输入）—— 想抢新游戏就用这个
     rows = rows.slice().sort(function (a, b) {
+      // 🆕 2026-09-25 **细项排名**（用户要求）：按某一项的值降序，缺项沉底。
+      //   用途：核对"这一项的打分是否合理" —— 例如"按内容面排"看最强的 20 条是不是真的内容面强。
+      //   `dim:score` = 总分（含缺项归一化的参考分）；`dim:pre` = 待测优先度；`dim:lead` = 提前量加分。
+      if (state.pickSort.indexOf("dim:") === 0) {
+        var dk = state.pickSort.slice(4);
+        var va = dk === "score" ? a.r.score : dk === "pre" ? preScore(a.r) : dk === "lead" ? a.r.leadScore : a.r.parts[dk];
+        var vb = dk === "score" ? b.r.score : dk === "pre" ? preScore(b.r) : dk === "lead" ? b.r.leadScore : b.r.parts[dk];
+        if (va == null && vb == null) return 0;
+        if (va == null) return 1;
+        if (vb == null) return -1;
+        if (vb !== va) return vb - va;
+        return (b.r.score == null ? -1 : b.r.score) - (a.r.score == null ? -1 : a.r.score);
+      }
       // 竞争待核查视图按**待测优先度**降序（总分恰恰是缺的那个，用不了）。
       // 🛑 2026-09-25 改：原先只按需求降序，但**需求高的会被自动补测**（serpComp 有需求门槛），
       //    真正容易被漏掉的是"需求没过门槛、但内容面好 / 我方时机不差"的那批 ——

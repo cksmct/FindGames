@@ -265,6 +265,8 @@ function r1(v) {
 }
 const pickLabelOf = (L, k) => String((L.PICK_LABEL && L.PICK_LABEL[k]) ? L.PICK_LABEL[k] : k).replace(/\(.*?\)/g, "");
 function printBreakdown(L, a, n) {
+  const NEU = L.PICK_NEUTRAL == null ? 50 : L.PICK_NEUTRAL;      // 缺项按中性值补进固定分母（与 rankability 同源）
+  const WTOT = L.PICK_W_TOTAL == null ? 76 : L.PICK_W_TOTAL;
   const rows = a.rows.filter((x) => x.r && x.r.score != null).sort((x, y) => y.r.score - x.r.score).slice(0, n);
   console.log("");
   console.log("══ 分数明细 Top " + rows.length + "（可做性分；雷达分另列一行）══");
@@ -276,15 +278,19 @@ function printBreakdown(L, a, n) {
     let sum = 0, wsum = 0;
     for (const k in L.PICK_W) {
       const v = p[k];
-      if (v == null) { cells.push(pad(pickLabelOf(L, k), 14) + "缺项"); continue; }
+      if (v == null) { cells.push(pad(pickLabelOf(L, k), 14) + "缺项(按" + NEU + "计)×" + L.PICK_W[k] + "=" + Math.round(NEU * L.PICK_W[k])); continue; }
       sum += v * L.PICK_W[k];
       wsum += L.PICK_W[k];
       cells.push(pad(pickLabelOf(L, k), 14) + Math.round(v) + "×" + L.PICK_W[k] + "=" + Math.round(v * L.PICK_W[k]));
     }
     console.log("    " + cells.join(" "));
-    console.log("    Σ(值×权重)=" + Math.round(sum) + " ÷ Σ权重=" + wsum + " = " + (wsum ? (sum / wsum).toFixed(1) : "—") +
-      " × 乘数 " + (r.mult == null ? "—" : Number(r.mult.toFixed(2))) + " → " + r.score +
-      (r.missing && r.missing.length ? "　（缺项 " + r.missing.length + " 项：未计入、也没归一化）" : ""));
+    const sumAll = sum + NEU * (WTOT - wsum);
+    const avg = sumAll / WTOT;
+    const bonus = r.leadBonus == null ? 0 : r.leadBonus;
+    console.log("    Σ(值×权重)=" + Math.round(sumAll) + "（缺项按中性 " + NEU + " 补齐）÷ Σ权重=" + WTOT + " = " + avg.toFixed(1) +
+      " × 乘数 " + (r.mult == null ? "—" : Number(r.mult.toFixed(2))) + " → " + r1(avg * r.mult) + " + 提前量加分 " + bonus + " = " + r.score +
+      (r.missing && r.missing.length ? "　（缺 " + r.missing.length + " 项，已标注）" : "") +
+      (r.bounds === "上界" ? "　🛑 竞争未测 → 上界" : ""));
     const sp = g.scoreParts;
     if (sp) {
       console.log("    雷达分 " + (g.score == null ? 0 : g.score) + " = 搜索量 " + sp.vol + "→" + r1(sp.volScore) +

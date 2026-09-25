@@ -269,3 +269,6 @@ table.sd th { color: var(--dim); font-weight: 500; }
 table.sd td.num, table.sd th.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.sd tr.sd-total td { font-weight: 600; border-top: 1px solid rgba(128,128,128,.4); border-bottom: none; }
 .sd-note { font-size: 11.5px; color: var(--dim); margin-top: 3px; line-height: 1.5; }
+
+/* 分数角标（2026-09-25）：缺项归一化给的分数必须一眼能看出是「参考/上界」，不能冒充实测总分 */
+.refmark { font-size: 9px; font-weight: 400; opacity: .75; margin-left: 2px; vertical-align: super; }
