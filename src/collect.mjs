@@ -642,6 +642,22 @@ if (cfg.games.enabled) {
     log("info", `自动竞争核查（SERP）：本轮测 ${serpRes.tested}（成功 ${serpRes.ok} · 失败 ${serpRes.failed}）· 沿用缓存 ${serpRes.cached}`);
   }
 
+  // ── 🆕 2026-09-25：firstSeenAt 存量回填（幂等）──
+  // `firstSeen` 通路（watchlist → pushQueue → 入库）只对"通路建立之后新入库"的条目生效；
+  // 通路之前已在库里的条目永远拿不到 firstSeenAt → lead 只能拿入库时间兜底，恒为负。
+  // .watchlist-firstseen.json 里存着这些名字的潜伏期首见时间，这里补写一次；已有值不覆盖。
+  {
+    const fsDoc = readJson(dataPath(cfg, ".watchlist-firstseen.json"), {}) || {};
+    const fsItems = fsDoc.items || {};
+    let fsBackfilled = 0;
+    for (const g of list) {
+      if (g.firstSeenAt) continue;
+      const rec = fsItems[String(g.name || "").trim().toLowerCase()];
+      if (rec && rec.firstSeen) { g.firstSeenAt = rec.firstSeen; fsBackfilled++; }
+    }
+    if (fsBackfilled) log("dim", `  firstSeenAt 回填：${fsBackfilled} 条（来自 .watchlist-firstseen.json，潜伏期首见）`);
+  }
+
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
   // 雷达分数的算法自述随产物下发 → 前端"评分规则"折叠块据实展示（单一事实源在 detect.mjs）
   writeGames(cfg, list, { scoring: SCORE_RULES, serp: SERP_RULES });

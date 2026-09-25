@@ -793,7 +793,10 @@
    *   拿不到首个专站日期时返回 ×1 —— 不猜、不罚。
    */
   function lagMultOf(g) {
-    var f = g.first;
+    // 🛑 与 discoveryLeadDays 同一口径（2026-09-25）：优先用潜伏期首见时间 firstSeenAt，
+    //    没有才退回雷达入库时间 first —— 否则同一张卡上"发现提前量"认潜伏首见、
+    //    "我方滞后"只认入库时间，潜伏转正条目的 ourLagDays 会被系统性高估。
+    var f = g.firstSeenAt || g.first;
     var cs = (g.serp && g.serp.competitorFirstSeen) || null;
     if (!f || !cs) return { mult: 1, lagDays: null, firstSeen: null };
     var d = (new Date(f).getTime() - new Date(cs).getTime()) / 86400000;
