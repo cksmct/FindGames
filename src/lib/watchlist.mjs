@@ -716,7 +716,7 @@ export async function buildWatchlist(cfg, session) {
     notes.push("Roblox 侧是**未发售清单**：Roblox 官方没有这类公开列表（官方 up-and-coming 是「已上线刚起量」），数据来自第三方 BloxInformer Release Hub，" +
       rbxStat.sourceLabel + "。数据时间 " + rbxUpcoming.snapshotAt.slice(0, 16).replace("T", " ") +
       "（原始 " + rbxStat.fetchedFromSource + " 条 → 剔除已发售 " + rbxStat.droppedPast + " 条 → 保留 " + rbxStat.kept + " 条）。");
-    notes.push("Roblox 条目的**潜伏评分（0~100）**＝发布确定性 35 + 日期精确度 25 + 内容面 20 + 社区地基 20；" +
+    notes.push("Roblox 条目的**潜伏评分（0~100）**＝发布确定性 28 + 日期精确度 18 + 内容面 14 + 社区地基 20 + 竞争饱和度 20（竞争未测时该项按权重跳过归一，不是 0 分）；" +
       "内容面与日期精确度是**按页面给的字段推断的启发式**（不是实测），所以每条都带理由，可一眼反驳。窗口(build/close/far)与评分是两件事：评分高但只剩 7 天照样来不及。");
     if (rbxUpcoming.stale) notes.push("⚠️ 这份 Roblox 数据已过期（>26 小时）：日期请以 BloxInformer 来源页为准。");
     if (rbxDroppedPast) notes.push("数据里已有 " + rbxDroppedPast + " 条在上次抓取后被发售，已从清单剔除（上线后请走「建站推荐」那条线评估）。");
