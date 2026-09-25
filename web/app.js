@@ -498,14 +498,18 @@
   //      访问量 = 需求（有人搜）→ 应该**正向**计分；
   //      竞争   = 要独立测（人工 SERP 核查优先，其次用上线时长推断）；测不到就标「竞争未测」。
   //
+  // 🛑 2026-09-25 权重重排（用户公理：「越早识别，成功率越高；先手 = 最大收益」）：
+  //    **发现提前量(lead) 升为第一权重** —— 它是"能不能领先"最直接的单一预测项；
+  //    需求规模/内容面各降一档（它们是"值得做"的必要条件，但不区分"早做"与"晚做"）；
+  //    动能/新鲜度降档（momentum 已有 momentum 豁免与转凉标记两条独立通道，不再需要高分）。
   // 七项（合计 100）：
-  //   需求规模   22  访问量 / 在线人数，log 归一，**单调递增**
-  //   内容面     18  已挖到的攻略词数量 ≈ 能做的页面数
-  //   发现提前量 16  **我们比发售早了多少**（我方时机，见 discoveryLeadScore）—— 新增
-  //   竞争       12  分高 = 竞争低。人工 SERP 核查 > 自动 SERP 核查 > 未测
-  //   需求动能   12  7 天曲线后半段 vs 前半段
-  //   新鲜度     10  **游戏距上线多久**，越老越难挤（"上线时间长"的兑现）
+  //   发现提前量 24  **我们比发售早了多少**（我方时机，见 discoveryLeadScore）—— 第一权重
+  //   需求规模   20  访问量 / 在线人数，log 归一，**单调递增**
+  //   内容面     16  已挖到的攻略词数量 ≈ 能做的页面数
+  //   竞争       14  分高 = 竞争低。人工 SERP 核查 > 自动 SERP 核查 > 未测
   //   口碑       10  好评率
+  //   需求动能    8  7 天曲线后半段 vs 前半段
+  //   新鲜度      8  **游戏距上线多久**，越老越难挤（"上线时间长"的兑现）
   // 另两个**全局乘数**（是否决性/一票性质的信息，不参与加权平均）：
   //   人工 lagHours  = **对手多快发稿**（竞争烈度）
   //   自动 ourLagDays = **我们比首个专站晚了几天**（我方滞后，见 lagMultOf）
@@ -529,7 +533,7 @@
   // 7 家专业站 8 小时内发稿 + 长尾被社区垄断 → 这是**竞争与时长**否掉的，
   // 不是"因为它访问量太大"否掉的。
   // ══════════════════════════════════════════════════════════════════════
-  var PICK_W = { demand: 22, surface: 18, lead: 16, comp: 12, momentum: 12, fresh: 10, quality: 10 };
+  var PICK_W = { demand: 20, surface: 16, lead: 24, comp: 14, momentum: 8, fresh: 8, quality: 10 };
   var PICK_LABEL = {
     demand: "需求规模", surface: "内容面", lead: "发现提前量(我方时机)",
     comp: "竞争(分高=竞争低)", momentum: "需求动能", fresh: "新鲜度(上线时长)", quality: "口碑",
@@ -1113,6 +1117,9 @@
       (r.score == null ? "—" : r.score) + "</span></div>" +
       '<div class="pk-verdict pk-' + v.k + '">' + v.t + (v.why ? " · " + esc(v.why) : "") + "</div>" +
       (evt ? '<div class="pk-verdict pk-flag">' + esc(evt) + "</div>" : "") +
+      (r.leadDays != null && r.leadDays >= 7
+        ? '<div class="pk-verdict pk-flag">🚀 首发窗口：发售前 ' + Math.round(r.leadDays) + " 天已发现（lead 权重第一，先手是成功率最高的单一变量）</div>"
+        : "") +
       // 来自潜伏清单转正的条目：没有 Trend 曲线，需求动能项会是"缺项"，必须说明原因
       (/潜伏/.test(String(g.reason || "")) ? '<div class="pk-verdict pk-flag">来自「🚀 潜伏列表」转正（该游戏上线时被潜伏清单抓到；暂无 Google Trends 曲线，所以需求动能缺失）</div>' : "") +
       (r.manual ? '<div class="pk-verdict pk-flag">人工竞争：发稿滞后乘数 ×' + r.manual.mult +
@@ -1162,6 +1169,13 @@
     else if (state.pick === "nowords") rows = all.filter(function (x) { return !(x.g.words || []).length; });
     // 🔍 竞争待核查：把"看得见、判不了"的那批集中起来（下面是它们专属的排序）
     else if (state.pick === "nocomp") rows = all.filter(function (x) { return x.r.comp.score == null; });
+    // 🚀 首发窗口（2026-09-25 新增，先手公理）：发售前发现（lead>0）或未晚于首个专站（lag≤7 天）
+    else if (state.pick === "lead") {
+      rows = all.filter(function (x) {
+        if (x.r.leadDays != null && x.r.leadDays > 0) return true;
+        return x.r.lag && x.r.lag.lagDays != null && x.r.lag.lagDays <= 7;
+      });
+    }
     // 排序：
     //   verdict（默认）先按结论档位、同档按分数 —— 避免"可小试 63 分"被"不建议 67 分"压下去
     //   newest / oldest 按**上线日**（正是"新鲜度"项的输入）—— 想抢新游戏就用这个

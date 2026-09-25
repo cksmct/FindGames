@@ -204,7 +204,7 @@
       "topN": 10,
       "cdx": {
         "enabled": true,
-        "maxDomains": 3,
+        "maxDomains": 5,
         "timeoutMs": 15000,
         "gapMs": 2500,
         "tries": 2,
