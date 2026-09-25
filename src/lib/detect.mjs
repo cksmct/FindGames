@@ -179,7 +179,7 @@ const NON_LATIN =
 //    excludeAAA 只在热搜候选里生效时，Roblox 榜单 / Play 热榜照样把 AAA 灌进库
 //    （实测线上 25 条：Roblox / Clash of Clans / Township / Royal Match…）。
 export const AAA_FRANCHISES =
-  /^(fortnite|minecraft|gta|gta ?[0-9iv]+|grand theft auto.*|call of duty|cod|warzone|valorant|apex legends|overwatch|league of legends|lol|roblox|genshin impact|honkai.*|counter[- ]strike|cs ?2|csgo|fifa.*|ea sports fc.*|nba ?2k.*|pubg|brawl stars|clash royale|clash of clans|mobile legends|free fire|honor of kings|pubg mobile|pokémon go|pokemon go|candy crush|among us)$/i;
+  /^(fortnite|minecraft|gta.*|grand theft auto.*|call of duty.*|cod|warzone|valorant|apex legends|overwatch|league of legends|lol|roblox|genshin impact|honkai.*|counter[- ]strike.*|cs ?2|csgo|fifa.*|ea sports fc.*|nba ?2k.*|pubg.*|brawl stars|clash royale|clash of clans|mobile legends|free fire|honor of kings|pokémon go|pokemon go|candy crush.*|among us|township.*|royal match.*|block ?blast.*|pou|fishdom.*|gardenscapes.*|homescapes.*|coin master.*|subway surf.*|whiteout survival.*|last war.*|rise of kingdoms.*|state of survival.*)$/i;
 
 /**
  * 判断一条热搜是否"可能是新游戏"
