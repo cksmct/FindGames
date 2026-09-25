@@ -190,11 +190,18 @@
       "enabled": true,
       "provider": "ddg",
       "onlyUnknownAge": true,
-      "maxPerRun": 4,
+      "maxAgeDays": 180,
+      "maxPerRun": 6,
       "ttlDays": 7,
       "gapMs": 3000,
       "query": "{q} codes",
-      "topN": 10
+      "topN": 10,
+      "cdx": {
+        "enabled": true,
+        "maxDomains": 3,
+        "timeoutMs": 15000,
+        "gapMs": 1200
+      }
     },
     "sourceBatch": 400,
     "sourceShare": 0.7,
@@ -276,6 +283,11 @@
     "comingSoonCount": 40,
     "comingSoonDays": 180,
     "includeTooLate": false,
+    "serpCheck": {
+      "enabled": true,
+      "maxPerRun": 5,
+      "ttlDays": 14
+    },
     "roblox": {
       "upcoming": true,
       "rising": false,

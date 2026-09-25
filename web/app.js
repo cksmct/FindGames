@@ -498,23 +498,41 @@
   //      访问量 = 需求（有人搜）→ 应该**正向**计分；
   //      竞争   = 要独立测（人工 SERP 核查优先，其次用上线时长推断）；测不到就标「竞争未测」。
   //
-  // 六项（合计 100）：
-  //   需求规模 22  访问量 / 在线人数，log 归一，**单调递增**
-  //   内容面   20  已挖到的攻略词数量 ≈ 能做的页面数
-  //   需求动能 14  7 天曲线后半段 vs 前半段
-  //   口碑     12  好评率
-  //   新鲜度   16  **距上线多久**，越老越难挤（"上线时间长"的兑现）
-  //   竞争     16  分高 = 竞争低。人工 SERP 核查 > 上线时长推断 > 未测
-  // 另：人工 lagHours（对手发稿滞后）作为**全局乘数** —— 是否决性信息，不参与加权平均。
+  // 七项（合计 100）：
+  //   需求规模   22  访问量 / 在线人数，log 归一，**单调递增**
+  //   内容面     18  已挖到的攻略词数量 ≈ 能做的页面数
+  //   发现提前量 16  **我们比发售早了多少**（我方时机，见 discoveryLeadScore）—— 新增
+  //   竞争       12  分高 = 竞争低。人工 SERP 核查 > 自动 SERP 核查 > 未测
+  //   需求动能   12  7 天曲线后半段 vs 前半段
+  //   新鲜度     10  **游戏距上线多久**，越老越难挤（"上线时间长"的兑现）
+  //   口碑       10  好评率
+  // 另两个**全局乘数**（是否决性/一票性质的信息，不参与加权平均）：
+  //   人工 lagHours  = **对手多快发稿**（竞争烈度）
+  //   自动 ourLagDays = **我们比首个专站晚了几天**（我方滞后，见 lagMultOf）
+  //
+  // 🛑 2026-09-25 修正（重要，别改回去）：**竞争项不再用「上线时长推断」**。
+  //    实测反例 Dressmaker（Steam 2026-09-21 发售，97% 好评、12,205 在线、畅销榜前 15）：
+  //      ageDays=4 → 旧版 fresh=100 **且** comp=100（"新鲜=竞争低"），总分 96~100 判「值得做」；
+  //      而现实是 SERP 已有 8+ 个**专为该游戏新建**的站，且多个在**发售前**就铺好了稿。
+  //    根因：ageDays 一个变量驱动了 fresh 与 comp 两项 → "新"被双计 32 分（约占三分之一权重）；
+  //      而"新"恰恰是**抢首发最拥挤**的区间，不是最空的区间。
+  //    → 竞争只认真测（人工 / 自动 SERP）；抢首发区间（≤180 天）不再白送满分，
+  //      我方时机改由 **发现提前量(lead)** 单独承担 —— 它才是"能不能领先"的正确变量。
+  //
+  // 判据来自 2026-09-25 的两个实测对照（同为"新游戏"，结论相反）：
+  //   DW3 复刻版   → 我们进场时**距发售还有 6 天**（lead=+6），仅晚于首个专站 17 天 → 可做
+  //   Dressmaker   → 我们进场时**已上线 4 天**（lead=−4），且晚于首个专站 45~110 天 → 不可做
+  // 🛑 注意区分两个不同的量，别混：**"对手有多少个站"（竞争）≠"我们比最早进场者晚了多少"（我方滞后）**。
+  //    决定成败的是后者；前者只是后者的后果。用户口径：「我们不惧怕竞争，只是不能比别人晚太多。」
   //
   // 反面案例（Royale High）：访问 1045 亿（需求拉满）、但上线 9 年 + 需求同比 -38% +
   // 7 家专业站 8 小时内发稿 + 长尾被社区垄断 → 这是**竞争与时长**否掉的，
   // 不是"因为它访问量太大"否掉的。
   // ══════════════════════════════════════════════════════════════════════
-  var PICK_W = { demand: 22, surface: 20, fresh: 16, comp: 16, momentum: 14, quality: 12 };
+  var PICK_W = { demand: 22, surface: 18, lead: 16, comp: 12, momentum: 12, fresh: 10, quality: 10 };
   var PICK_LABEL = {
-    demand: "需求规模", surface: "内容面", fresh: "新鲜度(上线时长)",
-    comp: "竞争(分高=竞争低)", momentum: "需求动能", quality: "口碑",
+    demand: "需求规模", surface: "内容面", lead: "发现提前量(我方时机)",
+    comp: "竞争(分高=竞争低)", momentum: "需求动能", fresh: "新鲜度(上线时长)", quality: "口碑",
   };
 
   function clamp01(v) { return Math.max(0, Math.min(100, v)); }
@@ -550,7 +568,7 @@
       ? "自动 SERP 核查（" + (sr.query || "<游戏名> codes") + "：" + (sr.bands || "前十独立域名数分档") + "）"
       : "自动 SERP 核查（后端每轮把「<游戏名> codes」前十的独立域名数写进条目，见 src/lib/serp.mjs）";
     var caveats = [
-      "「上线时间」被计了两遍：新鲜度(16) + 竞争(16) 都以官方上线日为输入（竞争项在有人工/SERP 核查时不看年龄）—— 老游戏沉底是设计意图，但这条占掉约三分之一的权重",
+      "🛑 2026-09-25 已修「上线时间被计两遍」：旧版新鲜度(16) + 竞争(16) 同由 ageDays 驱动，于是刚上线的游戏白拿 32 分（约占三分之一权重）。现在**抢首发区间（≤180 天）的竞争项不再用上线时长推断**，拿不到实测就如实标「未测」；我方时机改由新项**发现提前量(lead)** 承担。实测反例 Dressmaker（Steam 发售 4 天 / 97% 好评 / 12,205 在线）：旧版给 96~100 分判「值得做」，而 SERP 已有 8+ 个专为该游戏新建的站、且多个在**发售前**就铺好了稿",
       "Roblox 的需求未按上线年龄归一：同样 1000 万访问，上线 1 个月和上线 3 年同分（终身访问量口径的固有偏差）",
       "三套需求锚点与内容面档位是启发式（方向对、数值拍定），不是数据回归拟合的结果",
       "❄️ 曲线保鲜：卡片曲线是「发现那一刻的快照」，超过 curveRefresh.hours（默认 48h）会重取；重取**成功但连续 2 次没有量** → 标「已转凉」并在推荐页降到「观察」。取数失败（429）不算转凉",
@@ -565,10 +583,16 @@
       weights: [
         ["需求规模", PICK_W.demand, demandAnchorsText()],
         ["内容面", PICK_W.surface, "已挖到的攻略词数：≥8=100 · ≥5=80 · ≥3=55 · ≥1=30 · 0 词=未测"],
-        ["新鲜度", PICK_W.fresh, "距上线：≤30 天=100 · 1 年≈40 · 5 年≈10（只认官方上线日，绝不用\"首次发现时间\"）"],
-        ["竞争", PICK_W.comp, "分高=竞争低。优先级：人工 SERP 核查 > " + serpTxt + " > 上线时长推断（≤180 天=100 · ≤1 年=80 · ≤2 年=60 · ≤4 年=40 · ≤8 年=20 · 更久=5）> 未测"],
+        ["发现提前量(我方时机)", PICK_W.lead, "官方上线日 − 我们首次发现日：发售前 ≥30 天=100 · 发售前 1 周=90 · 发售前 7 天内=80 · 上线后 1 周内=55 · 后 1 月内=35 · 后 3 月内=15 · 更晚=5。仅适用于上线 ≤1 年的游戏（老游戏该维度不适用、权重跳过）"],
+        ["竞争", PICK_W.comp, "分高=竞争低。优先级：人工 SERP 核查 > " + serpTxt + " > 上线时长推断（**仅 >180 天的老条目**：≤1 年=80 · ≤2 年=60 · ≤4 年=40 · ≤8 年=20 · 更久=5）> 未测。🛑 抢首发区间（≤180 天）**不再**用上线时长推断 —— 实测「新」恰恰是竞争最拥挤的区间（Dressmaker 上线 4 天已有 8+ 个专站）"],
         ["需求动能", PICK_W.momentum, "7 天曲线后 1/4 vs 前 1/4（从零起飞=100；无曲线=未测）"],
+        ["新鲜度(上线时长)", PICK_W.fresh, "**游戏**距上线：≤30 天=100 · 1 年≈40 · 5 年≈10（只认官方上线日，绝不用\"首次发现时间\"）"],
         ["口碑", PICK_W.quality, "好评率 50%→0 · 95%→100；手游用星级（≥4.5★→100 · 3.5★→50 · ≤2.5★→0；0 人评=未测）"],
+      ],
+      items: [
+        "🛑 **两个全局乘数**（不参与加权，直接乘在总分上，两者独立）：① 对手发稿滞后 `lagHours`（人工填，衡量**对手多快**发稿 = 竞争烈度）→ ≤12h ×0.6 · ≤24h ×0.8 · ≥72h ×1.1；② 我方滞后 `ourLagDays`（自动算，衡量**我们比首个专站晚了多少**；**>30 天直接判「我们晚了」**）→ ≤3 天 ×1.15 · ≤14 天 ×1.0 · ≤30 天 ×0.85 · ≤60 天 ×0.65 · ≤120 天 ×0.45 · 更晚 ×0.3",
+        "🛑 **「对手有多少个站」≠「我们比最早进场者晚了多少」** —— 决定成败的是后者。用户口径：「我们不惧怕竞争，只是不能比别人晚太多。」",
+        "`ourLagDays` 的首个专站日期来自 Wayback CDX 最早快照，是**下界**（未被 Wayback 收录的域名查不到，实际可能更早）",
       ],
       caveats: caveats,
       note: "不同平台必须用不同规则：Roblox=终身访问量、Steam=当前在线、手游=评分人数+星级（装机量与首发日 Play 不提供）。三套锚点绝不混用 —— 数量级差 4~6 倍，混用会让一边永远满分、另一边永远 0 分。",
@@ -677,9 +701,16 @@
   var SERP_STALE_DAYS = 30;
   /**
    * 竞争（分高 = 竞争低 = 好挤进去）。
-   * 优先级：人工 SERP 核查（最准）> **自动 SERP 核查**（后端写进 g.serp，见 src/lib/serp.mjs）> 上线时长推断 > 未测(null)。
+   * 优先级：人工 SERP 核查（最准）> **自动 SERP 核查**（后端写进 g.serp，见 src/lib/serp.mjs）> 上线时长推断（**仅老条目**）> 未测(null)。
    * 🛑 绝不拿访问量推断竞争 —— 那是需求，不是竞争。
    * 自动 SERP 这一档是 2026-09-24 为**安卓**加的：它拿不到官方上线日 → 本来竞争项恒为未测 → 总分只能是 null。
+   *
+   * 🛑 2026-09-25 修正：**抢首发区间（≤180 天）不再用上线时长推断竞争**。
+   *    "新 = 竞争低"实测是错的：Dressmaker（Steam 发售 4 天、97% 好评、12,205 在线）
+   *    SERP 上已有 8+ 个专为该游戏新建的站，且多个在**发售前**就铺好了稿。
+   *    这一段拿不到实测就如实标「未测」（前端会引导点「查竞争」），而不是编一个满分。
+   *    注意：这个改动的前提是后端 `serpComp` 也会覆盖新条目（否则新游戏会全变未测）——
+   *    见 src/lib/serp.mjs 的 `maxAgeDays`。
    */
   function compRoom(g, ageDays) {
     var mc = manualComp(g.name);
@@ -689,15 +720,82 @@
       return {
         score: openScore(sc.open), source: "serp",
         domains: sc.domains, hosts: sc.hosts || [], query: sc.query || "", at: sc.at,
+        competitorFirstSeen: sc.competitorFirstSeen || null,
       };
     }
     if (ageDays == null) return { score: null, source: "unknown" };
-    var s = ageDays <= 180 ? 100
-      : ageDays <= 365 ? 80
-        : ageDays <= 730 ? 60
-          : ageDays <= 1460 ? 40
-            : ageDays <= 2920 ? 20 : 5;
+    if (ageDays <= 180) {
+      return {
+        score: null, source: "unknown",
+        why: "抢首发区间（上线 ≤180 天）不给上线时长推断 —— 实测「新」恰恰是竞争最拥挤的区间（Dressmaker 上线 4 天已 8+ 个专站），待人工 / 自动 SERP 核查",
+      };
+    }
+    var s = ageDays <= 365 ? 80
+      : ageDays <= 730 ? 60
+        : ageDays <= 1460 ? 40
+          : ageDays <= 2920 ? 20 : 5;
     return { score: s, source: "age" };
+  }
+
+  /**
+   * 发现提前量（**我方时机**）：`官方上线日 − 我们首次发现日`（g.first）。
+   *   正数 = 我们在**发售前**就发现了它（领先 N 天）；负数 = 上线之后才发现（滞后 N 天）。
+   *
+   * 为什么必须单独一项：决定成败的不是"对手有几个站"，而是"**我们比最早进场者晚了多少**"。
+   *   实测 2026-09-25 的两个对照（同为"新游戏"，结论相反，差别不在竞争数量）：
+   *     DW3 复刻版   → 进场时**距发售还有 6 天**（+6）→ 可做（research）
+   *     Dressmaker   → 进场时**已上线 4 天**（−4），且晚于首个专站 45~110 天 → 不可做（watch）
+   *   用户口径：「我们不惧怕竞争，只是不能比别人晚太多。」
+   *
+   * 🛑 `g.first` 的**正确用途就在这里**。它当 ageDays 用是错的（那是游戏上线时间，
+   *    见 ageDaysOf 的红线：拿首次发现时间当上线时长会让新词白拿竞争满分），
+   *    但它恰恰是"我们多早"的唯一数据源 —— 是**用错了地方**，不是字段本身有问题。
+   *
+   * 适用边界：只在"游戏仍处新周期"（ageDays ≤ 365）时给分；老游戏返回 null（不适用，权重跳过）——
+   *    不能因为"我们 5 年后才发现"就把老游戏判死（技能明确：老游戏同样可以进入优先队列）。
+   */
+  function discoveryLeadDays(g) {
+    var c = (g.stats && g.stats.created) || g.srcCreated;
+    var f = g.first;
+    if (!c || !f) return null;
+    var d = (new Date(c).getTime() - new Date(f).getTime()) / 86400000;
+    return isFinite(d) ? d : null;
+  }
+  function discoveryLeadScore(leadDays, ageDays) {
+    if (leadDays == null) return null;
+    if (ageDays != null && ageDays > 365) return null;
+    if (leadDays >= 30) return 100;   // 发售前 1 个月以上就发现 = 显著先手
+    if (leadDays >= 7) return 90;     // 发售前 1 周
+    if (leadDays > 0) return 80;      // 发售前 7 天内
+    if (leadDays >= -7) return 55;    // 上线后一周内（还有机会，但已被动）
+    if (leadDays >= -30) return 35;
+    if (leadDays >= -90) return 15;
+    return 5;                         // 晚了 3 个月以上：窗口基本关了
+  }
+
+  /**
+   * 我方滞后（**全局乘数**）：`我们首次发现日 − 首个专站的最早快照日`。
+   *   数据源 `g.serp.competitorFirstSeen` —— 后端用 Wayback CDX 查 SERP 前十域名各取最早快照
+   *   （见 src/lib/serp.mjs；🛑 这是**下界**，未被 Wayback 收录的域名查不到，实际可能更早）。
+   *   负数/很小 = 我们没比最早的专站晚 → 有位置；正很大 = 晚了 → 直接压总分。
+   *
+   * 🛑 与人工 `lagHours` 的区别（别混，两者独立相乘）：
+   *     lagHours  = **对手多快发稿**（竞争烈度）
+   *     ourLagDays = **我们晚了多少**（我方时机）
+   *   拿不到首个专站日期时返回 ×1 —— 不猜、不罚。
+   */
+  function lagMultOf(g) {
+    var f = g.first;
+    var cs = (g.serp && g.serp.competitorFirstSeen) || null;
+    if (!f || !cs) return { mult: 1, lagDays: null, firstSeen: null };
+    var d = (new Date(f).getTime() - new Date(cs).getTime()) / 86400000;
+    if (!isFinite(d)) return { mult: 1, lagDays: null, firstSeen: cs };
+    // 🛑 分档刻意偏严：抢首发语境下"晚 30 天以上"基本等于先手已失
+    //    （对手早被你晚这些天，页面已被收录、外链已积累、长尾已覆盖）。
+    //    分档由 2026-09-25 的两个实测样本拍定（晚 17 天仍可做 / 晚 44+ 天不可做）——
+    //    这是**启发式**，运行 1~2 个月后应按成功样本校准（与早期爆发轨的校准方式一致）。
+    var m = d <= 3 ? 1.15 : d <= 14 ? 1.0 : d <= 30 ? 0.85 : d <= 60 ? 0.65 : d <= 120 ? 0.45 : 0.3;
+    return { mult: m, lagDays: d, firstSeen: cs };
   }
 
   function rankability(g) {
@@ -705,6 +803,8 @@
     var plt = platformOf(st);
     var ageDays = ageDaysOf(g);
     var comp = compRoom(g, ageDays);
+    // 我方时机（2026-09-25 新增）：官方上线日 − 我们首次发现日（正 = 发售前就发现）
+    var leadDays = discoveryLeadDays(g);
     // 需求口径按平台分开（见 demandScore 的注释）：
     //   steam → 当前在线，缺失退回评价数（评价数 ≈ 销量代理）
     //   ios / android → 评分人数（两家都不公开装机量，这是唯一可得的规模代理）
@@ -728,6 +828,9 @@
       surface: (g.words || []).length ? surfaceScore(g.words) : null,
       fresh: freshAgeScore(ageDays),
       comp: comp.score,
+      // 我方时机（2026-09-25 新增）：发售前发现加分、上线后晚发现扣分。
+      // 老游戏（>365 天）该维度返回 null → 权重跳过，不当成 0 分（否则等于判死老游戏）。
+      lead: discoveryLeadScore(leadDays, ageDays),
       momentum: momentumScore(g.series),
       quality: (plt === "ios" || plt === "android") ? mobileQuality(st) : qualityScore(st.approval),
     };
@@ -747,13 +850,18 @@
     if (mc && mc.lagHours != null) {
       mult *= mc.lagHours <= 12 ? 0.6 : mc.lagHours <= 24 ? 0.8 : mc.lagHours >= 72 ? 1.1 : 1;
     }
+    // 我方滞后乘数（2026-09-25 新增）：**我们比首个专站晚了几天**。与上面的 lagHours 独立相乘
+    // （前者是"对手多快"，后者是"我们多晚"，两个不同的量）。无数据时 ×1，不猜不罚。
+    var lag = lagMultOf(g);
+    mult *= lag.mult;
     if (comp.score == null) {
-      return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult, reason: "no-competition-data" };
+      return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult, leadDays: leadDays, lag: lag, reason: "no-competition-data" };
     }
-    if (!wsum) return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult };
+    if (!wsum) return { score: null, parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult, leadDays: leadDays, lag: lag };
     return {
       score: Math.round(clamp01((sum / wsum) * mult)),
       parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult,
+      leadDays: leadDays, lag: lag,
       manual: mc ? { mult: Number(mult.toFixed(2)), note: mc.note || "" } : null,
     };
   }
@@ -801,6 +909,29 @@
     var mc = manualComp(g.name);
     if (mc && mc.open != null && mc.open <= 2) {
       return { k: "no", t: "竞争饱和（人工判断）", why: mc.note || "长尾已被专用 wiki / 专业站占据" };
+    }
+    // 🛑 2026-09-25 新增：**我们先手太晚** → 直接降档，不看总分。
+    //    依据：用户口径「我们不惧怕竞争，只是不能比别人晚太多」+ 实测对照
+    //    （Dressmaker：我们首次发现日晚于首个专站最早快照 45~110 天 → 无论总分多高都做不了）。
+    //    放在 comingSoon 之前：未发售游戏的 leadDays 为正，不会被这两条命中。
+    //    阈值 30 天来自 2026-09-25 两个实测样本（晚 17 天仍可做 / 晚 44+ 天不可做）——
+    //    是启发式，不是回归结果；运行时可用 config 覆盖。
+    if (r.lag && r.lag.lagDays != null && r.lag.lagDays > 30) {
+      return {
+        k: "no", t: "我们晚了",
+        why: "我们首次发现日比首个专站的最早快照（" + String(r.lag.firstSeen).slice(0, 10) + "）晚 " + Math.round(r.lag.lagDays) +
+          " 天（>30 天）—— 先手已失，这不是靠更努力能追回的差（只能靠换维度抹平：工具 / 硬数据）",
+      };
+    }
+    //    🛑 边界：**只对"新周期"（ageDays ≤ 365）生效**。老游戏不能套这条 ——
+    //       一个 5 年前上线的游戏，"我们 5 年后才发现"是常态，不是"晚"；
+    //       它该走 age 推断 + 人工核查，而不是被抢首发口径判死。
+    //       （实测踩过：不加这个边界，上线 1826 天的老游戏直接命中 → no，与"老游戏同样可进优先队列"冲突。）
+    if (r.ageDays != null && r.ageDays <= 365 && r.leadDays != null && r.leadDays <= -30) {
+      return {
+        k: "no", t: "发现太晚",
+        why: "游戏已上线 " + Math.round(-r.leadDays) + " 天我们才发现（>30 天）—— 抢首发窗口已过；要么等竞品出清（模板站群通常弃站），要么换维度（工具 / 硬数据）",
+      };
     }
     // 未发售的走「潜伏线」，不该用"能不能挤进去"这套（还没上线谈不上挤）
     if (st.comingSoon) {
@@ -885,6 +1016,22 @@
         " · 好评 " + (st.approval == null ? "未取得" : st.approval + "%") + " · 上线 " +
         (st.created ? esc(String(st.created).slice(0, 10)) : "未取得") + "（" + age + "）";
     }
+    // 我方时机（2026-09-25 新增）：lead / ourLagDays 现在是权重第三高的项，不能只藏在公式里 ——
+    // 它才是"能不能领先"的直接证据，必须在卡片上看得见。
+    var leadTxt = "";
+    if (r.leadDays != null) {
+      var ld = r.leadDays;
+      leadTxt += " · " + (ld > 0
+        ? "🟢 发现于发售前 " + Math.round(ld) + " 天"
+        : "🔴 上线后 " + Math.round(-ld) + " 天才发现");
+    }
+    if (r.lag && r.lag.lagDays != null) {
+      var lg = Math.round(r.lag.lagDays);
+      leadTxt += " · " + (lg <= 7
+        ? "🟢 未晚于首个专站" + (lg < 0 ? "（领先 " + Math.abs(lg) + " 天）" : "（同期）")
+        : "🔴 晚于首个专站 " + lg + " 天" + (r.lag.firstSeen ? "（最早 " + String(r.lag.firstSeen).slice(0, 10) + "）" : ""));
+    }
+    metaLine += leadTxt;
     return '<div class="gcard pk-card">' +
       '<div class="ghead"><h3>' + esc(g.name) + '</h3><span class="score pk-' + v.k + '">' +
       (r.score == null ? "—" : r.score) + "</span></div>" +

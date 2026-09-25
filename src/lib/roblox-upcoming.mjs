@@ -20,6 +20,8 @@
  */
 import { dataPath, readJson, writeJson, iso, log, sleep, retry } from "./util.mjs";
 import { fetchPage } from "./web-fetch.mjs";
+// 竞争饱和度（第五维）用的分档表：**与建站推荐的竞争项共用同一份**，口径才可比。
+import { openScore, COMP_SATURATED_OPEN } from "./serp.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const PAGE = "https://bloxinformer.com/upcoming-roblox-games/";
@@ -252,13 +254,24 @@ async function getText(url, label, timeoutMs = 30000, retries = 1) {
 /**
  * 潜伏评分（0~100）——**只用于"还没上线"的候选**，四个维度都是上线前可测的：
  *
- *   发布确定性 35  官方/开发者口风（Confirmed > Beta/Early Access > In Development > Pre-Alpha > Delayed > Maybe Cancelled）
- *   日期精确度 25  确切日期 > 月份 > 季度 > 年份 > 未定档（决定"现在动手来不来得及"）
- *   内容面     20  由 genres 推断"能写多少页面"（图鉴/配队类 ≫ 只值得做 codes 的玩法）
+ *   发布确定性 28  官方/开发者口风（Confirmed > Beta/Early Access > In Development > Pre-Alpha > Delayed > Maybe Cancelled）
+ *   日期精确度 18  确切日期 > 月份 > 季度 > 年份 > 未定档（决定"现在动手来不来得及"）
+ *   内容面     14  由 genres 推断"能写多少页面"（图鉴/配队类 ≫ 只值得做 codes 的玩法）
  *   社区地基   20  有无 Discord / YouTube / Roblox 群组（有社群才有需求地基）
+ *   竞争饱和度 20  **未发售 ≠ 空位**：SERP 前十的独立域名数（2026-09-25 新增，见下）
  *
  * 它与"窗口"(build/close/far) 是两个正交维度：评分高但窗口只剩 7 天 = 来不及；
  * 评分低哪怕还有 3 个月 = 也不值得投。
+ *
+ * 🛑 2026-09-25 新增第五维「竞争饱和度」（用户纠正 + 实测）：
+ *    用户口径：「未发售的游戏才蕴含巨大的机会」—— 对，但**"未发售"不等于"空位"**。
+ *    实测反例 Dressmaker（Steam 2026-09-21 发售、12,205 在线、97% 好评、畅销榜前 15）：
+ *    它在**发售前**（2026-08 甚至 6 月）就已经有多家专站建好，等正式上线时 SERP 已被 8+ 个站占满。
+ *    → 所以潜伏期要问的不是"它新不新"，而是"**现在有多少人已经在做了**"（竞争饱和度），
+ *      外加"**第一个专站是什么时候出现的**"（`serp.competitorFirstSeen`，来自 Wayback CDX 最早快照）——
+ *      后者用来算"我们晚了多少"，比"有几个站"更接近成败本身。
+ *    🛑 未测 → 该维取 null、权重跳过（**不是 0 分**）：没测到 ≠ 没人做。
+ *    🛑 硬规则：SERP 前十独立域名 ≥5（open ≤2）→ 直接判「竞争已起」，不再显示"值得潜伏"。
  *
  * 🛑 这是**启发式**，不是实测：内容面靠 genres 推断（页面没有"能写多少页"这种字段）。
  *    所以理由必须跟着分数一起显示，让人能一眼反驳它。
@@ -284,15 +297,17 @@ const STATUS_TIERS = [
  */
 export const UPCOMING_RULES = {
   title: "潜伏评分 = 还没发售时「该不该盯」",
-  formula: "score = 发布确定性 ×0.35 + 日期精确度 ×0.25 + 内容面 ×0.2 + 社区地基 ×0.2",
+  formula: "score = 发布确定性 ×0.28 + 日期精确度 ×0.18 + 内容面 ×0.14 + 社区地基 ×0.20 + 竞争饱和度 ×0.20",
   items: [
     "发布确定性（0~100）：已确认/有发售日 100 · Beta/Early Access 82 · 开发中 55 · 早期原型 40 · 已延期 30 · 可能取消 5 · 未标注 45",
     "日期精确度：确切日期 100 · 只有月份 70 · 只有季度 55 · 只有年份 40 · 未定档 15",
     "内容面（按类型取最高档）：宠物收集/RPG/开放世界 92（有图鉴·配队·流派可写）· 模拟/策略/体育 70 · 动作/射击/解谜 52 · obby/派对/社交 28 · 无类型标注 30",
     "社区地基：Discord +8 · YouTube +6 · Roblox 群组 +6（上限 20）",
+    "🆕 竞争饱和度（0~100，与建站推荐的竞争项**共用同一张分档表**）：SERP 前十独立域名数 → 0 个=100 · 1~2 个=75 · 3~4 个=50 · 5~7 个=25 · ≥8 个=10。**未测 = 不适用（权重跳过），不是 0 分**",
   ],
-  bands: "≥75 = 值得潜伏；已延期 / 可能取消 → 风险档；距发售 ≤7 天 → 窗口已过（新站来不及）",
-  note: "这是「上线前」的分；游戏上线后走「🎯 建站推荐」那套（需求/内容面/新鲜度/竞争）。两套不能互相比。",
+  bands: "≥75 = 值得潜伏；已延期 / 可能取消 → 风险档；**SERP 前十独立域名 ≥5（竞争已起）→ 竞争已起档**；距发售 ≤7 天 → 窗口已过（新站来不及）",
+  note: "这是「上线前」的分；游戏上线后走「🎯 建站推荐」那套（需求/内容面/新鲜度/竞争）。两套不能互相比。" +
+    " 🛑 「未发售」本身不是空位的证据 —— 实测有游戏在发售前就被多家专站占满（Dressmaker），所以竞争饱和度是你判断潜伏机会时**必看**的一维。",
 };
 
 /** @param {object} g normalizeEntry 的输出（含 status/genres/social/releasePrecision/releaseInDays） */
@@ -333,7 +348,32 @@ export function scoreUpcoming(g) {
   if (!have.length) missing.push("无任何社媒链接");
   reasons.push(`社区地基 ${community}（${have.join(" + ") || "无"}）`);
 
-  const score = Math.round(st.score * 0.35 + dateScore * 0.25 + surface * 0.2 + community * 0.2);
+  // ⑤ 竞争饱和度（2026-09-25 新增）—— **未发售 ≠ 空位**
+  //    实测 Dressmaker：发售前（2026-08 甚至 6 月）就已有专站，等正式上线时 SERP 已被 8+ 个站占满。
+  //    数据源是 SERP 缓存（与「建站推荐」共用同一份，见 serp.mjs 的 checkOneSerp）；
+  //    未测 → null（权重跳过），**不是 0 分** —— 没测到 ≠ 没人做。
+  let comp = null;
+  let compWhy = "未测（还没做过 SERP 核查）—— **未测不等于没人做**";
+  const srp = g.serp;
+  if (srp && srp.open != null) {
+    comp = openScore(srp.open);
+    compWhy = `前十 ${srp.domains} 个独立域名（${(srp.hosts || []).slice(0, 3).join(" · ") || "无人占位"}）`;
+    if (srp.competitorFirstSeen) {
+      compWhy += `；首个专站最早快照 ${srp.competitorFirstSeen}` +
+        " ← 我们比它晚了多少，比「有几个站」更接近成败（见 SKILL 第四条红线）";
+    }
+  } else {
+    missing.push("竞争未测");
+  }
+  reasons.push(`竞争饱和度 ${comp == null ? "未测" : comp}（${compWhy}）`);
+
+  // 权重合计 1.00。🛑 社区地基的原始分是 0~20（不是 0~100）—— 这是既有口径，别顺手改。
+  // 竞争未测时**归一化跳过该项**（不是当 0 分算）：诚实标"不知道"，而不是伪造一个低分。
+  const W = { st: 0.28, date: 0.18, surface: 0.14, community: 0.20, comp: 0.20 };
+  let sum = st.score * W.st + dateScore * W.date + surface * W.surface + community * W.community;
+  let wsum = W.st + W.date + W.surface + W.community;
+  if (comp != null) { sum += comp * W.comp; wsum += W.comp; }
+  const score = Math.round(sum / wsum);
 
   // 风险与窗口
   const risky = /maybe cancelled|cancelled|canceled|delayed/i.test(statusStr);
@@ -341,6 +381,9 @@ export function scoreUpcoming(g) {
   let band;
   if (d != null && d < 7) band = { k: "too-late", t: "窗口已过（≤7 天）" };
   else if (risky) band = { k: "risk", t: "风险（延期 / 可能取消）" };
+  // 🆕 硬规则：竞争已经起来（前十 ≥5 个独立域名）→ 不再是"潜伏机会"，直接标出来。
+  //    Dressmaker 就是这类：发售前就已多家专站，等它上线才动手必然晚。
+  else if (comp != null && srp.open <= COMP_SATURATED_OPEN) band = { k: "taken", t: "竞争已起（前十 ≥5 个独立域名）" };
   else if (score >= 75) band = { k: "go", t: "值得潜伏" };
   else if (score >= 55) band = { k: "watch", t: "观察" };
   else band = { k: "no", t: "暂不" };

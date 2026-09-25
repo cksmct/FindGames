@@ -22,6 +22,8 @@ import { loadRobloxUpcoming, normalizeEntry, scoreUpcoming, UPCOMING_RULES } fro
 import { linkUpcomingToRoblox } from "./roblox.mjs";
 import { fetchIosBatch } from "./mobile.mjs";
 import { pushQueue } from "./queue.mjs";
+// 潜伏评分第五维「竞争饱和度」用的单条 SERP 核查（与建站推荐共用同一份实现 + 同一份缓存）
+import { checkOneSerp } from "./serp.mjs";
 import { fetchInterest, hypeRatio } from "./interest.mjs";
 
 const STEAM = "https://store.steampowered.com";
@@ -356,6 +358,39 @@ export async function buildWatchlist(cfg, session) {
       notes.push("Roblox 官方关联（搜索接口）失败：" + e.message + "（清单照常出，只是没有官方页链接）");
     }
 
+    // 🆕 2026-09-25：给 Roblox 潜伏条目补「竞争饱和度」—— **未发售 ≠ 空位**
+    //    实测 Dressmaker（Steam 发售 4 天 / 12,205 在线 / 97% 好评）在**发售前**
+    //    （2026-08 甚至 6 月）就已经有多家专站建好，等它上线时 SERP 已被 8+ 个站占满。
+    //    → 潜伏期就必须问"现在有多少人已经在做了"，否则"未发售"会被误当成"没人做"。
+    //    有界：每轮最多 `watchlist.serpCheck.maxPerRun` 条（默认 5）+ 只在缓存过期时才发请求；
+    //    缓存与「建站推荐」共用 `.serp-cache.json`（同一份测量、同一张分档表）。
+    //    🛑 失败不写缓存（限流 ≠ 没竞争）→ 该维标「未测」，前端会显示"未测不等于没人做"。
+    const serpCacheFile = dataPath(cfg, ".serp-cache.json");
+    const serpCache = readJson(serpCacheFile, {}) || {};
+    const serpCfg = w.serpCheck || {};
+    const serpBudget = serpCfg.enabled === false ? 0 : (serpCfg.maxPerRun == null ? 5 : serpCfg.maxPerRun);
+    const serpTtlMs = (serpCfg.ttlDays == null ? 14 : serpCfg.ttlDays) * 86400000;
+    let serpUsed = 0;
+    let serpCached = 0;
+    const serpKeyOf = (n) => String(n || "").trim().toLowerCase();
+    const serpFor = async (name) => {
+      const k = serpKeyOf(name);
+      const hit = serpCache[k];
+      if (hit && hit.at && now - new Date(hit.at).getTime() < serpTtlMs) { serpCached++; return hit; }
+      if (serpUsed >= serpBudget) return hit || null;      // 超预算：沿用旧结果；没有就留「未测」
+      serpUsed++;
+      try {
+        const rec = await checkOneSerp(name, cfg);
+        serpCache[k] = rec;
+        log("dim", `    潜伏 SERP ${name}：独立域名 ${rec.domains} → 竞争档 ${rec.open}` +
+          (rec.competitorFirstSeen ? `；首个专站最早快照 ${rec.competitorFirstSeen}` : ""));
+        return rec;
+      } catch (e) {
+        log("dim", `    潜伏 SERP ${name} 失败（保持「未测」，不写缓存）：${e.message}`);
+        return hit || null;
+      }
+    };
+
     const pushed = [];
     for (const g of normalized) {
       // 数据可能过期：已经发售的条目默认剔除，但要计数（不静默吞）
@@ -366,6 +401,8 @@ export async function buildWatchlist(cfg, session) {
       seenName.add(key);
       // 优先给**官方游戏页**；解析不到才退回第三方来源页
       const page = g.robloxPage || g.robloxUrl || g.sourceUrl;
+      // 竞争饱和度（潜伏评分第五维）：读缓存 / 在预算内实测。拿不到就是 null（未测），不猜。
+      g.serp = await serpFor(g.name);
       const assess = scoreUpcoming(g);
       const item = {
         id: g.id,
@@ -401,6 +438,12 @@ export async function buildWatchlist(cfg, session) {
       };
       items.push(item);
       pushed.push(item);
+    }
+    if (serpUsed) writeJson(serpCacheFile, serpCache, true);
+    if (serpUsed || serpCached) {
+      notes.push("Roblox 条目的**竞争饱和度**（潜伏评分第五维）本轮实测 " + serpUsed + " 条 · 沿用缓存 " + serpCached +
+        " 条 —— 用「<游戏名> codes」前十的独立域名数衡量「**现在有多少人已经在做**」。未测的条目**不等于没人做**，" +
+        "只是还没轮到测（每轮上限 " + serpBudget + " 条）。");
     }
 
     // ── 已经能玩的（官方数据有访问/在线）→ 推进雷达队列，让它在建站推荐里"接班" ──

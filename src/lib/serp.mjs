@@ -18,10 +18,22 @@
  * ── 三条护栏（都是既有纪律的重复应用）──────────────────────────────────────
  *  1. **限流不等于没有竞争**：429 / 挑战页 / 结构变化一律**不写缓存**，该条目继续显示「未测」，
  *     绝不当成"0 个域名 = 竞争极低"（负缓存禁令，与 Roblox 429 同源）。
- *  2. **只测本来就会标未测的条目**（`onlyUnknownAge`，默认开）—— 其它平台已有更准的
- *     人工核查或上线时长推断，没必要花请求去覆盖；请求量另有 `maxPerRun` 封顶。
+ *  2. **取样范围（2026-09-25 修正）**：原先只测「拿不到官方上线日」的条目 —— 结果是
+ *     **最需要核查的新游戏反而被跳过**（有官方上线日 → 跳过 → 竞争项被"上线时长推断"接管
+ *     → 白送满分）。Dressmaker 事故就是这么来的：上线 4 天拿到 comp=100，
+ *     而真实 SERP 上已有 8+ 个专为该游戏新建的站。现在**抢首发区间（≤ maxAgeDays）也测**；
+ *     老条目才有 age 推断可用，不重复花请求。前端 `compRoom` 是配套改的（两边必须同改）。
  *  3. **判据是域名数，不是结果总数**（谷歌早已取消精确结果数）：同一站点的子域算一个，
  *     并排掉应用商店 / 视频社交 / 通用百科 —— 它们不是"占位的专业站"。
+ *
+ * ── 🆕 2026-09-25：Wayback CDX 查「首个专站出现日」──────────────────────────
+ * 竞争项回答的是"**对手有几个站**"，但决定成败的是"**我们比最早进场者晚了多少**"
+ * （用户口径：「我们不惧怕竞争，只是不能比别人晚太多」）。后者需要"第一个专站何时出现"。
+ * 做法：对 SERP 前十的独立域名各查一次 Wayback CDX 的**最早快照**，取最早的日期写进
+ * `g.serp.competitorFirstSeen` → 前端 `lagMultOf()` 据此算 `ourLagDays` 并乘在总分上。
+ * 实测（2026-09-25）：`dressmakers.wiki` 最早快照 `20260914023600` —— 发售（9-21）前 7 天就存在。
+ *   🛑 这是**下界**：未被 Wayback 收录的域名查不到（`dressmaker.wiki` 就没被收录）→ 实际可能更早。
+ *      查不到就返回 null（不猜、不罚）。
  */
 import { dataPath, readJson, writeJson, iso, log, sleep } from "./util.mjs";
 
@@ -46,6 +58,17 @@ function siteOf(host) {
 /** 独立域名数 → 竞争档 open（1~5，5 = 最空）。🛑 这几档就是人工核查的判据，别随手调 */
 const BANDS = [[0, 5], [2, 4], [4, 3], [7, 2], [Infinity, 1]];
 const bandOf = (n) => (BANDS.find(([max]) => n <= max) || BANDS[BANDS.length - 1])[1];
+
+/**
+ * open(1~5) → 分数（分高 = 竞争低）。**人工核查 / 自动 SERP / 潜伏评分三处共用同一张表**，
+ * 口径才可比。
+ * 🛑 前端 `web/app.js` 有一份同值的 `OPEN_SCORE`（浏览器端无法 import），
+ *    改这里必须同步改那边 —— 两处不一致会让"人工填的 open"和"机器测的域名数"失去可比性。
+ */
+export const OPEN_SCORE = [10, 25, 50, 75, 100];
+export const openScore = (v) => OPEN_SCORE[Math.max(1, Math.min(5, Math.round(v))) - 1];
+/** 竞争"已被占满"的判据：≥5 个独立域名（open ≤ 2）。潜伏评分据此直接标「竞争已起」 */
+export const COMP_SATURATED_OPEN = 2;
 
 /**
  * 自述随产物下发（`games.json.serp`）→ 前端规则块据实展示，**单一事实源在这里**，
@@ -139,6 +162,70 @@ function measure(hosts, c) {
 }
 
 /**
+ * Wayback CDX：某域名**最早一次快照**的日期（YYYY-MM-DD）。
+ * 用途：估计"首个专站是什么时候出现的" → 前端算 `ourLagDays = 我们首次发现日 − 这个日期`。
+ *
+ * 三种返回（必须分清，别混成一种）：
+ *   - 有快照 → 日期字符串
+ *   - 明确没有快照（`[]` / 只有表头）→ `null`（**是有效测量**："这个域名 Wayback 没收录"，不是失败）
+ *   - HTTP 失败 / 超时 → **抛错**（由调用方跳过，不写任何东西）
+ */
+async function cdxFirstSeen(domain, c) {
+  const url = "http://web.archive.org/cdx/search/cdx?url=" + encodeURIComponent(domain) +
+    "&output=json&limit=1&fl=timestamp";
+  const r = await fetch(url, {
+    headers: { "user-agent": UA, accept: "application/json" },
+    signal: AbortSignal.timeout(c.timeoutMs || 15000),
+  });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const t = (await r.text()).trim();
+  if (!t || t === "[]") return null;                       // 无快照（≠ 失败）
+  let j;
+  try { j = JSON.parse(t); } catch { throw new Error("CDX 返回不是 JSON（" + t.length + "B）"); }
+  const ts = j && j[1] && j[1][0];                          // j[0] 是表头行，j[1] 才是首条记录
+  if (!ts || !/^\d{14}$/.test(String(ts))) return null;
+  const s = String(ts);
+  return s.slice(0, 4) + "-" + s.slice(4, 6) + "-" + s.slice(6, 8);
+}
+
+/**
+ * **单条** SERP 核查（含 CDX 首个专站）—— 主循环与**潜伏清单**共用这一份实现。
+ *
+ * 2026-09-25 抽出：潜伏清单（未发售条目）也需要"竞争饱和度"，
+ *   因为**未发售 ≠ 空位** —— 实测 Dressmaker 在发售前（2026-08 甚至 6 月）就有专站在做。
+ *   两条链共用同一份测量逻辑，口径才不会漂。
+ *
+ * @returns {object} rec（可直接写缓存 / 挂到 `g.serp`）；**抛错 = 测量失败**，调用方不得写缓存
+ */
+export async function checkOneSerp(name, cfg) {
+  const c = Object.assign(
+    { query: "{q} codes", topN: 10, cdx: { enabled: true, maxDomains: 3, timeoutMs: 15000, gapMs: 1200 } },
+    (cfg && cfg.games && cfg.games.serpComp) || {}
+  );
+  const q = String(c.query || "{q} codes").replace("{q}", name);
+  const m = measure(await serpHosts(q, c), c);
+  const rec = Object.assign({ at: iso(), query: q }, m);
+  if (c.cdx && c.cdx.enabled !== false && m.hosts.length) {
+    const seen = [];
+    for (const d of m.hosts.slice(0, c.cdx.maxDomains || 3)) {
+      try {
+        const at = await cdxFirstSeen(d, c.cdx);
+        if (at) seen.push({ domain: d, at });
+      } catch (e) {
+        log("dim", `      CDX ${d} 跳过（不猜）：${e.message}`);
+      }
+      await sleep(c.cdx.gapMs || 1200);
+    }
+    if (seen.length) {
+      seen.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      rec.competitorFirstSeen = seen[0].at;              // 最早 = 首个专站出现日（**下界**）
+      rec.competitorSeenList = seen;
+    }
+  }
+  return rec;
+}
+
+/**
  * 给"竞争项本来只能标未测"的条目做自动 SERP 核查，结果写进 `g.serp`。
  *
  * 有界：每轮最多 `maxPerRun` 次请求（默认 12）+ 间隔 `gapMs`（默认 3s）+ 成功后缓存 `ttlDays` 天。
@@ -148,10 +235,15 @@ function measure(hosts, c) {
  */
 export async function enrichSerpComp(items, cfg) {
   const c = Object.assign(
-    { enabled: true, maxPerRun: 12, ttlDays: 7, gapMs: 3000, query: "{q} codes", topN: 10, onlyUnknownAge: true },
+    {
+      enabled: true, maxPerRun: 12, ttlDays: 7, gapMs: 3000, query: "{q} codes", topN: 10,
+      onlyUnknownAge: true,   // 保留：无官方上线日的条目一律测（它们本来只能标未测）
+      maxAgeDays: 180,        // 🆕 2026-09-25：抢首发区间（上线 ≤180 天）**也要测**
+      cdx: { enabled: true, maxDomains: 3, timeoutMs: 15000, gapMs: 1200 },
+    },
     (cfg && cfg.games && cfg.games.serpComp) || {}
   );
-  const out = { tested: 0, ok: 0, failed: 0, cached: 0 };
+  const out = { tested: 0, ok: 0, failed: 0, cached: 0, firstSeen: 0 };
   if (!c.enabled) return out;
 
   const file = dataPath(cfg, ".serp-cache.json");
@@ -164,8 +256,25 @@ export async function enrichSerpComp(items, cfg) {
     const st = g.stats || {};
     return st.visits ?? st.playing ?? st.ratings ?? st.reviews ?? 0;
   };
-  /** 拿不到官方上线日 → 竞争项本来只能标未测（只有这些值得花请求） */
-  const noAge = (g) => !((g.stats && g.stats.created) || g.srcCreated);
+  const ageDaysOf = (g) => {
+    const cr = (g.stats && g.stats.created) || g.srcCreated;
+    if (!cr) return null;
+    const d = (Date.now() - new Date(cr).getTime()) / 86400000;
+    return isFinite(d) ? d : null;
+  };
+  /**
+   * 哪些条目需要实测？
+   *   - 拿不到官方上线日 → 只能靠实测（旧行为，安卓）
+   *   - **抢首发区间（≤ maxAgeDays）→ 也测**（🆕 2026-09-25，见文件头第 2 条护栏）
+   *   - 其余（>maxAgeDays 的老条目）已有 age 推断可用，不重复花请求
+   * `onlyUnknownAge: false` 可退回"全部测"，仅调试用。
+   */
+  const needSerp = (g) => {
+    const a = ageDaysOf(g);
+    if (a == null) return true;
+    if (a <= (c.maxAgeDays == null ? 180 : c.maxAgeDays)) return true;
+    return c.onlyUnknownAge === false;
+  };
 
   const todo = [];
   for (const g of items || []) {
@@ -174,21 +283,21 @@ export async function enrichSerpComp(items, cfg) {
     const hit = cache[k];
     const fresh = hit && hit.at && now - new Date(hit.at).getTime() < ttl;
     if (fresh) { g.serp = hit; out.cached++; continue; }     // 命中缓存 → 直接挂上，不发请求
-    if (c.onlyUnknownAge && !noAge(g)) continue;             // 其它平台有更准的来源，不覆盖
+    if (!needSerp(g)) continue;
     todo.push(g);
   }
   todo.sort((a, b) => demandOf(b) - demandOf(a));
 
   for (const g of todo.slice(0, c.maxPerRun || 12)) {
-    const q = String(c.query || "{q} codes").replace("{q}", g.name);
     out.tested++;
     try {
-      const m = measure(await serpHosts(q, c), c);
-      const rec = Object.assign({ at: iso(), query: q }, m);
+      const rec = await checkOneSerp(g.name, cfg);
       cache[keyOf(g.name)] = rec;
       g.serp = rec;
       out.ok++;
-      log("dim", `    SERP ${g.name}：独立域名 ${m.domains} → 竞争档 ${m.open}（${m.hosts.slice(0, 3).join(" · ") || "无人占位"}）`);
+      if (rec.competitorFirstSeen) out.firstSeen++;
+      log("dim", `    SERP ${g.name}：独立域名 ${rec.domains} → 竞争档 ${rec.open}（${(rec.hosts || []).slice(0, 3).join(" · ") || "无人占位"}）` +
+        (rec.competitorFirstSeen ? `；首个专站最早快照 ${rec.competitorFirstSeen}` : "；首个专站日期未取得（下界缺失，不猜）"));
     } catch (e) {
       // 🛑 失败一律不写缓存：限流/挑战 ≠ 没有竞争（写进去就成了负缓存）
       out.failed++;

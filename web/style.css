@@ -256,3 +256,6 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 5px; color: #
 .wk-band.wk-no { background: rgba(139, 151, 168, .12); color: var(--dim); }
 .wk-band.wk-risk { background: rgba(248, 81, 73, .12); color: #ff9a92; }
 .wk-band.wk-too-late { background: rgba(248, 81, 73, .12); color: #ff9a92; }
+/* 🆕 2026-09-25：竞争已起（前十 ≥5 个独立域名）—— **未发售 ≠ 空位**
+   （实测 Dressmaker 在发售前就有多家专站，上线时 SERP 已被 8+ 个站占满） */
+.wk-band.wk-taken { background: rgba(219, 109, 40, .16); color: #ffa657; }
