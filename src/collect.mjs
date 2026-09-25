@@ -514,6 +514,11 @@ if (cfg.games.enabled) {
       //    "发售前发现"的先手红利在架构里就兑现不了。
       //    通路：watchlist.mjs 的 firstSeen → pushQueue → 这里。
       firstSeenAt: prev?.firstSeenAt || (c.srcInfo && c.srcInfo.firstSeen) || "",
+      // 🆕 保留官方数据观测链（stats / statsAt / statsPrev）：known.set 会替换整个对象，
+      //    不带走的话每次曲线重验都丢一次历史观测 → 「需求速度」差分永远断档
+      ...(prev && prev.stats
+        ? { stats: prev.stats, statsAt: prev.statsAt, ...(prev.statsPrev ? { statsPrev: prev.statsPrev } : {}) }
+        : {}),
       last: iso(),
       sightings: (prev?.sightings || 0) + 1,
       hype,

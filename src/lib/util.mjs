@@ -107,3 +107,28 @@ export function fmtVol(v) {
   if (v >= 1e3) return `${v / 1e3}K`;
   return String(v);
 }
+
+/**
+ * 把当前官方计数挪进 `statsPrev`（供「需求速度」差分用）—— 2026-09-25 新增。
+ *
+ * 为什么需要：三个数据补充层（roblox / steam / mobile）覆盖 `it.stats` 时直接覆写，
+ * 旧观测被丢弃 → 只剩"现在的绝对量"，没有"单位时间增量"。
+ * 小游戏恰恰要看**速度**而不是存量（1 万访问的老游和 1 万访问的上周新游是两个结论）。
+ *
+ * 规则：仅当旧观测确实更旧时才挪（同轮重复调用无害）；搬走的是**可比计数**
+ * （visits / playing / ratings / reviews），不带评分星级这类非单调字段。
+ * 前端 `velocityOf()` 按两次观测的时间差算 per-day 增量。
+ */
+export function keepStatsPrev(it, newAt) {
+  const st = it && it.stats;
+  if (!st) return;
+  const oldAt = it.statsAt || st.fetchedAt;
+  if (!oldAt || !newAt || new Date(oldAt).getTime() >= new Date(newAt).getTime()) return;
+  it.statsPrev = {
+    at: oldAt,
+    visits: st.visits ?? null,
+    playing: st.playing ?? null,
+    ratings: st.ratings ?? null,
+    reviews: st.reviews ?? null,
+  };
+}

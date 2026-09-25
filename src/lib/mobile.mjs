@@ -24,7 +24,7 @@
  *      绝不按名字去别的平台找同名 —— "Deep Fishing" 在 Roblox 与 Steam 上就是两个游戏。
  *   ② 拿不到就写 null 并保留旧值，绝不写 0（0 分 ≠ 没人玩，未测 ≠ 0）。
  */
-import { dataPath, readJson, writeJson, iso, log, sleep } from "./util.mjs";
+import { dataPath, readJson, writeJson, iso, log, sleep, keepStatsPrev } from "./util.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
@@ -141,6 +141,7 @@ export async function fetchAndroidDetail(pkg) {
 /** 补一个 iOS 条目（来自缓存或批量请求结果） */
 function applyIos(it, st) {
   if (!st) return false;
+  keepStatsPrev(it, st.fetchedAt);   // 旧观测挪进 statsPrev → 前端可算「评分增速」
   it.stats = st;
   it.statsAt = st.fetchedAt;
   return true;
@@ -220,6 +221,7 @@ export async function enrichMobileStats(items, cfg) {
       const st = await fetchAndroidDetail(c.pkg);
       if (st) {
         cache.android[c.pkg] = st;
+        keepStatsPrev(c.it, st.fetchedAt);   // 旧观测挪进 statsPrev → 前端可算「评分增速」
         c.it.stats = st;
         c.it.statsAt = st.fetchedAt;
         andOk++;

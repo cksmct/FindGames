@@ -21,7 +21,7 @@
  *    Roblox 游戏身上，覆盖它真实的 visits/approval。所以这里只对"来源未知或明确是 Steam"
  *    的条目做名字解析（见 enrichSteamStats 里的两道护栏）。
  */
-import { dataPath, readJson, writeJson, iso, log, sleep, retry } from "./util.mjs";
+import { dataPath, readJson, writeJson, iso, log, sleep, retry, keepStatsPrev } from "./util.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const HDR = { "user-agent": UA, "accept-language": "en-US", accept: "application/json" };
@@ -230,6 +230,7 @@ export async function enrichSteamStats(items, cfg) {
       const st = await fetchSteamStats(appid, { gapMs: s.gapMs ?? 350 });
       if (st && (st.name || st.reviews != null)) {
         cache.items[appid] = st;
+        keepStatsPrev(t.it, st.fetchedAt);   // 旧观测挪进 statsPrev → 前端可算「评价/在线增速」
         t.it.stats = st;
         t.it.statsAt = st.fetchedAt;
         fetched++;

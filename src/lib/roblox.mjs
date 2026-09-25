@@ -20,7 +20,7 @@
  *    也不要回退到旧的 gamesV2 群组接口，实测对所有组都返回空数组（见 skill 护栏 1）。
  */
 import { randomUUID } from "node:crypto";
-import { log, sleep, iso, dataPath, readJson, writeJson } from "./util.mjs";
+import { log, sleep, iso, dataPath, readJson, writeJson, keepStatsPrev } from "./util.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const HDR = { "user-agent": UA, accept: "application/json" };
@@ -238,8 +238,10 @@ export async function enrichGameStats(items, cfg) {
     const uid = resolved.get(it);
     const d = uid ? games.map.get(uid) : null;
     if (!d) { failed++; continue; } // 保留旧 stats（宁可用上次的数字，也不要留空）
+    const nowIso = iso();
+    keepStatsPrev(it, nowIso);   // 旧观测挪进 statsPrev → 前端可算「需求速度」（visits/天）
     it.stats = shapeStats(d, votes.map.get(uid));
-    it.statsAt = iso();
+    it.statsAt = nowIso;
     fetched++;
   }
   if (failed) errors.push(`${failed} 个没拿到 games 记录（沿用旧值）`);

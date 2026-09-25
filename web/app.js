@@ -542,6 +542,60 @@
   function clamp01(v) { return Math.max(0, Math.min(100, v)); }
   var avgOf = function (a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : 0; };
 
+  // ── 🆕 需求速度（2026-09-25）：两次官方计数观测的差分 ──
+  // 小游戏恰恰要看**速度**而不是存量：1 万访问的老游和 1 万访问的上周新游是两个结论。
+  // 后端 keepStatsPrev 在每次刷新官方数据时把旧观测挪进 statsPrev，这里算 per-day 增量。
+  // 观测间隔 <12h 的差分噪声太大（Roblox 访问量按小时跳动），返回 null 不显示。
+  function velocityOf(g) {
+    var p = g.statsPrev, s = g.stats || {};
+    if (!p || !p.at || !s.fetchedAt) return null;
+    var days = (new Date(s.fetchedAt) - new Date(p.at)) / 86400000;
+    if (!(days >= 0.5)) return null;
+    var kinds = ["visits", "playing", "ratings", "reviews"];
+    for (var i = 0; i < kinds.length; i++) {
+      var k = kinds[i];
+      if (s[k] != null && p[k] != null) return { kind: k, perDay: Math.round((s[k] - p[k]) / days), days: Math.round(days) };
+    }
+    return null;
+  }
+
+  // ── 🆕 绝对需求地板（2026-09-25）：平台计数下限 → 低于 = 攻略站回不了本 ──
+  // 🛑 与「未测」严格分开：**可测但低于地板** → 硬 no（理由写明数字）；拿不到数字 → 不判，标未测。
+  // 🛑 锚点是**启动假设**（常识拍定，不是回归结果）：跑两周后按成功/失败样本校准，
+  //    校准前对个别条目的异议走 feedback / 人工 competition 覆盖，别直接改这里的数。
+  //    未发售条目不适用（它们还没上线，走潜伏线），pickVerdict 里的调用点在 comingSoon 之后。
+  //    itch/poki/热搜等无平台量的来源不适用地板 → 由「小基准刻度」（baseline.floor）负责。
+  var DEMAND_FLOORS = [
+    //  [ageDays 上限, Roblox 终身访问, Roblox 在线, Steam 评价数, 手游评分人数]
+    [30, 1e5, 100, 30, 300],
+    [180, 1e6, 300, 100, 1000],
+    [Infinity, 5e6, 500, 300, 3000],
+  ];
+  function demandFloorVerdict(g, ageDays) {
+    var st = g.stats || {};
+    var plt = platformOf(st);
+    var fl = null;
+    for (var i = 0; i < DEMAND_FLOORS.length; i++) {
+      if (ageDays != null && ageDays <= DEMAND_FLOORS[i][0]) { fl = DEMAND_FLOORS[i]; break; }
+    }
+    if (!fl) return null;
+    var tier = ageDays <= 30 ? "新游地板（上线≤30天）" : ageDays <= 180 ? "成长地板（≤180天）" : "成熟地板（>180天）";
+    if (plt === "roblox") {
+      if (st.visits == null && st.playing == null) return null;
+      var vOk = st.visits != null && st.visits >= fl[1];
+      var pOk = st.playing != null && st.playing >= fl[2];
+      if (!vOk && !pOk) return { why: tier + "：Roblox 终身访问 " + fmtCount(st.visits) + " / 当前在线 " + fmtCount(st.playing) +
+        "，均低于门槛（访问 " + fmtCount(fl[1]) + " 或在线 " + fmtCount(fl[2]) + "）—— 搜攻略的人撑不起一个站" };
+    } else if (plt === "steam") {
+      if (st.reviews == null) return null;
+      if (st.reviews < fl[3]) return { why: tier + "：Steam 评价 " + fmtCount(st.reviews) + " 低于门槛 " + fmtCount(fl[3]) + "（评价数 ≈ 销量代理）" };
+    } else if (plt === "ios" || plt === "android") {
+      if (st.ratings == null) return null;
+      if (st.ratings < fl[4]) return { why: tier + "：评分人数 " + fmtCount(st.ratings) + " 低于门槛 " + fmtCount(fl[4]) + "（装机量不公开，评分人数是唯一代理）" };
+    }
+    return null;
+  }
+
   // ── 📖 评分规则展示（用户要求"把规则打在每个页面上"）──
   // 原则：**数字从代码常量生成**（PICK_W / demandScore 的锚点），不手抄 —— 规则与实现才不会漂移。
   // 雷达分与潜伏分的规则由后端随产物下发（games.scoring / watch.rules），单一事实源在算分函数旁边。
@@ -575,6 +629,8 @@
       "🛑 2026-09-25 已修「上线时间被计两遍」：旧版新鲜度(16) + 竞争(16) 同由 ageDays 驱动，于是刚上线的游戏白拿 32 分（约占三分之一权重）。现在**抢首发区间（≤180 天）的竞争项不再用上线时长推断**，拿不到实测就如实标「未测」；我方时机改由新项**发现提前量(lead)** 承担。实测反例 Dressmaker（Steam 发售 4 天 / 97% 好评 / 12,205 在线）：旧版给 96~100 分判「值得做」，而 SERP 已有 8+ 个专为该游戏新建的站、且多个在**发售前**就铺好了稿",
       "Roblox 的需求未按上线年龄归一：同样 1000 万访问，上线 1 个月和上线 3 年同分（终身访问量口径的固有偏差）",
       "三套需求锚点与内容面档位是启发式（方向对、数值拍定），不是数据回归拟合的结果",
+      "🆕 绝对需求地板与小基准刻度（2026-09-25）：平台计数低于「需求地板」→ 判「需求低于地板」；搜索峰值低于小基准参照词 → 判「需求低于最小参照」。两者都是**可测但不够**的硬 no，与「未测」严格分开。地板锚点是启动假设，运行两周后按成功/失败样本校准；itch/poki/热搜等无平台量来源靠小基准刻度",
+      "🆕 需求速度：两次官方计数观测的差分（statsPrev，间隔 ≥12h 才显示）—— 同样的存量，增速完全不同",
       "❄️ 曲线保鲜：卡片曲线是「发现那一刻的快照」，超过 curveRefresh.hours（默认 48h）会重取；重取**成功但连续 2 次没有量** → 标「已转凉」并在推荐页降到「观察」。取数失败（429）不算转凉",
       "0 与「未测」端到端分开：数据层缺失写 null，展示层也不把 0 渲染成 —（否则\"真的是 0\"与\"没抓到\"无法区分）",
     ];
@@ -1022,6 +1078,20 @@
           "）—— 需求在退潮，先别投产能",
       };
     }
+    // 🆕 小基准刻度（2026-09-25）：连"已知最小行情"的参照词都比不过 → 快速否定。
+    //    itch / poki / 热搜等无平台量的来源主要靠它；与「未测」严格分开（floor=true 是测出来的）。
+    if (g.baseline && g.baseline.floor) {
+      return {
+        k: "no", t: "需求低于最小参照",
+        why: "7 天搜索峰值 " + g.baseline.termPeak + " 低于参照词「" + (g.baseline.floorRef || "基准") + "」（峰值 " +
+          g.baseline.floorPeak + "，同一请求共享尺度）—— 连最小可行情都够不到，几乎确定没法做",
+      };
+    }
+    // 🆕 绝对需求地板（2026-09-25）：平台计数低于下限 → 硬 no。可测但不够，不是"未测"。
+    var floorHit = demandFloorVerdict(g, r.ageDays);
+    if (floorHit) {
+      return { k: "no", t: "需求低于地板", why: floorHit.why };
+    }
     // 🛑 竞争测不到就不下结论 —— 但要给"怎么补"的动作（点「查竞争」看 SERP），
     //    而不是像旧版那样用访问量硬推断一个"巨头级"。
     if (r.comp.score == null) {
@@ -1110,6 +1180,13 @@
     if (r.comp.source === "serp" && r.comp.domains != null) {
       leadTxt += " · 竞争 前十 " + r.comp.domains + " 域名 / 专用站 " +
         (r.comp.dedicated == null ? "—" : r.comp.dedicated);
+    }
+    // 🆕 需求速度（2026-09-25）：两次官方观测的差分 —— 小游戏看增速比看存量更准
+    var vel = velocityOf(g);
+    if (vel && vel.perDay > 0) {
+      metaLine += " · 速度 +" + fmtVol(vel.perDay) + " " +
+        (vel.kind === "visits" ? "访问/天" : vel.kind === "playing" ? "在线/天" : vel.kind === "ratings" ? "评分/天" : "评价/天") +
+        "（近 " + vel.days + " 天差分）";
     }
     metaLine += leadTxt;
     return '<div class="gcard pk-card">' +
