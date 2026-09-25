@@ -197,9 +197,9 @@
       "minRatings": 1000,
       "minWords": 3,
       "minAgeDays": 7,
-      "maxPerRun": 6,
+      "maxPerRun": 12,
       "ttlDays": 7,
-      "gapMs": 3000,
+      "gapMs": 5000,
       "query": "{q} codes",
       "topN": 10,
       "cdx": {
