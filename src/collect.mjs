@@ -17,7 +17,7 @@
 import path from "node:path";
 import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, writeJson, dataPath } from "./lib/util.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
-import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh } from "./lib/interest.mjs";
+import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh, enrichBaseline } from "./lib/interest.mjs";
 import {
   noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo,
   feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES, AAA_FRANCHISES,
@@ -651,6 +651,16 @@ if (cfg.games.enabled) {
   const serpRes = await enrichSerpComp(list, cfg);
   if (serpRes.tested || serpRes.cached) {
     log("info", `自动竞争核查（SERP）：本轮测 ${serpRes.tested}（成功 ${serpRes.ok} · 失败 ${serpRes.failed}）· 沿用缓存 ${serpRes.cached}`);
+  }
+
+  // ── 小基准刻度（2026-09-25 新增）──
+  // 回答「这个小游戏到底有没有可行情」：候选 + 小量级参照词（gimkit/blooket 这类，绝不是 GPTs）
+  // 同一次请求共享 0-100 尺度 → 峰值低于参照 = 判「需求低于最小参照」（前端硬 no）。
+  // 只测没有平台需求口径的条目（itch/poki/crazygames/热搜候选）；有 visits/ratings 的走绝对需求地板。
+  const baseRes = await enrichBaseline(list, session, cfg);
+  if (baseRes.eligible) {
+    log("info", `小基准刻度：本轮 ${baseRes.groups} 组（有量 ${baseRes.ok} · 低于参照 ${baseRes.floor} · 失败/作废 ${baseRes.failed}）· 沿用缓存 ${baseRes.cached}` +
+      (baseRes.skipped ? ` · 留到下一轮 ${baseRes.skipped}` : ""));
   }
 
   // ── 🆕 2026-09-25：firstSeenAt 存量回填（幂等）──

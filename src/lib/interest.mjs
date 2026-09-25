@@ -195,6 +195,112 @@ const peakOf = (a) => (a && a.length ? Math.max(...a) : 0);
 const avgOf = (a) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
 
 /**
+ * **小基准刻度**（2026-09-25 新增）：候选 + 小量级参照词放进**同一次** Trends 请求，
+ * 回答「这个小游戏到底有没有可行情」—— 替代已停用的 GPTs 基准（它太大，2/3 条目被取整成 0）。
+ *
+ * 判读（🛑 与「未测」严格分开）：
+ *   · 参照词在本组尺度有数据、候选峰值 **< 参照峰值** → `g.baseline.floor = true`
+ *     → 前端判「需求低于最小参照」—— 连最小可行情都够不到，几乎确定没法做（用户口径）。
+ *   · 候选峰值 ≥ 参照峰值 → 有量（大小看 ratio），不设硬结论。
+ *   · 参照词本身无数据 → 本组**作废**（不写缓存，保持未测）—— 绝不编比值（负缓存禁令）。
+ *
+ * 只测「没有平台需求口径」的条目（itch / poki / crazygames / 热搜候选）——
+ * 有 visits / ratings / reviews 的走「绝对需求地板」（那更准），不在这里重复花配额。
+ *
+ * ⚠️ 参照词（`games.baseline.refs`，默认 gimkit / blooket）是**启动假设**：
+ *    两个教育游戏品牌，量级远小于 GPTs、又确有"养得起攻略站"的持续需求。
+ *    跑两周后必须按成功/失败样本重标定（见 README 校准流程），别把默认值当真理。
+ *
+ * 有界：每轮 `maxPerRun`（默认 8）· 按来源公平抽样（pickFairShare）· 成功缓存 `ttlDays`（默认 7）·
+ *       连续 `rateLimitStop`（默认 2）组限流即本轮收工。
+ */
+export async function enrichBaseline(items, session, cfg) {
+  const g = (cfg && cfg.games) || {};
+  const c = Object.assign(
+    { enabled: true, maxPerRun: 8, ttlDays: 7, gapMs: 2500, rateLimitStop: 2, refs: ["gimkit", "blooket"] },
+    g.baseline || {}
+  );
+  const out = { groups: 0, ok: 0, floor: 0, failed: 0, cached: 0, skipped: 0, eligible: 0, limited: 0 };
+  if (!c.enabled || !session) return out;
+  const refs = (Array.isArray(c.refs) ? c.refs : []).map((x) => String(x || "").trim()).filter(Boolean).slice(0, 2);
+  if (!refs.length) return out;
+
+  const now = Date.now();
+  const ttl = (c.ttlDays || 7) * 86400000;
+  const geoDefault = (g.geos || ["US"])[0];
+
+  const todo = [];
+  for (const it of items || []) {
+    if (!it || !it.name) continue;
+    // 有平台需求口径的条目走「绝对需求地板」（更准），不在这里花配额
+    if (it.stats && (it.stats.visits != null || it.stats.platform === "steam" ||
+        it.stats.platform === "ios" || it.stats.platform === "android")) continue;
+    if (it.baseline && it.baseline.at && now - new Date(it.baseline.at).getTime() < ttl) { out.cached++; continue; }
+    todo.push(it);
+  }
+  todo.sort((a, b) => (b.score || 0) - (a.score || 0));
+  const picked = pickFairShare(todo, c.maxPerRun || 8);
+  out.eligible = todo.length + out.cached;
+  out.skipped = todo.length - picked.length;
+
+  const slot = Math.max(1, 5 - refs.length);            // Trends 上限 5 词：候选 + 参照
+  for (let i = 0; i < picked.length; i += slot) {
+    const group = picked.slice(i, i + slot);
+    const names = group.map((x) => String(x.name).trim());
+    const geo = group[0].chart_geo || geoDefault;
+    out.groups++;
+    try {
+      const d = await fetchCompareGroup(session, names.concat(refs), geo, {
+        timeframe: g.timeframe || "now 7-d",
+        sampleEveryHours: g.sampleEveryHours || 4,
+      });
+      const measurable = (term) => {
+        const peak = peakOf(d.seriesByTerm[term] || []);
+        const has = d.hasDataByTerm ? d.hasDataByTerm[term] : undefined;
+        return (peak > 0 || has === true) ? peak : null;
+      };
+      const refPeaks = refs.map(measurable);
+      const floorPeak = Math.min(...refPeaks.filter((v) => v != null));
+      if (floorPeak == null || !isFinite(floorPeak)) {
+        // 参照词全部无数据 → 本组作废（不写缓存，保持未测）
+        out.failed += group.length;
+        log("dim", `    小基准（${geo}）：参照词 ${refs.join("/")} 在本组尺度无数据 → 本组作废（不写缓存，保持未测）`);
+      } else {
+        const parts = [];
+        for (const it of group) {
+          const term = String(it.name).trim();
+          const termPeak = peakOf(d.seriesByTerm[term] || []);
+          const termHas = d.hasDataByTerm ? d.hasDataByTerm[term] : undefined;
+          const measurableTerm = termPeak > 0 || termHas === true;
+          const below = !measurableTerm || termPeak < floorPeak;
+          it.baseline = {
+            at: iso(), geo, refs, refPeaks, floorPeak, termPeak,
+            termHasData: termHas ?? null,
+            ratio: measurableTerm ? Number((termPeak / floorPeak).toFixed(3)) : null,
+            floor: below,
+          };
+          if (below) out.floor++; else out.ok++;
+          parts.push((measurableTerm ? termPeak + "/" + floorPeak : "无数据") + " " + term);
+        }
+        log("dim", `    小基准（${geo}·参照 ${refs.join("/")} 峰值 ${floorPeak}）：${parts.join(" · ")}`);
+        out.limited = 0;
+      }
+    } catch (e) {
+      out.failed += group.length;
+      const limited = /429/.test(String(e.message));
+      if (limited) out.limited++;
+      log("warn", `    小基准取数失败（${names.join(" / ")}）：${e.message} —— 不写缓存，保持「未测」`);
+      if (limited && out.limited >= (c.rateLimitStop || 2)) {
+        log("warn", `    小基准连续 ${out.limited} 组限流 → 本轮提前结束（剩余留给下一轮）`);
+        break;
+      }
+    }
+    await sleep(c.gapMs || 2500);
+  }
+  return out;
+}
+
+/**
  * 按来源**公平抽样**（`enrichCompare` / `enrichCurveRefresh` 共用）。
  *
  * 🛑 为什么不能只按分数排序取前 N：实测"纯分数排序"会把 Roblox 饿死 ——

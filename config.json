@@ -248,6 +248,14 @@
       "gapMs": 2500,
       "rateLimitStop": 2
     },
+    "baseline": {
+      "enabled": true,
+      "maxPerRun": 8,
+      "ttlDays": 7,
+      "gapMs": 2500,
+      "rateLimitStop": 2,
+      "refs": ["gimkit", "blooket"]
+    },
     "minVol": 200,
     "strongSignal": {
       "belowVol": 1000,

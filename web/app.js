@@ -1181,6 +1181,11 @@
       leadTxt += " · 竞争 前十 " + r.comp.domains + " 域名 / 专用站 " +
         (r.comp.dedicated == null ? "—" : r.comp.dedicated);
     }
+    // 🆕 小基准刻度（2026-09-25）：与最小行情参照词同尺度比过 —— 无平台量来源的"需求"证据
+    if (g.baseline) {
+      leadTxt += " · 小基准 峰值 " + (g.baseline.termPeak || 0) + " vs 参照 " + g.baseline.floorPeak +
+        (g.baseline.floor ? "（🔴 低于最小参照）" : "（×" + (g.baseline.ratio == null ? "—" : g.baseline.ratio) + "）");
+    }
     // 🆕 需求速度（2026-09-25）：两次官方观测的差分 —— 小游戏看增速比看存量更准
     var vel = velocityOf(g);
     if (vel && vel.perDay > 0) {
