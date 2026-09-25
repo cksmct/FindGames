@@ -223,6 +223,16 @@
       ]
     },
     "maxItems": 3000,
+    "retention": {
+      "enabled": true,
+      "signalDays": 30,
+      "minWords": 3
+    },
+    "history": {
+      "enabled": true,
+      "maxLines": 40000,
+      "keepRatio": 0.7
+    },
     "steamListCount": 60,
     "steamUpcomingCount": 40,
     "queue": {

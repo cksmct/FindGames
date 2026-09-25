@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import vm from "node:vm";
+import { loadEngine, appSourceOf } from "./lib/verdict.mjs";
 import { execFileSync } from "node:child_process";
 import { ROOT, parseArgs, log } from "./lib/util.mjs";
 
@@ -39,108 +39,11 @@ function resolveDataset() {
   return dir;
 }
 
-/** app.js 源码：current = 工作区文件；其它值 = 某个 git 版本（修复前对照用 HEAD） */
-function appSource(logic) {
-  if (!logic || logic === "current") return fs.readFileSync(path.join(ROOT, "web", "app.js"), "utf8");
-  return execFileSync("git", ["show", logic + ":web/app.js"], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 }).toString("utf8");
-}
-
-/**
- * 注入导出钩子：在「切换」那一段（纯函数定义之后、事件绑定之前）插一段只读导出。
- * 用 eval 逐个取名并 null 兜底 —— 跨版本对照时旧版缺少某个函数也不会整体报错。
- */
-const HOOK = `
-  // ── Node 复算钩子（src/audit-verdicts.mjs 注入；浏览器里不存在这一段）──
-  var __auditPick = function (n) { try { return eval(n); } catch (e) { return null; } };
-  globalThis.__RADAR_LOGIC__ = {
-    rankability: __auditPick("rankability"),
-    pickVerdict: __auditPick("pickVerdict"),
-    compRoom: __auditPick("compRoom"),
-    discoveryLeadDays: __auditPick("discoveryLeadDays"),
-    discoveryLeadScore: __auditPick("discoveryLeadScore"),
-    lagMultOf: __auditPick("lagMultOf"),
-    platformOf: __auditPick("platformOf"),
-    PICK_W: __auditPick("PICK_W"),
-    PRE_W: __auditPick("PRE_W"),
-    COMP_LABEL: __auditPick("COMP_LABEL"),
-    get games() { return __auditPick("games"); },
-    get manualComp() { return __auditPick("MANUAL_COMP"); },
-  };
-`;
-
-function patch(src) {
-  const anchor = "\n  // ── 切换 ──";
-  if (src.includes(anchor)) return src.replace(anchor, function () { return HOOK + anchor; });
-  const tail = "\n})();";
-  if (!src.includes(tail)) throw new Error("app.js 结构变了：找不到注入锚点（切换段 / IIFE 收尾）—— 请更新 src/audit-verdicts.mjs 的锚点");
-  return src.replace(tail, function () { return HOOK + tail; });
-}
-
-/** 万能 DOM 桩：任何属性 / 调用都返回它自己（够用即可 —— 我们只取纯函数，不校验渲染） */
-function makeStub() {
-  const target = function () {};
-  const stub = new Proxy(target, {
-    get(t, k) {
-      if (k === Symbol.toPrimitive) return function () { return ""; };
-      if (k === "then" || k === "toJSON") return undefined;
-      if (k === "length") return 0;
-      if (k === "innerHTML" || k === "innerText" || k === "textContent" || k === "value") return "";
-      if (k === "nextSibling" || k === "previousSibling" || k === "firstChild" || k === "lastChild" ||
-        k === "parentNode" || k === "parentElement" || k === "firstElementChild" || k === "lastElementChild") return null;
-      if (k === "children" || k === "childNodes") return [];
-      if (k === "forEach" || k === "map" || k === "filter" || k === "slice") return function () { return stub; };
-      if (k === "closest") return function () { return null; };
-      if (k === "contains" || k === "hasAttribute" || k === "matches") return function () { return false; };
-      return stub;
-    },
-    set() { return true; },
-    apply() { return stub; },
-    construct() { return stub; },
-    has() { return true; },
-  });
-  return stub;
-}
-
-/** fetch 桩：把 data/xxx.json 映射到数据集目录；取不到就当 404（前端本来就有 catch） */
-function makeFetch(dir) {
-  return function (url) {
-    const u = String(url || "");
-    const rel = u.replace(/^\.?\//, "").replace(/^data\//, "");
-    try {
-      const txt = fs.readFileSync(path.join(dir, rel), "utf8");
-      const data = JSON.parse(txt);
-      return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(data); }, text: function () { return Promise.resolve(txt); } });
-    } catch (e) {
-      return Promise.reject(new Error("404 " + u));
-    }
-  };
-}
-
-/** 在 vm 里加载 app.js **真实源码**，并等 data/*.json 加载完成 */
+/** 判级引擎装载（实现集中在 src/lib/verdict.mjs —— 采集端与验收端共用同一份） */
 async function loadLogic(logic, dir) {
-  const src = patch(appSource(logic));
-  const stub = makeStub();
-  const sandbox = {
-    console: { log() {}, warn() {}, error() {}, info() {} },
-    fetch: makeFetch(dir),
-    document: stub, window: stub, location: stub, navigator: stub,
-    localStorage: stub, sessionStorage: stub, history: stub,
-    setTimeout: function (fn, ms) { const t = setTimeout(fn, ms); if (t.unref) t.unref(); return t; },
-    clearTimeout: function (t) { clearTimeout(t); },
-    setInterval: function () { return 0; }, clearInterval: function () {},
-    requestAnimationFrame: function () { return 0; },
-    Blob: function () {}, URL: { createObjectURL: function () { return ""; }, revokeObjectURL: function () {} },
-  };
-  sandbox.globalThis = sandbox;
-  const ctx = vm.createContext(sandbox);
-  vm.runInContext(src, ctx, { filename: "web/app.js@" + logic });
-  const L = ctx.__RADAR_LOGIC__;
-  if (!L) throw new Error("导出钩子没跑到：app.js 顶层同步抛错了");
-  for (let i = 0; i < 500; i++) {
-    if (L.games && (L.games.items || []).length) break;
-    await new Promise(function (r) { setTimeout(r, 20); });
-  }
-  if (!L.games || !(L.games.items || []).length) throw new Error("games.json 没进沙箱（数据集缺文件 / fetch 桩路径不对）");
+  if (!fs.existsSync(path.join(dir, "games.json"))) throw new Error("games.json 没读到（" + dir + "）");
+  const L = await loadEngine({ dir: dir, appSource: appSourceOf(logic), logic: logic });
+  for (const w of L.__warnings || []) log("warn", "  " + w);
   return L;
 }
 
@@ -158,6 +61,22 @@ const LEAD_BUCKETS = [
   { label: "上线后 >90 天", hit: function (d) { return d < -90; } },
 ];
 
+/**
+ * 上线时长分桶：回答「越老是不是越不值得做」。
+ * 与前端同一口径的年龄 = `stats.created || srcCreated`（**绝不用 g.first**，那只是我们入库的时间）。
+ * 最后两桶是"没有官方上线日"与"其它"，避免总数对不上。
+ */
+const AGE_BUCKETS = [
+  { label: "≤7 天", hit: (d) => d != null && d <= 7 },
+  { label: "8~30 天", hit: (d) => d != null && d > 7 && d <= 30 },
+  { label: "31~180 天", hit: (d) => d != null && d > 30 && d <= 180 },
+  { label: "181~365 天", hit: (d) => d != null && d > 180 && d <= 365 },
+  { label: "1~3 年", hit: (d) => d != null && d > 365 && d <= 1095 },
+  { label: "3~5 年", hit: (d) => d != null && d > 1095 && d <= 1825 },
+  { label: ">5 年", hit: (d) => d != null && d > 1825 },
+  { label: "无官方上线日", hit: (d) => d == null },
+];
+
 /** 用前端**真实函数**复算：每条一次 rankability + pickVerdict，再汇总成分布 */
 function analyze(L, gamesDoc) {
   const items = gamesDoc.items || [];
@@ -172,6 +91,10 @@ function analyze(L, gamesDoc) {
       buckets: LEAD_BUCKETS.map(function (b) { return { label: b.label, hit: b.hit, n: 0 }; }),
     },
     scored: 0, unscored: 0, rows: [],
+    // 按上线时长看判级（回答"越老越不值得做吗"）
+    byAge: AGE_BUCKETS.map(function (b) { return { label: b.label, hit: b.hit, total: 0, verdicts: {}, scored: 0, scoreSum: 0 }; }),
+    // 雷达窗口：`first` 是"雷达入库时间"，超过 30 天就会被 30 天滚动窗口滚出去
+    window: { d7: 0, d14: 0, d25: 0, d30: 0, over: 0 },
   };
   for (const g of items) {
     const r = L.rankability(g);
@@ -198,6 +121,22 @@ function analyze(L, gamesDoc) {
       for (const b of a.lead.buckets) if (b.hit(d)) { b.n++; break; }
     }
     a.rows.push({ name: g.name, k: v.k, t: v.t, score: r.score, leadDays: r.leadDays, lagDays: (r.lag && r.lag.lagDays != null) ? r.lag.lagDays : null, comp: cs, src: g.src });
+    const cr = (g.stats && g.stats.created) || g.srcCreated;
+    const ageD = cr ? (Date.now() - new Date(cr).getTime()) / 86400000 : null;
+    const ab = a.byAge.filter(function (x) { return x.hit(ageD); })[0];
+    if (ab) {
+      ab.total++;
+      ab.verdicts[v.k] = (ab.verdicts[v.k] || 0) + 1;
+      if (r.score != null) { ab.scored++; ab.scoreSum += r.score; }
+    }
+    const fa = g.first ? (Date.now() - new Date(g.first).getTime()) / 86400000 : null;
+    if (fa != null) {
+      if (fa <= 7) a.window.d7++;
+      else if (fa <= 14) a.window.d14++;
+      else if (fa <= 25) a.window.d25++;
+      else if (fa <= 30) a.window.d30++;
+      else a.window.over++;
+    }
   }
   a.lead.vals.sort(function (x, y) { return x - y; });
   a.lead.median = a.lead.vals.length ? a.lead.vals[Math.floor(a.lead.vals.length / 2)] : null;
@@ -252,6 +191,20 @@ function report(L, a, meta) {
   console.log("    firstSeenAt 覆盖 " + a.lead.firstSeenAt + " 条（" + pct(a.lead.firstSeenAt, a.total) + "），其余退回雷达入库时间 first（会系统性低估提前量）");
   console.log("    可算 " + a.lead.count + " 条 · 中位 " + fmt1(a.lead.median) + " 天 · 均值 " + fmt1(a.lead.avg) + " 天 · 发售前发现(lead>0) " + a.lead.positive + " 条（" + pct(a.lead.positive, a.lead.count) + "）");
   console.log("    " + a.lead.buckets.map(function (b) { return b.label + " " + b.n; }).join(" ｜ "));
+  console.log("");
+  console.log("  按上线时长看判级（回答「越老是不是越不值得做」）");
+  console.log("    " + pad("上线时长", 18) + pad("条目", 8) + pad("值得做", 8) + pad("观察", 8) + pad("否", 8) + pad("未测", 8) + pad("有总分", 8) + "平均分");
+  for (const b of a.byAge) {
+    if (!b.total) continue;
+    const avg = b.scored ? Math.round(b.scoreSum / b.scored) : null;
+    console.log("    " + pad(b.label, 18) + pad(b.total, 8) + pad(b.verdicts.yes || 0, 8) + pad(b.verdicts.warn || 0, 8) +
+      pad(b.verdicts.no || 0, 8) + pad(b.verdicts.unknown || 0, 8) + pad(b.scored, 8) + (avg == null ? "—" : avg));
+  }
+  const w = a.window;
+  const expiring = w.d30 + w.over;
+  console.log("  雷达窗口（按雷达入库时间 first，30 天滚动 —— 超期即从推荐里消失，不是降档）");
+  console.log("    ≤7 天 " + w.d7 + " · 8~14 天 " + w.d14 + " · 15~25 天 " + w.d25 + " · >25 天 " + expiring +
+    "（占 " + pct(expiring, a.total) + "，下几轮内会滚出去；只有被来源/热搜**重新发现**时才以新的 first 回来）");
 }
 
 function printTop(a, n) {

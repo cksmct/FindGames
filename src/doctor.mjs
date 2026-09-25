@@ -16,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { ROOT, parseArgs } from "./lib/util.mjs";
+import { readHistoryStats } from "./lib/verdict-history.mjs";
 
 const args = parseArgs();
 const SKIP_DIRS = new Set([".git", "node_modules", "data", "export", "dist", ".next", "out"]);
@@ -209,7 +210,25 @@ function dataReport() {
     (L.median == null ? "—" : Math.round(L.median * 10) / 10 + " 天") + " · 发售前发现(lead>0) " + L.positive + " 条（" + pct(L.positive, L.n) + "）");
   console.log("    " + L.buckets.map((b) => b.label + " " + b.n).join(" ｜ "));
 
-  // ④ 本地 vs radar-data（CI 每小时的快照；本地 data/ 只有跑过 collect 才更新）
+  // ④ 判级历史留档（.verdict-history.jsonl）—— "过去判成什么" 的唯一来源
+  const hs = readHistoryStats({}, dataDir);
+  console.log("");
+  console.log("  判级历史留档（.verdict-history.jsonl）");
+  if (!hs.exists) {
+    console.log("    还没有留档 —— 跑一轮采集就会开始记（只记变化：判级升降 / 新实测竞争 / 进出 / 每轮一行分布）");
+    warns.push("还没有判级历史留档 —— 过去的判级结果不可回溯");
+  } else {
+    console.log("    " + hs.lines + " 行 · " + (hs.bytes / 1024 / 1024).toFixed(2) + " MB · 覆盖 " + (hs.days == null ? "—" : (hs.days < 1 ? Math.round(hs.days * 24) + " 小时" : hs.days + " 天")) +
+      " · 最近 " + String(hs.lastAt || "").slice(0, 19).replace("T", " "));
+    console.log("    行类型：" + Object.entries(hs.kinds).sort((a, b) => b[1] - a[1]).map((e) => e[0] + " " + e[1]).join(" · "));
+    const lastDist = hs.recent.filter((r) => r && r.kind === "dist").pop();
+    if (lastDist) {
+      console.log("    最近一轮分布：条目 " + lastDist.total + " · 值得做 " + lastDist.yes + " · 观察 " + lastDist.warn +
+        " · 否 " + lastDist.no + " · 未测 " + lastDist.unknown + " · 有竞争结论 " + lastDist.meas);
+    }
+  }
+
+  // ⑤ 本地 vs radar-data（CI 每小时的快照；本地 data/ 只有跑过 collect 才更新）
   const ref = args.peer ? String(args.peer) : "origin/radar-data";
   console.log("");
   console.log("  本地 vs " + ref + "（本地缓存的远端引用；要最新先 git fetch origin radar-data）");

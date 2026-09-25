@@ -16,6 +16,7 @@
  */
 import path from "node:path";
 import { loadConfig, parseArgs, log, iso, sleep, pMap, readJson, writeJson, dataPath } from "./lib/util.mjs";
+import { recordRound } from "./lib/verdict-history.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh, enrichBaseline } from "./lib/interest.mjs";
 import {
@@ -566,8 +567,41 @@ if (cfg.games.enabled) {
   }
 
   let list = Array.from(known.values());
-  const cutoff = Date.now() - 30 * 86400_000;
-  list = list.filter((g) => new Date(g.first).getTime() >= cutoff);
+  // ── 留存策略（2026-09-25 改：退出必须是**事实性**的，不是时间性的）─────────────────────
+  // 🛑 旧版按 `first`（**我们的**雷达入库时间）超 30 天就删 —— 等于把我们的记账时间当成游戏的有效期：
+  //    一个 31 天前发现、现在仍有需求、竞争也没占满的游戏会被无声删掉；等它再被来源发现时以新的 `first`
+  //    回来，曲线 / 竞争实测 / 首见时间全丢，`lead`（现第一权重）又变负 —— 用记账误差惩罚游戏。
+  // 现在：只要还有**任何一条它可能有戏的证据**就留着；只有连续 signalDays 天没有任何新信号
+  //    **且** 曲线没量、没有可做词、没有当前口径竞争实测、没有人工判断、也不在潜伏线上 —— 才退出，
+  //    并且退出前**归档**（.verdict-history.jsonl 的 exit 行，见 lib/verdict-history.mjs）。
+  const ret = cfg.games.retention || {};
+  const signalDays = ret.signalDays == null ? 30 : ret.signalDays;
+  const retMinWords = ret.minWords == null ? 3 : ret.minWords;
+  const retNow = Date.now();
+  const manualNames = new Set(Object.keys(cfg.games.competition || {}).map((s) => s.trim().toLowerCase()));
+  const exits = new Map();
+  const keepEvidence = (g) => {
+    const t = new Date(g.last || g.first || 0).getTime();
+    if (isFinite(t) && retNow - t <= signalDays * 86400_000) return "signal";
+    if ((g.series || []).length >= 2 && !g.cooled) return "curve";
+    if ((g.words || []).length >= retMinWords) return "words";
+    if (g.serp && g.serp.dedicated != null && g.serp.at &&
+      retNow - new Date(g.serp.at).getTime() <= 30 * 86400_000) return "serp";
+    if ((g.stats && g.stats.comingSoon) || g.via === "watchlist-live") return "coming";
+    if (manualNames.has(String(g.name || "").trim().toLowerCase())) return "manual";
+    return null;
+  };
+  if (ret.enabled !== false) {
+    const beforeRet = list.length;
+    list = list.filter((g) => {
+      if (keepEvidence(g)) return true;
+      exits.set(String(g.name || "").trim().toLowerCase(), { name: g.name, why: "no-signal-" + signalDays + "d", last: g.last || "", first: g.first || "" });
+      return false;
+    });
+    if (beforeRet !== list.length) {
+      log("info", `留存策略：退出 ${beforeRet - list.length} 条（连续 ${signalDays} 天无新信号，且无曲线 / 无词 / 无实测竞争 / 非潜伏）—— 已归档`);
+    }
+  }
   // 规则可能已经改过（比如新开了 latinOnly、补了排除词）：按【当前规则】再筛一遍，
   // 否则旧条目会一直留在列表里直到 30 天过期 —— 改了配置却看不到变化
   const ruleFiltered = list.length;
@@ -588,20 +622,39 @@ if (cfg.games.enabled) {
     return gameCandidate({ q: g.name, cats }, { latinOnly, excludeAAA }).ok;
   });
   if (list.length < ruleFiltered) log("dim", `  按当前规则清掉 ${ruleFiltered - list.length} 个不再符合条件的旧条目`);
-  // ── 体积护栏（2026-09-24）──
-  // 开了"目录直收"之后，发现量会真实反映出来（每轮十几到几十条），而看板要**整份加载** games.json：
-  // 不设上限的话一个月能涨到几万条 → 页面加载不动。
-  // 淘汰策略：先保住**有曲线的**（可评估的那批），再按首次发现时间新旧，超出部分如实计数。
+  // ── 体积护栏（2026-09-24；2026-09-25 改淘汰顺序）──
+  // 看板要**整份加载** games.json，所以必须有条数上限；超限时淘汰谁就是这里的全部学问。
+  // 🛑 旧顺序是先保住有曲线的、再按首次发现时间新的排前 —— 等于用新当保留优先级，而新恰恰
+  //    不是可做性的证据（实测 1912 条里 1279 条 = 67% 是只有一个名字：无曲线 / 无词 / 无实测竞争）。
+  //    现在改成按**可做性 / 信息价值**降序：有官方数据（判得了）+ 有曲线（动能看得见）+ 有词（内容面）
+  //    + 花过 SERP 配额 + 人工核查过 + 潜伏；曲线转凉扣一分；时间只作次序（先 last，再 first）。
+  //    被淘汰的同样写进归档（exits），不做静默删除。
   // ⚠️ 这里的 `games.maxItems`（games.json 条数上限）与 `pool.maxItems`（关键词池上限）**同名不同义**，
   //    两个都在 config.json 里 —— 改的时候别看错行。保留 `|| 3000`：写 0 时走默认值，而不是把列表清空。
   const gymMax = cfg.games.maxItems || 3000;
   if (list.length > gymMax) {
     const before = list.length;
+    const valueOf = (g) => {
+      const st = g.stats || {};
+      let v = 0;
+      if (st.created || st.visits != null || st.playing != null || st.ratings != null) v += 2;
+      if ((g.series || []).length >= 2 && !g.cooled) v += 2;
+      if ((g.words || []).length >= retMinWords) v += 2;
+      if (g.serp && g.serp.dedicated != null) v += 3;
+      if (manualNames.has(String(g.name || "").trim().toLowerCase())) v += 3;
+      if (st.comingSoon || g.via === "watchlist-live") v += 2;
+      if (g.cooled) v -= 1;
+      return v;
+    };
     list = list.slice().sort((a, b) =>
-      (((b.series || []).length > 1 ? 1 : 0) - ((a.series || []).length > 1 ? 1 : 0)) ||
+      (valueOf(b) - valueOf(a)) ||
+      (new Date(b.last || b.first) - new Date(a.last || a.first)) ||
       (new Date(b.first) - new Date(a.first)));
+    for (const g of list.slice(gymMax)) {
+      exits.set(String(g.name || "").trim().toLowerCase(), { name: g.name, why: "容量护栏（可做性最低）", last: g.last || "", first: g.first || "" });
+    }
     list = list.slice(0, gymMax);
-    log("dim", `  games.json 体积护栏：${before} → ${gymMax} 条（优先保留有曲线的条目）`);
+    log("dim", `  games.json 体积护栏：${before} → ${gymMax} 条（按**可做性**保留：官方数据 / 曲线 / 可做词 / 实测竞争 / 人工判断 优先）`);
   }
   // ── 补 Roblox 官方数据（访问量 / 好评率 / 上线时间 / 更新 / 在线人数）──
   // 这是"建站可做性"评分里【需求规模 / 口碑 / 新鲜度】三项的输入，必须写在 writeGames 之前。
@@ -663,25 +716,54 @@ if (cfg.games.enabled) {
       (baseRes.skipped ? ` · 留到下一轮 ${baseRes.skipped}` : ""));
   }
 
-  // ── 🆕 2026-09-25：firstSeenAt 存量回填（幂等）──
-  // `firstSeen` 通路（watchlist → pushQueue → 入库）只对"通路建立之后新入库"的条目生效；
-  // 通路之前已在库里的条目永远拿不到 firstSeenAt → lead 只能拿入库时间兜底，恒为负。
-  // .watchlist-firstseen.json 里存着这些名字的潜伏期首见时间，这里补写一次；已有值不覆盖。
+  // ── 2026-09-25：firstSeenAt 存量回填 + **全量登记**（幂等）──
+  // ① 回填：`firstSeen` 通路（watchlist → pushQueue → 入库）只对通路建立之后新入库的条目生效；
+  //    更早就在库里的条目拿不到 → lead 只能拿入库时间兜底，恒为负。这里按名字补一次，已有值不覆盖。
+  // ② 登记：把**所有雷达条目**写进名字级首见表。条目将来因留存策略 / 容量护栏离开列表、日后又被
+  //    重新发现时，`firstSeenAt` 仍能恢复 —— 否则 `lead`（现第一权重）会把我们其实早就看过它
+  //    算成刚刚才发现。这是别用记账误差惩罚游戏这条原则的落地。
   {
-    const fsDoc = readJson(dataPath(cfg, ".watchlist-firstseen.json"), {}) || {};
+    const firstSeenFile = dataPath(cfg, ".watchlist-firstseen.json");
+    const fsDoc = readJson(firstSeenFile, {}) || {};
     const fsItems = fsDoc.items || {};
-    let fsBackfilled = 0;
+    let fsBackfilled = 0, fsRecorded = 0, fsPruned = 0;
     for (const g of list) {
-      if (g.firstSeenAt) continue;
-      const rec = fsItems[String(g.name || "").trim().toLowerCase()];
-      if (rec && rec.firstSeen) { g.firstSeenAt = rec.firstSeen; fsBackfilled++; }
+      const k = String(g.name || "").trim().toLowerCase();
+      if (!k) continue;
+      const rec = fsItems[k];
+      if (!g.firstSeenAt && rec && rec.firstSeen) { g.firstSeenAt = rec.firstSeen; fsBackfilled++; }
+      if (!rec) {
+        fsItems[k] = { name: String(g.name), firstSeen: g.firstSeenAt || g.first || iso(), lastSeen: iso() };
+        fsRecorded++;
+      } else if (retNow - new Date(rec.lastSeen || rec.firstSeen).getTime() > 86400_000) {
+        rec.lastSeen = iso();
+      }
+    }
+    for (const [k, v] of Object.entries(fsItems)) {
+      if (!v || !v.lastSeen || retNow - new Date(v.lastSeen).getTime() > 180 * 86400_000) { delete fsItems[k]; fsPruned++; }
+    }
+    if (fsRecorded || fsPruned) {
+      writeJson(firstSeenFile, { updated: iso(), items: fsItems }, true);
+      log("dim", `  名字级首见表：新登记 ${fsRecorded} 条 · 清理 ${fsPruned} 条（退出后再进来也能恢复 lead）`);
     }
     if (fsBackfilled) log("dim", `  firstSeenAt 回填：${fsBackfilled} 条（来自 .watchlist-firstseen.json，潜伏期首见）`);
   }
 
   list.sort((a, b) => new Date(b.first) - new Date(a.first));
-  // 雷达分数的算法自述随产物下发 → 前端"评分规则"折叠块据实展示（单一事实源在 detect.mjs）
-  writeGames(cfg, list, { scoring: SCORE_RULES, serp: SERP_RULES });
+  // ── 判级历史留档（方案 1：只记变化 + 每轮一行分布）──
+  // 放在 writeGames 之前：此时 stats / 曲线 / 词 / 竞争实测都补齐了，判级输入与页面一致。
+  // 🛑 失败不阻塞采集（归档是观测设施，不是产物），但要如实报出来。
+  let histRes = null;
+  try {
+    histRes = await recordRound(cfg, {
+      items: list,
+      exits: exits,
+      config: { competition: cfg.games.competition || {}, trendsCompare: cfg.trendsCompare },
+    });
+  } catch (e) {
+    log("warn", `  判级历史留档失败（不影响产物）：${e.message}`);
+  }
+  if (histRes) log("dim", `  判级历史：本轮 ${histRes.rows} 行（变化 ${histRes.changed}，含每轮一行分布）· 累计 ${histRes.lines} 行`);  writeGames(cfg, list, { scoring: SCORE_RULES, serp: SERP_RULES });
   log("ok", `输出 data/games.json（${list.length} 个，本轮新增 ${added}，挖到攻略词 ${kwAdded} 个）`);
   if (statRes.mode === "on") {
     const rbx = list.filter((x) => x.stats?.visits != null).length;
