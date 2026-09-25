@@ -720,6 +720,10 @@
       return {
         score: openScore(sc.open), source: "serp",
         domains: sc.domains, hosts: sc.hosts || [], query: sc.query || "", at: sc.at,
+        // 🆕 2026-09-25：分档只认**专用站**（域名含游戏名的站 = 用户说的"对手当然是新建的站"），
+        //    通用游戏媒体（progameguides 等）只是基线噪音，如实记数但不参与分档。
+        dedicated: sc.dedicated == null ? null : sc.dedicated,
+        dedicatedHosts: sc.dedicatedHosts || [],
         competitorFirstSeen: sc.competitorFirstSeen || null,
       };
     }
@@ -1031,6 +1035,11 @@
         ? "🟢 未晚于首个专站" + (lg < 0 ? "（领先 " + Math.abs(lg) + " 天）" : "（同期）")
         : "🔴 晚于首个专站 " + lg + " 天" + (r.lag.firstSeen ? "（最早 " + String(r.lag.firstSeen).slice(0, 10) + "）" : ""));
     }
+    // 竞争分档的依据要看得到：**专用站**才是对手，通用媒体是基线噪音
+    if (r.comp.source === "serp" && r.comp.domains != null) {
+      leadTxt += " · 竞争 前十 " + r.comp.domains + " 域名 / 专用站 " +
+        (r.comp.dedicated == null ? "—" : r.comp.dedicated);
+    }
     metaLine += leadTxt;
     return '<div class="gcard pk-card">' +
       '<div class="ghead"><h3>' + esc(g.name) + '</h3><span class="score pk-' + v.k + '">' +
@@ -1049,15 +1058,15 @@
       " · 攻略词 " + (g.words || []).length + " 个</div>" +
       // 竞争未测 → 给出"填一行就有分"的可复制片段（人工核查仍是首选口径，比机器数域名更准）
       (r.comp.score == null
-        ? '<div class="gmeta pk-dim">竞争未测 → 点「查竞争（SERP）」数一下前十有几个独立域名占位，' +
+        ? '<div class="gmeta pk-dim">竞争未测 → 点「查竞争（SERP）」数一下前十有几个**专为该游戏建的站**（域名里含游戏名的，如 dressmaker.wiki / nethros.wiki —— 通用媒体 progameguides / pocketgamer 不算，它们对每个游戏都有 codes 页），' +
           "再把这一行加进 config.json 的 <code>games.competition</code>，下一轮就有分：<br>" +
           '<code>"' + esc(g.name) + '": {"open": 3},</code>' +
-          "　（open 5=几乎没人做 · 4=1~2 个站 · 3=3~4 个 · 2=5~7 个 · 1=≥8 个）</div>"
+          "　（open 5=0 个专用站 · 4=1~2 个 · 3=3~4 个 · 2=5~7 个 · 1=≥8 个）</div>"
         : "") +
       '<div class="kwrow">' +
       (g.srcUrl ? '<a class="kwchip" target="_blank" rel="noopener" href="' + esc(g.srcUrl) + '">' +
         esc(SRC_LABEL[g.src] || "作品") + " 页</a>" : "") +
-      '<a class="kwchip up" target="_blank" rel="noopener" title="数一下前十有几个独立域名占位，就是竞争强度的实测（与自动通道同一个查询词）" href="' + serpSearchUrl(g.name) + '">查竞争（SERP）</a>' +
+      '<a class="kwchip up" target="_blank" rel="noopener" title="数一下前十有几个【专为该游戏建的站】（域名含游戏名）；通用媒体不算 —— 它们对每个游戏都有 codes 页。与自动通道同一个查询词" href="' + serpSearchUrl(g.name) + '">查竞争（SERP）</a>' +
       '<a class="kwchip" target="_blank" rel="noopener" title="更宽的一眼看法：wiki / tier list / comps / guide 有没有人已经在做" href="' + longtailSearchUrl(g.name) + '">查长尾</a>' +
       '<a class="kwchip" target="_blank" rel="noopener" href="' + exploreUrl(g.name, g.chart_geo) + '">Google Trends</a>' +
       "</div>" +

@@ -55,9 +55,34 @@ function siteOf(host) {
   return parts.slice(-2).join(".");
 }
 
-/** 独立域名数 → 竞争档 open（1~5，5 = 最空）。🛑 这几档就是人工核查的判据，别随手调 */
+/**
+ * **专用站数** → 竞争档 open（1~5，5 = 最空）。🛑 这几档就是人工核查的判据，别随手调。
+ *
+ * 🛑 2026-09-25 口径修正（用户：「**我们的对手当然是新建的站**」）：
+ *   分档输入从"前十独立域名**总数**"改为"**专为这个游戏建的站数**"。
+ *   原因（实测 2026-09-25 真实采集）：Roblox 潜伏条目的前十全是
+ *   `progameguides.com / pocketgamer.com / beebom.com / destructoid.com / tryhardguides.com / bloxinformer.com` ——
+ *   这些**通用游戏媒体/数据站**对**每个**游戏都写 `codes` 页，是基线噪音；
+ *   按总数分档会让 5/5 条 Roblox 条目全被判「竞争已起」（档 1~2），把最该做的标的误杀。
+ *   而 Dressmaker 的 `dressmaker.wiki / dressmakers.wiki / dressmaker-game.wiki …` 才是真对手。
+ */
 const BANDS = [[0, 5], [2, 4], [4, 3], [7, 2], [Infinity, 1]];
 const bandOf = (n) => (BANDS.find(([max]) => n <= max) || BANDS[BANDS.length - 1])[1];
+
+/** 归一化成 slug（只留 a-z0-9）—— 用于判断"这个域名是不是为这个游戏建的" */
+const slugOf = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+/**
+ * 判断一个域名是不是**专为这个游戏建的站**：域名（eTLD+1）里含游戏名 slug。
+ *   实测：`dressmaker.wiki` → 含 `dressmaker` ✅ · `nethros.wiki` → 含 `nethros` ✅
+ *         `progameguides.com` / `pocketgamer.com` → 不含游戏名 ❌（通用媒体）
+ * 🛑 游戏名 slug 短于 4 字符时**不做判断**（避免 `abc` 这类误匹配）→ 一律算通用站。
+ */
+export function isDedicatedSite(site, name) {
+  const g = slugOf(name);
+  if (g.length < 4) return false;
+  return slugOf(site).includes(g);
+}
 
 /**
  * open(1~5) → 分数（分高 = 竞争低）。**人工核查 / 自动 SERP / 潜伏评分三处共用同一张表**，
@@ -75,19 +100,21 @@ export const COMP_SATURATED_OPEN = 2;
  * 前端不再手抄一份档位（手抄过一次就已经抄错了，见 demandAnchorsText 的教训）。
  */
 export const SERP_RULES = {
-  title: "竞争 = 自动 SERP 核查（「<游戏名> codes」前十的独立域名数）",
+  title: "竞争 = 自动 SERP 核查（「<游戏名> codes」前十的「专用站」数）",
   source: "DuckDuckGo HTML 结果页（零密钥，实测可直连）",
   query: "<游戏名> codes",
-  bands: "独立域名数 → 0 个=100 · 1~2 个=75 · 3~4 个=50 · 5~7 个=25 · ≥8 个=10",
+  bands: "**专用站**数（域名含游戏名 slug ＝「专为这个游戏建的站」）→ 0 个=100 · 1~2 个=75 · 3~4 个=50 · 5~7 个=25 · ≥8 个=10",
   noise: "不计入：应用商店（Play / App Store）· 视频社交（YouTube / Facebook / TikTok / X / Pinterest 等）· 通用百科（Wikipedia）",
   caveats: [
-    "只数独立域名（同一站点的子域算一个）—— 对齐人工核查的口径「前十有几个独立域名占位」",
-    "目前只覆盖拿不到官方上线日的条目（安卓）；其它平台已有人工核查 > 上线时长推断，不重复花请求",
+    "🛑 2026-09-25 口径修正（用户：「**我们的对手当然是新建的站**」）：分档输入从「前十独立域名**总数**」改为「**专用站数**」（域名含游戏名 slug，如 `dressmaker.wiki` / `nethros.wiki`）。实测反例：Roblox 潜伏条目的前十全是 `progameguides.com` / `pocketgamer.com` / `beebom.com` / `destructoid.com` / `tryhardguides.com` —— 这些通用媒体对**每个**游戏都写 codes 页，按总数分档会把 5/5 条全判「竞争已起」，误杀最该做的标的",
+    "通用站数仍如实记在 `domains` / `hosts` 里（那是事实），只是**不参与分档**；`dedicated` / `dedicatedHosts` 才是判据",
+    "🛑 2026-09-25 取样范围修正：旧版只测「拿不到官方上线日」的条目，结果**最需要核查的新游戏反而被跳过**（有上线日 → 跳过 → 竞争项被上线时长推断接管 → 白送满分，Dressmaker 事故）。现在「无上线日 **或** 上线 ≤ `maxAgeDays`（默认 180 天）」都测",
+    "🆕 `g.serp.competitorFirstSeen` ＝ 前十**专用站**的 Wayback CDX 最早快照（**下界**：未被收录的域名查不到，如 `dressmaker.wiki`）。前端据此算 `ourLagDays`（我们比首个专站晚了多少）→ **>30 天直接判「我们晚了」**；查不到就跳过，不猜",
     "查询词固定为「<游戏名> codes」：它是最值钱的长尾，也是竞争最先被占的位置",
     "自动通道默认走 DuckDuckGo 作代理（实测限流很紧，常返回反爬页）；人工核查建议看 Google —— 两者数字会略有差异",
     "测失败（限流 / 挑战页 / 页面结构变化）不写缓存，该条目保持「未测」—— 限流不等于没有竞争",
   ],
-  note: "人工核查（config.json 的 games.competition）优先级仍高于它：人看一眼比机器数域名更准。",
+  note: "人工核查（config.json 的 games.competition）优先级仍高于它：人看一眼比机器数域名更准。人工核查时也请只数「**专为该游戏建的站**」。",
 };
 
 /**
@@ -148,8 +175,12 @@ async function ddgHosts(query, c) {
   return hosts;
 }
 
-/** 主机名列表 → 测量结果（只数前 topN 个独立站点，对齐"数前十"的口径） */
-function measure(hosts, c) {
+/**
+ * 主机名列表 → 测量结果（只数前 topN 个独立站点，对齐"数前十"的口径）。
+ * 🛑 分档（`open`）用 **专用站数**，不是独立域名总数 —— 见 BANDS 上的口径说明。
+ *    两个数都留下：`domains`/`hosts` 是原始事实（含通用媒体），`dedicated`/`dedicatedHosts` 才是判据。
+ */
+function measure(hosts, c, name) {
   const topN = c.topN || 10;
   const sites = [];
   for (const h of hosts) {
@@ -158,7 +189,14 @@ function measure(hosts, c) {
     sites.push(s);
     if (sites.length >= topN) break;
   }
-  return { domains: sites.length, hosts: sites, open: bandOf(sites.length) };
+  const dedicated = sites.filter((s) => isDedicatedSite(s, name));
+  return {
+    domains: sites.length,                    // 前十独立域名总数（含通用游戏媒体）
+    hosts: sites,
+    dedicated: dedicated.length,              // 🆕 其中"专为这个游戏建的站"
+    dedicatedHosts: dedicated,
+    open: bandOf(dedicated.length),           // 🛑 分档输入 = 专用站数
+  };
 }
 
 /**
@@ -173,19 +211,33 @@ function measure(hosts, c) {
 async function cdxFirstSeen(domain, c) {
   const url = "http://web.archive.org/cdx/search/cdx?url=" + encodeURIComponent(domain) +
     "&output=json&limit=1&fl=timestamp";
-  const r = await fetch(url, {
-    headers: { "user-agent": UA, accept: "application/json" },
-    signal: AbortSignal.timeout(c.timeoutMs || 15000),
-  });
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  const t = (await r.text()).trim();
-  if (!t || t === "[]") return null;                       // 无快照（≠ 失败）
-  let j;
-  try { j = JSON.parse(t); } catch { throw new Error("CDX 返回不是 JSON（" + t.length + "B）"); }
-  const ts = j && j[1] && j[1][0];                          // j[0] 是表头行，j[1] 才是首条记录
-  if (!ts || !/^\d{14}$/.test(String(ts))) return null;
-  const s = String(ts);
-  return s.slice(0, 4) + "-" + s.slice(4, 6) + "-" + s.slice(6, 8);
+  // 🛑 2026-09-25 实测：**批量请求时 Wayback 会大量返回 503 / 超时**
+  //    （首轮真实采集：15 次 CDX 只成功 1 次，间隔当时是 1.2s 且无重试）。
+  //    所以这里加线性退避重试 + 拉长间隔；仍失败则抛错，由调用方跳过（不猜、不罚）。
+  const tries = Math.max(1, c.tries == null ? 2 : c.tries);
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetch(url, {
+        headers: { "user-agent": UA, accept: "application/json" },
+        signal: AbortSignal.timeout(c.timeoutMs || 15000),
+      });
+      if (r.status === 429 || r.status === 503) throw new Error("HTTP " + r.status + "（Wayback 限流）");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const t = (await r.text()).trim();
+      if (!t || t === "[]") return null;                   // 无快照（≠ 失败）
+      let j;
+      try { j = JSON.parse(t); } catch { throw new Error("CDX 返回不是 JSON（" + t.length + "B）"); }
+      const ts = j && j[1] && j[1][0];                     // j[0] 是表头行，j[1] 才是首条记录
+      if (!ts || !/^\d{14}$/.test(String(ts))) return null;
+      const s = String(ts);
+      return s.slice(0, 4) + "-" + s.slice(4, 6) + "-" + s.slice(6, 8);
+    } catch (e) {
+      lastErr = e;
+      if (i < tries - 1) await sleep((c.retryGapMs == null ? 3000 : c.retryGapMs) * (i + 1));
+    }
+  }
+  throw lastErr;
 }
 
 /**
@@ -203,11 +255,15 @@ export async function checkOneSerp(name, cfg) {
     (cfg && cfg.games && cfg.games.serpComp) || {}
   );
   const q = String(c.query || "{q} codes").replace("{q}", name);
-  const m = measure(await serpHosts(q, c), c);
+  const m = measure(await serpHosts(q, c), c, name);
   const rec = Object.assign({ at: iso(), query: q }, m);
-  if (c.cdx && c.cdx.enabled !== false && m.hosts.length) {
+  // 🛑 CDX 只查**专用站**（`dedicatedHosts`）—— 我们要回答的是"**第一个为这个游戏建的站**
+  //    什么时候出现"，通用媒体站（progameguides 等）的首次快照没有意义（它们对所有游戏都有页）。
+  //    附带收益：请求量大降（多数条目的专用站是 0~1 个），Wayback 的限流压力随之变小。
+  //    没有专用站 → 完全不查 CDX（正确：没人专门做，就不存在"我们晚了"）。
+  if (c.cdx && c.cdx.enabled !== false && (m.dedicatedHosts || []).length) {
     const seen = [];
-    for (const d of m.hosts.slice(0, c.cdx.maxDomains || 3)) {
+    for (const d of (m.dedicatedHosts || []).slice(0, c.cdx.maxDomains || 3)) {
       try {
         const at = await cdxFirstSeen(d, c.cdx);
         if (at) seen.push({ domain: d, at });

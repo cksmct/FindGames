@@ -357,7 +357,11 @@ export function scoreUpcoming(g) {
   const srp = g.serp;
   if (srp && srp.open != null) {
     comp = openScore(srp.open);
-    compWhy = `前十 ${srp.domains} 个独立域名（${(srp.hosts || []).slice(0, 3).join(" · ") || "无人占位"}）`;
+    // 🛑 分档看的是**专用站**（域名含游戏名 = 用户说的"对手当然是新建的站"）；
+    //    通用游戏媒体（progameguides / pocketgamer …）只是基线噪音，如实记数但不参与分档。
+    const ded = srp.dedicated == null ? (srp.dedicatedHosts || []).length : srp.dedicated;
+    compWhy = `专为它建的站 ${ded} 个（前十共 ${srp.domains} 个独立域名` +
+      (ded ? "：" + (srp.dedicatedHosts || []).slice(0, 3).join(" · ") : "，其余是通用媒体，不算对手") + "）";
     if (srp.competitorFirstSeen) {
       compWhy += `；首个专站最早快照 ${srp.competitorFirstSeen}` +
         " ← 我们比它晚了多少，比「有几个站」更接近成败（见 SKILL 第四条红线）";

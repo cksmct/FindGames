@@ -200,7 +200,9 @@
         "enabled": true,
         "maxDomains": 3,
         "timeoutMs": 15000,
-        "gapMs": 1200
+        "gapMs": 2500,
+        "tries": 2,
+        "retryGapMs": 3000
       }
     },
     "sourceBatch": 400,

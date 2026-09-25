@@ -442,8 +442,10 @@ export async function buildWatchlist(cfg, session) {
     if (serpUsed) writeJson(serpCacheFile, serpCache, true);
     if (serpUsed || serpCached) {
       notes.push("Roblox 条目的**竞争饱和度**（潜伏评分第五维）本轮实测 " + serpUsed + " 条 · 沿用缓存 " + serpCached +
-        " 条 —— 用「<游戏名> codes」前十的独立域名数衡量「**现在有多少人已经在做**」。未测的条目**不等于没人做**，" +
-        "只是还没轮到测（每轮上限 " + serpBudget + " 条）。");
+        " 条 —— 用「<游戏名> codes」前十的**专用站**数（域名含游戏名 = 专为它建的站）衡量「**现在有多少人已经在做**」；" +
+        "通用游戏媒体（progameguides / pocketgamer 等）对每个游戏都有 codes 页，只如实记数、**不算对手**。" +
+        "未测的条目**不等于没人做**，只是还没轮到测（每轮上限 " + serpBudget + " 条；" +
+        "DuckDuckGo 通道实测**连打约 2 次后即被反爬页挡住** → 想提高覆盖请配 BRAVE_API_KEY 并把 serpComp.provider 换成 brave）。");
     }
 
     // ── 已经能玩的（官方数据有访问/在线）→ 推进雷达队列，让它在建站推荐里"接班" ──
