@@ -78,6 +78,7 @@
       "IE"
     ],
     "latinOnly": true,
+    "englishOnly": true,
     "maxCurvesPerRun": 120,
     "minCurvesPerRun": 24,
     "sources": {

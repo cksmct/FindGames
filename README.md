@@ -339,7 +339,9 @@ node src/audit-verdicts.mjs --from-ref origin/radar-data --compare HEAD   # 同�
 
 **② 它不分国家（和原站一致）**
 
-游戏雷达是全局列表，不受顶部国家筛选影响。但每条都记录了：`geos`（在哪些国家上榜过）、`chart_geo`（曲线取自哪个国家，优先取你在 `config.games.geos` 里指定的市场），卡片上会显示「曲线地区 XX」。
+游戏雷达是全局列表，不受顶部国家筛选影响。但每条都记录了：`geos`（在哪些国家上榜过）、`chart_geo`（曲线取自哪个国家，优先取你在 `config.games.geos` 里指定的市场），卡片上显示「热于 XX · 曲线地区 XX」。
+
+🆕 2026-09-25 修正：以前只显示「曲线地区」，而曲线会在词的地区不在偏好区时**静默回退到 US** —— 于是「只在 CL/DE/FR 热」的词也被贴上 US 标签进了雷达（实测 59 条 / 2.7%），看起来就像「US 的西班牙语词」。现在两处一起改：① **准入地区闸**（`games.geos`）—— 只在非英语区热的词直接不进雷达；② 卡片把真实的 `geos` 与取曲线的 `chart_geo` 分开显示，不再混淆。
 
 **③ 排序：原站按「最新信号」，我们默认「最新发现」，并给了切换**
 
@@ -367,6 +369,7 @@ node src/audit-verdicts.mjs --from-ref origin/radar-data --compare HEAD   # 同�
 | `concurrency` / `delayMs` | 并发与间隔（采集热搜用） |
 | `games.geos` | **游戏雷达扫描的市场**，默认 `["US","GB","CA","AU","NZ","IE"]`（英语六国）。只做英文站就保持这样 |
 | `games.latinOnly` | 默认 `true`：只收拉丁字母的游戏名（见下方「只做英文站」） |
+| `games.englishOnly` | 默认 `true`：**英文闸** —— 非拉丁字母体系 / 带变音字母 / 小语种日期短语 / 小语种功能词，任一命中即否决（见下方「只做英文站」） |
 | `games.*` 其余 | 每轮取多少条曲线（`maxCurvesPerRun`）、曲线抽样间隔（`sampleEveryHours`）、刷新间隔（`refreshHours`）、收录门槛（`minVol`）、每个游戏留多少攻略词（`relatedWords`）、请求间隔（`delayMs`） |
 | `games.sources` | 候选来源开关：`{ "roblox": true, "steam": true }` |
 | `games.sourceShare` | 每轮曲线配额中分给来源候选的比例，默认 `0.7`（其余留给热搜候选） |
@@ -383,11 +386,22 @@ node src/audit-verdicts.mjs --from-ref origin/radar-data --compare HEAD   # 同�
 |---|---|---|
 | **游戏雷达** | `games.geos = ["US","GB","CA","AU","NZ","IE"]` | 只在英语区榜单里找游戏 |
 | | `games.latinOnly = true` | 名字含汉字/假名/韩文/阿拉伯文等的候选**直接否决** |
+| | `games.englishOnly = true` | 名字是**非英文**（带变音字母 / 小语种日期 / 功能词 / 非拉丁脚本）的候选**直接否决** —— `latinOnly` 只排非拉丁**字母体系**，拦不住西/德/法/葡/土（它们全是拉丁字母） |
 | **热词雷达** | `geos = [...38 国]` | **仍是全球**（想看英文热搜就自己改，见下） |
 
 **为什么游戏雷达要单独限语言**：实测原站 findnews.me 的 **407 个游戏里 405 个是纯拉丁字母名，只有 1 个日文名** —— 它显然也不在日韩台榜单里找游戏。我们照做。
 
-`latinOnly` 用的是**白名单**（只放行拉丁字母 / 数字 / 标点 / 符号 / 空格），而不是列举非拉丁语种 —— 列举法一定会漏（藏文、蒙文、僧伽罗文……）。`\p{Script=Latin}` 包含带变音符号的字母，所以 `New Pokémon Snap` 这类能正常通过。
+`latinOnly` 用的是**白名单**（只放行拉丁字母 / 数字 / 标点 / 符号 / 空格），而不是列举非拉丁语种 —— 列举法一定会漏（藏文、蒙文、僧伽罗文……）。
+
+🆕 2026-09-25 补 `englishOnly`（默认开）：白名单里的 `\p{Script=Latin}` **包含带变音符号的字母**，所以 `latinOnly` 拦不住西班牙语 / 德语 / 法语 / 葡萄牙语 / 土耳其语（它们全是拉丁字母）。实测线上 2220 条里 43 条带重音字母（`Kahvehane Simülatörü` · `Le Président, à vos règles`），外加 18 条中日韩名、5 条小语种日期短语（`24 de septiembre`）、8 条小语种功能词（`Las aventuras de Chorizo`）—— 对英文站无用，还白占曲线配额（曲线只能回退到 US 取，算出一条与本词无关的曲线）。判据三条，任一命中即否决、且可解释（`nonEnglishEvidence()`）：
+
+| 证据 | 例子 | 为什么 |
+|---|---|---|
+| 带重音 / 变音字母 | `Kahvehane Simülatörü` · `Esquimó a Grande Aventura` | 英文关键词里几乎不出现；代价是误杀 `Me 262 Königsberg WW2` 这类含德文地名的英文标题（实测 1 条） |
+| 小语种日期短语 | `24 de septiembre` · `18 septembre` | 事件词，不是游戏 |
+| 小语种功能词 | `Las aventuras de Chorizo` · `Malmsturm - Wege aus Blut und Eisen` | und/für/avec/pour/não/del/los… 出现即判；el/la/con/des/les 等弱功能词要 ≥2 个才算 |
+
+整个闸可用 `games.englishOnly: false` 关掉（那就回到「只要是拉丁字母就要」）。
 
 **想让热词也只看英文**，把顶层 `geos` 换成英语区即可（热搜量约从 5800 条降到 1500 条）：
 

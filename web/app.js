@@ -476,6 +476,7 @@
       return '<div class="gcard"><div class="ghead"><h3>' + esc(g.name) + "</h3>" +
         '<span class="score">score ' + (g.score || 0) + "</span></div>" +
         '<div class="gmeta">' + times + (g.reason ? " · " + esc(g.reason) : "") +
+        (g.geos && g.geos.length ? " · 热于 " + esc(g.geos.slice(0, 4).join("/")) : "") +
         (g.chart_geo ? " · 曲线地区 " + esc(g.chart_geo) : "") +
         (g.src ? " · " + srcLink(g) : "") + "</div>" +
         cooled +

@@ -21,7 +21,7 @@ import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh, enrichBaseline } from "./lib/interest.mjs";
 import {
   noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo,
-  feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES, AAA_FRANCHISES,
+  feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES, AAA_FRANCHISES, looksNonEnglish,
 } from "./lib/detect.mjs";
 import { judgeCandidates } from "./lib/judge.mjs";
 import {
@@ -197,6 +197,12 @@ if (cfg.games.enabled) {
   const gamesDoc = loadGames(cfg);
   const known = new Map(gamesDoc.items.map((g) => [g.name.toLowerCase(), g]));
   const prefGeos = new Set(cfg.games.geos || []);
+  // 🆕 英文闸：默认开。`latinOnly` 拦不住西/德/法/葡/土 —— 它们都是拉丁字母（见 detect.mjs 的 NON_EN_* 段）
+  const englishOnly = cfg.games.englishOnly !== false;
+  // 🆕 2026-09-25 准入地区闸 = `prefGeos`（config 里本来就是英语区：US/GB/CA/AU/NZ/IE）。
+  //   为什么补这道闸：之前只有「取曲线用哪个地区」的偏好，**没有准入判定** —— 只在 CL/FR/DE/VN 热的词
+  //   照样进库，然后曲线**静默回退到 US**（见下面 todo 循环），凭空造出一条与本词无关的曲线。
+  //   实测：2220 条里 59 条（2.7%）是这种，地区集中在 FR/DE/BR/IT/VN/CO/NL/BD/ES/IN/CL。
   const refreshMs = (cfg.games.refreshHours || 6) * 3600_000;
   // 默认只收拉丁字母名（做英文站的推荐配置）；config 里显式写 false 才放开
   const latinOnly = cfg.games.latinOnly !== false;
@@ -213,11 +219,13 @@ if (cfg.games.enabled) {
 
   for (const it of fresh) {
     if (it.noise) continue;
+    // 🛑 准入地区闸：只在非英语区热的词直接跳过（省下的曲线配额给英语区）
+    if (!prefGeos.has(it.geo)) continue;
     // 你的明确判断优先于任何启发式规则：feedback.block 里的词直接不进雷达
     if (feedbackVerdict(it.q, cfg.feedback) === "block") continue;
     const vol = it.vol || 0;
     if (vol < (cfg.games.minVol ?? 0)) continue;
-    const gc = gameCandidate(it, { latinOnly, excludeAAA });
+    const gc = gameCandidate(it, { latinOnly, excludeAAA, englishOnly, trendTerm: true });
     if (!gc.ok) continue;
     // 低量区（刚冒头的新游戏就在这里）只放行"强信号"候选：
     // 实测 32 个 vol<1000 的候选里，权重≥3 的全是真游戏；
@@ -299,6 +307,8 @@ if (cfg.games.enabled) {
       //    但不为它们花"入库 + 官方数据 + SERP 实测"的配额（实测 25 条 AAA 全来自 Play 热榜直收）。
       //    热搜候选的同类过滤在 gameCandidate({excludeAAA}) 里，这里补齐目录/队列两条通道。
       if (excludeAAA && AAA_FRANCHISES.test(String(it.name || "").trim())) continue;
+      // 🆕 英文闸（2026-09-25）：目录里也有大量非英文名（实测 34 条来源型带重音字母：appstore 17 / itch 14）
+      if (englishOnly && looksNonEnglish(String(it.name || ""))) continue;
       // 🛑 2026-09-24 实测纠偏：**低优先级 ≠ 不该收**。
       //    原规则「prio < minPrio 一律不收」把 Google Play **整源**挡在门外：
       //    Play 没有新游入口 → 全部条目都是热榜 → queue.mjs 一律给 prio 1
@@ -342,6 +352,7 @@ if (cfg.games.enabled) {
     if (feedbackVerdict(it.name, cfg.feedback) === "block") continue;
     // 🛑 AAA 闸（2026-09-25）：排队等曲线验证的候选同理 —— 不把最贵的 Trends 配额花在饱和大作上
     if (excludeAAA && AAA_FRANCHISES.test(String(it.name || "").trim())) continue;
+    if (englishOnly && looksNonEnglish(String(it.name || ""))) continue;   // 🆕 英文闸
     const cur = known.get(key);
     if (cur && Date.now() - new Date(cur.chart_at || 0).getTime() < refreshMs) continue;
     candMap.set(key, {
@@ -613,6 +624,13 @@ if (cfg.games.enabled) {
     //    目录直收把 `Roblox`（Google Play 直收）灌进来之后**再没有机会被清掉** ——
     //    实测它靠 `roblox.com` 被误判成"专用站"，在推荐页排到**第一**（前端的自指域名修正已同步，见 serp.mjs）。
     if (excludeAAA && AAA_FRANCHISES.test(String(g.name || "").trim())) return false;
+    // 🆕 英文闸对**所有**条目生效（含来源型）：实测 34 条来源型带重音字母（土耳其/葡语/法语手游）
+    //    + 18 条中日韩名 —— 它们对英文站没有价值，但来源型条目原先整段跳过重筛 → 进来就再也清不掉。
+    if (englishOnly && looksNonEnglish(String(g.name || ""))) return false;
+    // 🆕 准入地区闸也要落到存量（含热搜型存量）：只在非英语区热的词同样清掉。
+    //    为什么放在来源型放行之前：来源型条目的 geos 就是我们的取数地区（US），天然通过；
+    //    这条真正拦的是"热搜型存量"（实测 52 条：FR/CL/BR/VN/DE…）。
+    if (!g.src && !(g.geos || []).some((q) => prefGeos.has(q))) return false;
     // 来源型条目（Roblox 榜单 / Steam 商店）是目录里的作品本体，不套"热搜游戏识别"规则 ——
     // 否则 "Mall" / "Cars" / "Find" 这类原名会被噪音 / 泛化词规则误杀
     if (g.src) return true;
@@ -624,7 +642,7 @@ if (cfg.games.enabled) {
     if (verdicts.get(String(g.name).toLowerCase().trim())?.game === false) return false;
     // 你的反馈同样能清存量：把词加进 feedback.block，下一轮它就从列表里消失
     if (feedbackVerdict(g.name, cfg.feedback) === "block") return false;
-    return gameCandidate({ q: g.name, cats }, { latinOnly, excludeAAA }).ok;
+    return gameCandidate({ q: g.name, cats }, { latinOnly, excludeAAA, englishOnly, trendTerm: !g.src }).ok;
   });
   if (list.length < ruleFiltered) log("dim", `  按当前规则清掉 ${ruleFiltered - list.length} 个不再符合条件的旧条目`);
   // ── 体积护栏（2026-09-24；2026-09-25 改淘汰顺序）──

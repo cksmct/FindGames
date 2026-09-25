@@ -79,7 +79,7 @@ const FIXTURE = /\b(game|match|fixture|kickoff)s? (today|tonight|live|score|resu
 // Google 把球赛标为 [17]，但把博彩站标成 [6,17]（同时含 Games 分类），
 // 所以"纯体育就判噪音"的规则拦不住博彩站，必须在这里拦。
 const FIXTURE_FORM =
-  /\b(game|games|match|fixture|kickoff|vs|versus|odds|sportsbook|standings|scoreboard|result|results|highlights|lineup|lineups|live stream|injur(?:y|ies)|transfer|transfers|squad|halftime|full ?time|recap|preview)\b/i;
+  /\b(game|games|match|fixture|kickoff|vs|versus|x|odds|sportsbook|standings|scoreboard|result|results|highlights|lineup|lineups|live stream|injur(?:y|ies)|transfer|transfers|squad|halftime|full ?time|recap|preview)\b/i;
 // 订阅服务 / 云游戏平台 —— 是服务，不是"新游戏作品"。
 // 实测 "xbox game pass" 会被收录，且它的分类是 [18,6]（不含 17），躲过了赛事规则。
 const SERVICE_ONLY =
@@ -158,6 +158,42 @@ const GENERIC_WORD =
 const GENERIC_MODIFIER =
   /\b(free|new|best|top|all|online|gratis|gratuit|gratuits|gratuite|kostenlos|gratuitos|completo|espanol|español)\b/gi;
 const stripGenericModifiers = (q) => q.trim().replace(GENERIC_MODIFIER, " ").replace(/\s+/g, " ").trim();
+// ── 英文闸（🆕 2026-09-25；用户口径：我们做的是**英文站**）─────────────────────────
+// 为什么需要：`latinOnly` 只排掉**非拉丁字母体系**（中/日/韩/西里尔/阿拉伯…），而西/德/法/葡/土/北欧
+//   全是拉丁字母 → 一律放行。实测线上 2220 条里：43 条带重音字母（Kahvehane Simülatörü ·
+//   Le Président, à vos règles · Esquimó a Grande Aventura）、外加小语种日期短语（24 de septiembre）
+//   与小语种功能词（Las aventuras de Chorizo）—— 对英文站毫无价值，还白占曲线配额：这些词的地区
+//   不在偏好里，曲线只能**回退到 US 取**，算出一条与本词无关的曲线 —— 这就是「卡片写着 US、
+//   词却是德语」的来源。
+// 判据（可解释，见 nonEnglishEvidence）：三条独立证据任一条成立即判非英文 ——
+//   ① 带重音/变音字母（é à ü ñ ß ø å …）：英文关键词里几乎不出现。代价是误杀「Me 262 Königsberg WW2」
+//      这类含德文地名的英文标题，可接受；`games.englishOnly: false` 可整体关掉这个闸。
+//   ② 小语种日期短语（<数字> de septiembre / 24. September / 18 septembre）—— 事件词，不是游戏。
+//   ③ 小语种功能词（und/für/avec/pour/não/del/los …）或 ≥2 个弱功能词（el/la/con/des/les …）。
+const NON_EN_ACCENT = /[\u00c0-\u00ff\u0100-\u017f]/;
+const NON_EN_DATE = /\b\d{1,2}[.\s]+(de\s+|del\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|maio|junho|julho|setembro|outubro|novembro|dezembro|januar|februar|märz|juni|juli|oktober|dezember|janvier|février|mars|avril|juin|juillet|août|septembre|octobre|novembre|décembre)\b/i;
+const NON_EN_STRONG = /\b(und|für|über|nicht|sind|das|der|dem|den|von|zum|zur|não|avec|pour|dans|quand|pourquoi|comment|warum|del|los|las|dos|uma|desde|donde|cuando|dónde|quién)\b/i;
+const NON_EN_WEAK = /\b(el|la|que|para|con|por|como|más|mais|et|sur|les|des|une|est|una|auch|noch|schon|vom|beim|seu|sua|pelo|pela)\b/gi;
+/** 英文闸证据：返回命中了哪几条（空数组 = 看着像英文）。可解释，便于回答「这条为什么被挡」 */
+export function nonEnglishEvidence(q) {
+  const t = String(q || "");
+  const out = [];
+  // 非拉丁字母体系（中/日/韩/西里尔/阿拉伯…）：latinOnly 的语义并进来 —— 来源型条目原先整段跳过，
+  // 实测线上有 18 条中日韩名（呱唧大陆 / フロアーⅩⅢの心象 / Βρες Με）从目录通道漏进来。
+  if (NON_LATIN.test(t)) out.push("非拉丁字母体系");
+  if (NON_EN_ACCENT.test(t)) out.push("带重音/变音字母");
+  if (NON_EN_DATE.test(t)) out.push("小语种日期短语");
+  if (NON_EN_STRONG.test(t)) out.push("小语种功能词");
+  const weak = (t.match(NON_EN_WEAK) || []).length;
+  if (weak >= 2) out.push("多个小语种功能词×" + weak);
+  return out;
+}
+export const looksNonEnglish = (q) => nonEnglishEvidence(q).length > 0;
+
+// 新闻 / 法律 / 公司事件 —— 热搜里常见，但不是游戏作品（2026-09-25 实测漏网三条：
+//   xbox studio changes and restructuring · amazon ftc prime settlement update · nintendo lawsuit …）
+const NEWS_ONLY = /\b(settlement|lawsuit|class action|restructuring|layoffs?|merger|acquisition|earnings|antitrust|shareholders?|stock price|ipo|studio changes)\b/i;
+
 // 明确不是游戏的身份类词 / 平台类词（不是"新游戏"）
 const NOT_GAME_EXTRA =
   /\b(vtuber|virtual youtuber|バーチャルyoutuber|youtuber|influencer|streamer|celebrity|twitch|discord|reddit|tiktok|instagram|facebook|spotify)\b/i;
@@ -182,6 +218,16 @@ export const AAA_FRANCHISES =
   /^(fortnite|minecraft|gta.*|grand theft auto.*|call of duty.*|cod|warzone|valorant|apex legends|overwatch|league of legends|lol|roblox|genshin impact|honkai.*|counter[- ]strike.*|cs ?2|csgo|fifa.*|ea sports fc.*|nba ?2k.*|pubg.*|brawl stars|clash royale|clash of clans|mobile legends|free fire|honor of kings|pokémon go|pokemon go|candy crush.*|among us|township.*|royal match.*|block ?blast.*|pou|fishdom.*|gardenscapes.*|homescapes.*|coin master.*|subway surf.*|whiteout survival.*|last war.*|rise of kingdoms.*|state of survival.*)$/i;
 
 /**
+ * 🆕 2026-09-25：**包含式** AAA 闸 —— 只用于**热搜词**（不用于目录里的作品名）。
+ * 为什么：AAA_FRANCHISES 是整串锚定（^…$），而热搜词常带修饰与顺序变化 —— 实测漏网
+ *   `edition collector gta 6` · `collector gta 6` · `rockstar games gta vi` · `roblox-tunisie`。
+ * 为什么不给目录名也用：目录里真有「Golf Clash」/「Coil Clash」/「Guhe Township Waterfall」这类
+ *   名字里恰好含通用词的真游戏（实测 clash 7 条、township 1 条）→ 只有品牌性极强的词才敢做子串匹配。
+ */
+export const AAA_SUBSTR =
+  /\b(gta|grand theft auto|rockstar games|call of duty|minecraft|fortnite|valorant|apex legends|overwatch|league of legends|genshin|honkai|counter-strike|cs2|fifa|ea sports fc|nba 2k|pubg|brawl stars|candy crush|pokemon|pokémon|roblox|among us|free fire|mobile legends)\b/i;
+
+/**
  * 判断一条热搜是否"可能是新游戏"
  * @param {{q:string,cats:number[]}} item
  * @param {{latinOnly?:boolean}} [opts] latinOnly=true 时只收拉丁字母名（做英文站的推荐配置）
@@ -191,8 +237,18 @@ export function gameCandidate(item, opts = {}) {
   const q = item.q || "";
   const cats = item.cats || [];
   if (opts.latinOnly && NON_LATIN.test(q)) return { ok: false, reason: "非英文名", weight: 0 };
-  // AAA 大作 / 饱和品牌：可选开关（games.excludeAAA），默认关
-  if (opts.excludeAAA && AAA_FRANCHISES.test(q.trim())) return { ok: false, reason: "AAA大作(不可做)", weight: 0 };
+  // 🆕 英文闸（默认开，`games.englishOnly: false` 可关）：见 NON_EN_* 常量段的注释
+  if (opts.englishOnly !== false) {
+    const ev = nonEnglishEvidence(q);
+    if (ev.length) return { ok: false, reason: "非英文（" + ev.join("/") + "）", weight: 0 };
+  }
+  // AAA 大作 / 饱和品牌：可选开关（games.excludeAAA），默认关。
+  //   热搜词额外走**包含式**（AAA_SUBSTR）：`edition collector gta 6` 不以 gta 开头，整串锚定抓不到。
+  if (opts.excludeAAA && (AAA_FRANCHISES.test(q.trim()) || (opts.trendTerm && AAA_SUBSTR.test(q)))) {
+    return { ok: false, reason: "AAA大作(不可做)", weight: 0 };
+  }
+  // 🆕 新闻 / 法律 / 公司事件：不是游戏作品（做站也无从下手）
+  if (NEWS_ONLY.test(q)) return { ok: false, reason: "新闻/法律事件", weight: 0 };
   if (!q || NOT_GAME.test(q) || NOT_GAME_EXTRA.test(q)) return { ok: false, reason: "非游戏实体", weight: 0 };
   // 体育分类 + 赛事词形 = 比赛/盘口，不是游戏作品
   if (cats.includes(CAT.SPORTS) && FIXTURE_FORM.test(q)) return { ok: false, reason: "体育赛事/盘口", weight: 0 };
