@@ -501,6 +501,13 @@ if (cfg.games.enabled) {
       related_at: needRelated ? iso() : prev?.related_at || iso(),
       chart_geo: geo,
       first: prev?.first || iso(),
+      // 🆕 2026-09-25：**潜伏期首次发现时间**（我们还没上线就盯上它的那天）。
+      //    `first` = 雷达入库时间（用于 30 天过期 + "最新发现"排序），语义不动；
+      //    `lead`（发现提前量）问的是"我们**最早**什么时候看到它" → 必须用 `firstSeenAt`。
+      //    没有这个字段，潜伏转正的条目 lead 恒为负（实测 1115 条里 712 条 lead<0、**0 条 lead>0**），
+      //    "发售前发现"的先手红利在架构里就兑现不了。
+      //    通路：watchlist.mjs 的 firstSeen → pushQueue → 这里。
+      firstSeenAt: prev?.firstSeenAt || (c.srcInfo && c.srcInfo.firstSeen) || "",
       last: iso(),
       sightings: (prev?.sightings || 0) + 1,
       hype,

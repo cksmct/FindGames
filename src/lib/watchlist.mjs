@@ -250,6 +250,27 @@ export async function buildWatchlist(cfg, session) {
   const notes = [];
   const stats = { steam: 0, roblox: 0, total: 0, trendsChecked: 0, trendsFailed: 0, trendsMode: "off", windows: {} };
 
+  // ── 🆕 2026-09-25：潜伏条目的「首次发现时间」持久化 ──────────────────────────
+  // 为什么必须持久化：`lead`（发现提前量）= 官方上线日 − **我们最早看到它的时间**。
+  //   但潜伏列表**每轮重建、不留历史**（刻意的设计，见 README）→ 条目转正进 games.json 时，
+  //   只能拿"入库时刻"当发现日 → `lead` 永远为负。
+  //   实测规模（线上 1115 条）：`lead < 0` **712 条**、`lead > 0` **0 条**，中位滞后 78 天
+  //   → "发售前发现"的先手红利在架构里**根本产生不了**，`lead` 项此前只实现了"惩罚晚发现"那一半。
+  // 做法：把每个名字的首次出现时间跨轮存进 `.watchlist-firstseen.json`（点文件，不上站），
+  //   转正时随队列带进 games.json 的 `firstSeenAt`。
+  //   （`pushQueue` 用 Object.assign 保留任意字段，老条目还会同步新元数据 → 队列层不用改。）
+  const firstSeenFile = dataPath(cfg, ".watchlist-firstseen.json");
+  const firstSeenDoc = readJson(firstSeenFile, {}) || {};
+  const fsItems = firstSeenDoc.items || {};
+  const markFirstSeen = (name) => {
+    const k = String(name || "").trim().toLowerCase();
+    if (!k) return "";
+    const rec = fsItems[k];
+    if (rec && rec.firstSeen) { rec.lastSeen = iso(); return rec.firstSeen; }
+    fsItems[k] = { name: String(name), firstSeen: iso(), lastSeen: iso() };
+    return fsItems[k].firstSeen;
+  };
+
   // ── Steam：愿望单榜（主力）+ 近发售窗口 ──
   const steamMap = new Map();
   try {
@@ -317,6 +338,8 @@ export async function buildWatchlist(cfg, session) {
     items.push({
       id: "steam:" + s.appid,
       name: s.name,
+      // 🆕 我们**最早**看到它的时间（跨轮持久化）→ 转正进 games.json 后用来算 lead
+      firstSeen: markFirstSeen(s.name),
       source: "steam",
       list: s.list,
       rank: s.rank,
@@ -407,6 +430,8 @@ export async function buildWatchlist(cfg, session) {
       const item = {
         id: g.id,
         name: g.name,
+        // 🆕 我们**最早**看到它的时间（跨轮持久化）→ 转正进 games.json 后用来算 lead
+        firstSeen: markFirstSeen(g.name),
         source: "roblox",
         list: "BloxInformer Release Hub",
         rank: null,
@@ -462,6 +487,9 @@ export async function buildWatchlist(cfg, session) {
           name: x.name, source: "roblox", kind: "new", url: x.links.page,
           prio: 5,                 // 插队：已确认可玩，比排队等验证的候选更急
           via: "watchlist-live",   // 标记来源：雷达对这类条目免"必须有 Trend 曲线"的门槛
+          // 🆕 把**潜伏期首次发现时间**带进队列 → collect.mjs 入库时写成 `firstSeenAt`
+          //    （这是"发售前发现"能兑现成 lead 正分的唯一通路）
+          firstSeen: x.firstSeen || "",
         })), knownNames);
         // added + bumped 都算"本轮交给了雷达"：已在队列里的会被抬优先级而不是重复入队，
         // 只报 added 会让人误以为漏掉了（实测：7 条转正，added 只有 2）。
@@ -520,6 +548,8 @@ export async function buildWatchlist(cfg, session) {
     items.push({
       id: "roblox:" + (r.universeId || r.name),
       name: r.name,
+      // 🆕 我们**最早**看到它的时间（跨轮持久化）→ 转正进 games.json 后用来算 lead
+      firstSeen: markFirstSeen(r.name),
       source: "roblox",
       list: r.list,
       rank: null,
@@ -585,6 +615,8 @@ export async function buildWatchlist(cfg, session) {
           items.push({
             id: "ios:" + it.appid,
             name: it.name,
+            // 🆕 我们**最早**看到它的时间（跨轮持久化）→ 转正进 games.json 后用来算 lead
+            firstSeen: markFirstSeen(it.name),
             source: "appstore",
             list: it.list,                 // 形如 `new-free US`
             rank: it.rank,
@@ -695,5 +727,12 @@ export async function buildWatchlist(cfg, session) {
     items: limited,
   };
   writeJson(dataPath(cfg, "watchlist.json"), doc);
+  // firstSeen 写回：保留 180 天内出现过的，长期不出现的清掉（避免文件无限增长）
+  const fsCutoff = now - 180 * 86400000;
+  let fsDropped = 0;
+  for (const [k, v] of Object.entries(fsItems)) {
+    if (!v || !v.lastSeen || new Date(v.lastSeen).getTime() < fsCutoff) { delete fsItems[k]; fsDropped++; }
+  }
+  writeJson(firstSeenFile, { updated: iso(), items: fsItems }, true);
   return doc;
 }

@@ -760,7 +760,11 @@
    */
   function discoveryLeadDays(g) {
     var c = (g.stats && g.stats.created) || g.srcCreated;
-    var f = g.first;
+    // 🆕 2026-09-25：优先用**潜伏期首次发现时间**（`firstSeenAt`，来自 watchlist 的 firstSeen）。
+    //    它才是"我们最早看到它"的时间；没有才退回雷达入库时间 `first`。
+    //    没有这一层，潜伏转正的条目 lead 恒为负（实测 1115 条里 712 条 lead<0、**0 条 lead>0**），
+    //    "发售前发现"的先手红利永远兑现不了 —— `lead` 就只实现了"惩罚晚发现"的一半。
+    var f = g.firstSeenAt || g.first;
     if (!c || !f) return null;
     var d = (new Date(c).getTime() - new Date(f).getTime()) / 86400000;
     return isFinite(d) ? d : null;
