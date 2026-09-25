@@ -498,6 +498,8 @@ export async function buildWatchlist(cfg, session) {
           youtube: (g.social && g.social.youtube) || "",
         }),
         assess,
+        // 🆕 2026-09-25：SERP 测量结果随条目落盘（此前只进 assess.reasons 文本，前端看不到测量时间与明细）
+        serp: g.serp || null,
         // 官方关联结果（有就带上；没有就如实留空，不编）
         universeId: g.universeId || null,
         matchType: g.matchType || "",
@@ -556,6 +558,10 @@ export async function buildWatchlist(cfg, session) {
       for (const x of arr) { const k = key(x) || "(未标注)"; m[k] = (m[k] || 0) + 1; }
       return Object.entries(m).sort((a, b) => b[1] - a[1]);
     };
+    // 🆕 2026-09-25 校准观测：分数分位数 —— 「值得潜伏」长期为 0 时，先看分布再动阈值/锚点，
+    //    不拍脑袋（p25/p50/p75 + 各维平均分量从 reasons 里抽不出来，先用总分分布定位压缩点）。
+    const scores = pushed.map((x) => x.assess.score).sort((a, b) => a - b);
+    const pct = (q) => (scores.length ? scores[Math.min(scores.length - 1, Math.floor(q * scores.length))] : null);
     const genreCount = {};
     for (const x of pushed) for (const gg of x.genres || []) genreCount[gg] = (genreCount[gg] || 0) + 1;
     rbxStat = {
@@ -585,6 +591,7 @@ export async function buildWatchlist(cfg, session) {
       byBand: tally(pushed, (x) => x.assess.band.t),
       byGenre: Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 8),
       avgScore: pushed.length ? Math.round(pushed.reduce((a, x) => a + x.assess.score, 0) / pushed.length) : null,
+      scoreP25: pct(0.25), scoreP50: pct(0.5), scoreP75: pct(0.75),
       top: pushed.slice().sort((a, b) => b.assess.score - a.assess.score).slice(0, 5)
         .map((x) => ({ name: x.name, score: x.assess.score, band: x.assess.band.t, days: x.releaseInDays })),
     };

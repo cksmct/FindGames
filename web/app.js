@@ -1417,9 +1417,16 @@
   /** 评估列：分数 + 分档，鼠标悬停看四个分项的理由（让人能一眼反驳） */
   function assessCell(it) {
     var a = it.assess;
-    if (!a) return '<span class="dim">—</span>';
+    if (!a) {
+      // 🆕 该来源不做潜伏评分：说清楚去哪看，而不是静默画"—"（94 条里 71 条原先无解释）
+      var where = it.source === "appstore"
+        ? (it.preorder ? "预购条目：上架后走「🎯 建站推荐」评估" : "已上架：走「🎯 建站推荐」评估")
+        : "走「🎯 建站推荐」评估";
+      return '<span class="dim" title="潜伏评分只评 Roblox 未发售条目（发布确定性/日期/内容面/社区/竞争五维）">' + esc(where) + "</span>";
+    }
     var tip = "评分 " + a.score + " · " + a.band.t + "\n" + a.reasons.join("\n") +
-      (a.missing.length ? "\n缺：" + a.missing.join(" / ") : "");
+      (a.missing.length ? "\n缺：" + a.missing.join(" / ") : "") +
+      (it.serp && it.serp.at ? "\nSERP 测于 " + String(it.serp.at).slice(0, 10) : "");
     return '<span class="wk-band wk-' + a.band.k + '" title="' + esc(tip) + '">' + a.score + " " + esc(a.band.t) + "</span>";
   }
 

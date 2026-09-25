@@ -302,7 +302,7 @@ export const UPCOMING_RULES = {
     "发布确定性（0~100）：已确认/有发售日 100 · Beta/Early Access 82 · 开发中 55 · 早期原型 40 · 已延期 30 · 可能取消 5 · 未标注 45",
     "日期精确度：确切日期 100 · 只有月份 70 · 只有季度 55 · 只有年份 40 · 未定档 15",
     "内容面（按类型取最高档）：宠物收集/RPG/开放世界 92（有图鉴·配队·流派可写）· 模拟/策略/体育 70 · 动作/射击/解谜 52 · obby/派对/社交 28 · 无类型标注 30",
-    "社区地基：Discord +8 · YouTube +6 · Roblox 群组 +6（上限 20）",
+    "社区地基：Discord +12 · YouTube +5 · Roblox 群组 +3（上限 20）—— Discord 是 Roblox 独立游戏社区的基本盘，对未发售小游戏而言社群是**最早**的需求信号（搜索量是滞后指标）",
     "🆕 竞争饱和度（0~100，与建站推荐的竞争项**共用同一张分档表**）：SERP 前十**专用站**数（域名含游戏名 slug = 专为它建的站；通用媒体 progameguides 等对每个游戏都有 codes 页，不算对手）→ 0 个=100 · 1~2 个=75 · 3~4 个=50 · 5~7 个=25 · ≥8 个=10。**未测 = 不适用（权重跳过），不是 0 分**",
   ],
   bands: "≥70 = 值得潜伏；已延期 / 可能取消 → 风险档；**SERP 前十专用站 ≥5（竞争已起）→ 竞争已起档**；距发售 ≤7 天 → 窗口已过（新站来不及）",
@@ -338,12 +338,15 @@ export function scoreUpcoming(g) {
   reasons.push(`内容面 ${surface}（${(g.genres || []).join("/") || "无类型"} → ${surfaceWhy}）`);
 
   // ④ 社区地基
+  // 🛑 2026-09-25 锚点重排（用户公理：「越早识别，成功率越高」+ 未发售小游戏的最早需求就在社群）：
+  //    Discord 8→12 / YouTube 6→5 / 群组 6→3 —— Discord 是 Roblox 独立游戏社区的基本盘，
+  //    "有"本身就值一半分；三家齐全的未发售游戏极少，旧锚点把整个刻度压到了 47 分均值、0 条 go。
   const social = g.social || {};
   let community = 0;
   const have = [];
-  if (social.discord) { community += 8; have.push("Discord"); }
-  if (social.youtube) { community += 6; have.push("YouTube"); }
-  if (social.robloxGroup) { community += 6; have.push("Roblox 群组"); }
+  if (social.discord) { community += 12; have.push("Discord"); }
+  if (social.youtube) { community += 5; have.push("YouTube"); }
+  if (social.robloxGroup) { community += 3; have.push("Roblox 群组"); }
   community = Math.min(20, community);
   if (!have.length) missing.push("无任何社媒链接");
   reasons.push(`社区地基 ${community}（${have.join(" + ") || "无"}）`);
