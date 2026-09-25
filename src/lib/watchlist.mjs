@@ -325,6 +325,8 @@ export async function buildWatchlist(cfg, session) {
   const info = await enrichSteam(cfg, steamItems, w);
   const items = [];
   const seenName = new Set();
+  // 🆕 发售即转正的收集桶（见下面循环内的注释）
+  const steamPromote = [];
 
   for (const s of steamItems) {
     const meta = info.get(String(s.appid)) || {};
@@ -332,7 +334,23 @@ export async function buildWatchlist(cfg, session) {
     const p = parseRelease(released, now);
     // ≤7 天就发售的不进清单：新站在 7 天内不可能排上去（除非只要一个快速长尾页）。
     // 未定档（days=null）的**要留** —— 高愿望单 + 没定档恰恰是最典型的"潜伏"标的。
-    if (!w.includeTooLate && p.days != null && p.days < 7) continue;
+    if (!w.includeTooLate && p.days != null && p.days < 7) {
+      // 🆕 2026-09-25：**发售即转正**（Steam 侧一直缺的"潜伏 → 上线"接班）。
+      //    旧版把"临门 ≤7 天 / 已发售"的直接丢弃 —— 潜伏盯了几个月的游戏在兑现日
+      //    从清单消失，且永远不会进建站推荐（转正逻辑此前只存在于 Roblox 分支）。
+      //    现在：临门（0~7 天）与已发售 ≤14 天的推进雷达队列 —— prio 5、via=watchlist-live
+      //    （免"必须有 Trends 曲线"门槛）、带 firstSeen；清单本体仍只服务"还没上线"。
+      if (p.days >= -14 && s.appid) {
+        steamPromote.push({
+          name: s.name, source: "steam", kind: "new", url: s.url,
+          appid: Number(s.appid),
+          prio: 5,
+          via: "watchlist-live",
+          firstSeen: markFirstSeen(s.name),
+        });
+      }
+      continue;
+    }
     const key = String(s.name).toLowerCase();
     seenName.add(key);
     items.push({
@@ -359,6 +377,23 @@ export async function buildWatchlist(cfg, session) {
       links: linkSet(s.name, s.url, geo, compare),
       trends: { status: "not-queried" },
     });
+  }
+
+  // ── Steam 发售即转正：推进雷达队列（与 Roblox 的 watchlist-live 共用同一套下游链路）──
+  let steamPromoted = 0;
+  if (steamPromote.length) {
+    try {
+      const knownDoc = readJson(dataPath(cfg, "games.json"), { items: [] });
+      const knownNames = new Set((knownDoc.items || []).map((x) => String(x.name).toLowerCase()));
+      const res = pushQueue(cfg, steamPromote, knownNames);
+      // added + bumped 都算"本轮交给了雷达"：已在队列里的会被抬优先级而不是重复入队。
+      steamPromoted = res.added + (res.bumped || 0);
+      notes.push("Steam **发售即转正**：" + steamPromote.length + " 条临门 / 已发售的游戏推进雷达队列（新增 " + res.added +
+        " · 提权 " + (res.bumped || 0) + "）—— 潜伏盯到上线后由「🎯 建站推荐」接班，潜伏期首见时间（firstSeen）随行，" +
+        "这是「发现提前量」正分的来源之一。");
+    } catch (e) {
+      notes.push("Steam 发售即转正失败：" + e.message + "（不影响清单本体）");
+    }
   }
   // Roblox 未发售（BloxInformer Release Hub）——真正的"未 release"清单 + 潜伏评分
   let rbxDroppedPast = 0;
@@ -586,7 +621,7 @@ export async function buildWatchlist(cfg, session) {
   //     这才是判"竞争窗口"的依据（不是"我们什么时候发现它"）；
   //   · Android（Play）**没有可抓的"新游"入口、详情页也没有首发日** → 进不了潜伏线，
   //     它只能在雷达/推荐页按"评分人数 + 星级"评估。这不是偷懒，是那个平台没这个数据。
-  const iosStat = { total: 0, dated: 0, undated: 0, tooOld: 0, kept: 0 };
+  const iosStat = { total: 0, dated: 0, undated: 0, tooOld: 0, kept: 0, preorder: 0 };
   {
     const mob = Object.assign({ ios: true, maxAgeDays: 45, maxItems: 40, lookupBatch: 50 }, w.mobile || {});
     if (mob.ios !== false) {
@@ -620,14 +655,18 @@ export async function buildWatchlist(cfg, session) {
           const rel = (st && st.created) || "";
           if (!rel) { iosStat.undated++; continue; }
           const daysSince = Math.floor((nowMs - new Date(rel + "T00:00:00Z").getTime()) / 86400000);
-          if (daysSince < 0) continue;                                  // 预购 / 未上架：这里只收已经能玩的
-          if (daysSince > (mob.maxAgeDays || 45)) { iosStat.tooOld++; continue; }
+          // 🆕 2026-09-25：**预购 / 未上架**（releaseDate 在未来）不再是丢弃项 ——
+          //    lookup 给出的未来日期是**带确切发售日的新潜伏来源**（零新增请求），
+          //    与 Steam / Roblox 的"还有几天发售"同一口径进清单（正数 releaseInDays）。
+          const preorder = daysSince < 0;
+          if (!preorder && daysSince > (mob.maxAgeDays || 45)) { iosStat.tooOld++; continue; }
           const key = String(it.name).toLowerCase();
           if (seenName.has(key)) continue;
           if (iosStat.kept >= (mob.maxItems || 40)) break;   // 别让手机端条目把整份清单挤出局
           seenName.add(key);
           iosStat.dated++;
           iosStat.kept++;
+          if (preorder) iosStat.preorder++;
           items.push({
             id: "ios:" + it.appid,
             name: it.name,
@@ -639,9 +678,11 @@ export async function buildWatchlist(cfg, session) {
             appid: it.appid,
             geo: it.geo,
             released: rel,
-            releaseInDays: -daysSince,     // 负数 = 已经上线（与 Steam/Roblox 的"还有几天"共用一个字段）
-            daysSince,
-            window: "fresh",               // 新增窗口：🆕 刚上架
+            // 预购：正数 = 还有 N 天发售（与 Steam/Roblox 同口径）；已上架：负数 = 已上架 N 天
+            releaseInDays: -daysSince,
+            daysSince: preorder ? null : daysSince,   // 「已上架几天」只对已上架语义成立
+            window: preorder ? windowOf(-daysSince) : "fresh",               // 新增窗口：🆕 刚上架
+            preorder,
             genres: (st && st.genres) || [],
             developer: (st && st.developer) || "",
             price: (st && st.price) || "",
@@ -652,7 +693,7 @@ export async function buildWatchlist(cfg, session) {
             trends: { status: "not-queried" },
           });
         }
-        log("dim", `  iOS 新上架：榜上抓 ${iosStat.total} · 查详情 ${iosStat.picked} → 进清单 ${iosStat.dated}（无日期 ${iosStat.undated} / 超过 ${mob.maxAgeDays} 天 ${iosStat.tooOld}）`);
+        log("dim", `  iOS 新上架：榜上抓 ${iosStat.total} · 查详情 ${iosStat.picked} → 进清单 ${iosStat.dated}（预购/未上架 ${iosStat.preorder} · 无日期 ${iosStat.undated} / 超过 ${mob.maxAgeDays} 天 ${iosStat.tooOld}）`);
       } catch (e) {
         notes.push("iOS 新上架清单未取得：" + e.message);
       }
@@ -669,7 +710,11 @@ export async function buildWatchlist(cfg, session) {
   // 🆕 2026-09-24：iOS 的"刚上架"条目用 `daysSince` 当同一个主键 ——
   //    语义上「3 天前上架」和「3 天后发售」都是"3 天的事"，都是现在该动手的信号。
   const primaryKey = (x) => {
-    if (x.source === "appstore") return x.daysSince == null ? 1e9 : x.daysSince;
+    if (x.source === "appstore") {
+      if (x.daysSince != null) return x.daysSince;          // 已上架：按「上架几天」
+      if (x.releaseInDays != null) return x.releaseInDays;  // 🆕 预购：按「还有几天发售」
+      return 1e9;
+    }
     return x.releaseInDays == null ? 1e9 : x.releaseInDays;
   };
   items.sort((a, b) => {
@@ -690,6 +735,7 @@ export async function buildWatchlist(cfg, session) {
   stats.steam = limited.filter((x) => x.source === "steam").length;
   stats.roblox = limited.filter((x) => x.source === "roblox").length;
   stats.appstore = limited.filter((x) => x.source === "appstore").length;
+  stats.steamPromoted = steamPromoted;
   stats.ios = iosStat;
   stats.robloxUpcoming = rbxUpcoming ? rbxUpcoming.items.length : 0;
   stats.robloxDroppedPast = rbxDroppedPast;
@@ -704,7 +750,8 @@ export async function buildWatchlist(cfg, session) {
   if (iosStat.total) {
     notes.push(`iOS 手游：来源 Apple 的 newfree/newpaid（Apple 在推的新面孔）+ topfree/topgrossing（**真·刚上线就冲榜**）` +
       `，再用 lookup 拿**真实上线日**过滤（榜上 ${iosStat.total} → 查详情 ${iosStat.picked} → 有日期 ${iosStat.dated}、无日期跳过 ${iosStat.undated}、超过 ${(w.mobile && w.mobile.maxAgeDays) || 60} 天 ${iosStat.tooOld}）。` +
-      "窗口标「🆕 新上架」；评分人数是需求代理、星级是口碑（0 人评 = 刚上架，不是口碑差）。");
+      "窗口标「🆕 新上架」；评分人数是需求代理、星级是口碑（0 人评 = 刚上架，不是口碑差）。" +
+      "🆕 **预购 / 未上架**（releaseDate 在未来）不再丢弃：按「N 天后发售」进清单 —— lookup 的未来日期是带确切发售日的潜伏来源（零新增请求）。");
     notes.push("🛑 **不要相信 Apple 的 new* feed 就等于「刚上线」**：实测 2026-09-24 该 feed 的 `updated` 是新的，" +
       "但里面每个游戏的上线日都停在 **2026-07-03~07-08**（113/114 条挤在 76~83 天）—— 它返回的是**冻结的旧批次**。" +
       "所以本清单靠 **lookup 的真实 releaseDate** 判窗口，而不是靠它在不在 new 榜上。");

@@ -1258,7 +1258,11 @@
    * 都是现在该动手的信号，混排才能一眼看出"最近发生了什么"。
    */
   function watchPrimary(x) {
-    if (x.source === "appstore") return x.daysSince == null ? 1e9 : x.daysSince;
+    if (x.source === "appstore") {
+      if (x.daysSince != null) return x.daysSince;          // 已上架：按「上架几天」
+      if (x.releaseInDays != null) return x.releaseInDays;  // 🆕 预购：按「还有几天发售」（与服务端 primaryKey 一致）
+      return 1e9;
+    }
     return x.releaseInDays == null ? 1e9 : x.releaseInDays;
   }
 
