@@ -23,7 +23,7 @@ import { linkUpcomingToRoblox } from "./roblox.mjs";
 import { fetchIosBatch } from "./mobile.mjs";
 import { pushQueue } from "./queue.mjs";
 // 潜伏评分第五维「竞争饱和度」用的单条 SERP 核查（与建站推荐共用同一份实现 + 同一份缓存）
-import { checkOneSerp, isCurrentSerpRecord, SERP_CACHE_VERSION } from "./serp.mjs";
+import { checkOneSerp, isCurrentSerpRecord, deriveComp, SERP_CACHE_VERSION } from "./serp.mjs";
 import { fetchInterest, hypeRatio } from "./interest.mjs";
 
 const STEAM = "https://store.steampowered.com";
@@ -451,20 +451,24 @@ export async function buildWatchlist(cfg, session) {
       const raw = serpCache[k];
       const hit = isCurrentSerpRecord(raw) ? raw : null;
       if (raw && !hit) serpStaleSkipped++;
-      if (hit && hit.at && now - new Date(hit.at).getTime() < serpTtlMs) { serpCached++; return hit; }
-      if (!serpWindowOpen) return hit || null;             // 未到窗口：只读缓存，把配额让给建站推荐
-      if (serpUsed >= serpBudget) return hit || null;      // 超预算：沿用旧结果；没有就留「未测」
+      // 🛑 返回前统一走 deriveComp()：缓存里的 `dedicated` / `open` 是**写记录时的标量**，
+      //    口径改过（专用站定义 / 平台自指域名）后就会失真；hosts 才是原始事实。
+      if (hit && hit.at && now - new Date(hit.at).getTime() < serpTtlMs) { serpCached++; return deriveComp(hit); }
+      if (!serpWindowOpen) return hit ? deriveComp(hit) : null;      // 未到窗口：只读缓存，把配额让给建站推荐
+      if (serpUsed >= serpBudget) return hit ? deriveComp(hit) : null;   // 超预算：沿用旧结果；没有就留「未测」
       serpUsed++;
       try {
         const rec = await checkOneSerp(name, cfg);
         serpCache[k] = rec;
         serpCache._v = SERP_CACHE_VERSION;   // 与 serp.mjs 同版本号，否则下一轮会被整体作废
-        log("dim", `    潜伏 SERP ${name}：独立域名 ${rec.domains} → 竞争档 ${rec.open}` +
-          (rec.competitorFirstSeen ? `；首个专站最早快照 ${rec.competitorFirstSeen}` : ""));
-        return rec;
+        const derived = deriveComp(rec);
+        log("dim", `    潜伏 SERP ${name}：独立域名 ${derived.domains} → 竞争档 ${derived.open}` +
+          (derived.ownExcluded && derived.ownExcluded.length ? `（平台自指域名 ${derived.ownExcluded.join("/")} 不算专用站）` : "") +
+          (derived.competitorFirstSeen ? `；首个专站最早快照 ${derived.competitorFirstSeen}` : ""));
+        return derived;
       } catch (e) {
         log("dim", `    潜伏 SERP ${name} 失败（保持「未测」，不写缓存）：${e.message}`);
-        return hit || null;
+        return hit ? deriveComp(hit) : null;
       }
     };
 

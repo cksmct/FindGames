@@ -608,6 +608,11 @@ if (cfg.games.enabled) {
   // 用本轮终审的判定（含缓存命中）清存量，而不是另读一次缓存文件 —— 口径保持一致
   const verdicts = judged.verdicts;
   list = list.filter((g) => {
+    // 🛑 AAA / 平台泛词对**所有**条目生效（含来源型，2026-09-25 补）：
+    //    它们不是"该不该建站"的问题，而是"根本排不上去"；而来源型条目原先整段跳过重筛，
+    //    目录直收把 `Roblox`（Google Play 直收）灌进来之后**再没有机会被清掉** ——
+    //    实测它靠 `roblox.com` 被误判成"专用站"，在推荐页排到**第一**（前端的自指域名修正已同步，见 serp.mjs）。
+    if (excludeAAA && AAA_FRANCHISES.test(String(g.name || "").trim())) return false;
     // 来源型条目（Roblox 榜单 / Steam 商店）是目录里的作品本体，不套"热搜游戏识别"规则 ——
     // 否则 "Mall" / "Cars" / "Find" 这类原名会被噪音 / 泛化词规则误杀
     if (g.src) return true;

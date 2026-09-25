@@ -759,6 +759,37 @@
   var COMP_LABEL = { manual: "人工核查", serp: "自动 SERP 核查", age: "上线时长推断", unknown: "未测" };
   /** 自动 SERP 核查结果的有效期：后端 7 天重测一轮，这里再兜一道 —— 超过 30 天就当作没有（宁可标未测） */
   var SERP_STALE_DAYS = 30;
+  /** 平台自指 / 官方域名 + 分档表：**随产物下发**（单一事实源 src/lib/serp.mjs），这里只是兜底副本 */
+  var SERP_PLATFORM_OWN = ["roblox.com", "robloxlabs.com", "steampowered.com", "steamcommunity.com", "steamdb.info",
+    "apple.com", "itunes.apple.com", "google.com", "play.google.com", "android.com",
+    "itch.io", "poki.com", "crazygames.com", "xbox.com", "nintendo.com", "playstation.com", "epicgames.com"];
+  var SERP_BANDS = [[0, 5], [2, 4], [4, 3], [7, 2], [1e15, 1]];
+  function serpBandOf(n) {
+    var t = (games && games.serp && games.serp.bandTable) || SERP_BANDS;
+    for (var i = 0; i < t.length; i++) if (n <= t[i][0]) return t[i][1];
+    return 1;
+  }
+  function serpPlatformOwn() { return (games && games.serp && games.serp.platformOwn) || SERP_PLATFORM_OWN; }
+  /**
+   * 从 SERP **原始事实**（hosts / dedicatedHosts）重算竞争字段（🆕 2026-09-25）。
+   * 为什么：`dedicated` / `open` 是写记录时的标量，口径改过后会失真；hosts 是原始事实，随时可重算。
+   * 实测事故：条目 `Roblox` 的前十里 `roblox.com`（官方页）含游戏名 slug → 被判成 1 个专用站
+   * → 「通用媒体已垄断」硬否失效（那条要求 dedicated === 0）→ 竞争 75 分 → 87 分排推荐第一。
+   */
+  function serpDerived(sc) {
+    if (!sc) return null;
+    var own = serpPlatformOwn();
+    var dedRaw = sc.dedicatedHosts || [];
+    var ded = [], excl = [];
+    for (var i = 0; i < dedRaw.length; i++) (own.indexOf(dedRaw[i]) >= 0 ? excl : ded).push(dedRaw[i]);
+    var n = dedRaw.length ? ded.length : (sc.dedicated == null ? null : sc.dedicated);
+    return {
+      domains: sc.domains == null ? (sc.hosts || []).length : sc.domains,
+      dedicated: n, dedicatedHosts: ded, ownExcluded: excl,
+      open: n == null ? null : serpBandOf(n),
+    };
+  }
+
   /**
    * 竞争（分高 = 竞争低 = 好挤进去）。
    * 优先级：人工 SERP 核查（最准）> **自动 SERP 核查**（后端写进 g.serp，见 src/lib/serp.mjs）> 上线时长推断（**仅老条目**）> 未测(null)。
@@ -779,22 +810,20 @@
     var mc = manualComp(g.name);
     if (mc && mc.open != null) return { score: openScore(mc.open), source: "manual" };
     var sc = g.serp;
-    // 🛑 2026-09-25 结构版本：v2 = 专用站口径。`dedicated` 缺失 = v1 记录（open 按"前十独立域名
-    //    总数"分档）→ 与新口径不可比，当作**未测**，等后端重测（缓存文件已由 serp.mjs 的 `_v`
-    //    整体作废，但**已经烘进 games.json 的旧记录还在**，必须在这里拦住）。
-    //    注意 pickVerdict 的「通用媒体已垄断」只用 domains、不依赖 open 档位 —— 旧记录仍会被它判否。
-    if (sc && sc.open != null && sc.dedicated != null && sc.at && (Date.now() - new Date(sc.at).getTime()) / 86400000 <= SERP_STALE_DAYS) {
+    // 🛑 2026-09-25：两件事一起改 ——
+    //    ① 结构版本：`dedicated` 缺失 = v1 记录（open 按"前十独立域名总数"分档）→ 与新口径不可比，当未测；
+    //    ② 平台自指域名：用**原始事实**（hosts / dedicatedHosts）重算，把 roblox.com 这类官方页从"专用站"里剔掉。
+    //    只做①不做②的话，条目 `Roblox` 仍会靠 roblox.com 拿 75 分、还绕过「通用媒体已垄断」硬否 → 排推荐第一。
+    var d = serpDerived(sc);
+    if (sc && d && d.open != null && sc.at && (Date.now() - new Date(sc.at).getTime()) / 86400000 <= SERP_STALE_DAYS) {
       return {
-        score: openScore(sc.open), source: "serp",
-        domains: sc.domains, hosts: sc.hosts || [], query: sc.query || "", at: sc.at,
-        // 🆕 2026-09-25：分档只认**专用站**（域名含游戏名的站 = 用户说的"对手当然是新建的站"），
-        //    通用游戏媒体（progameguides 等）只是基线噪音，如实记数但不参与分档。
-        dedicated: sc.dedicated == null ? null : sc.dedicated,
-        dedicatedHosts: sc.dedicatedHosts || [],
+        score: openScore(d.open), source: "serp",
+        domains: d.domains, hosts: sc.hosts || [], query: sc.query || "", at: sc.at,
+        dedicated: d.dedicated, dedicatedHosts: d.dedicatedHosts, ownExcluded: d.ownExcluded,
         competitorFirstSeen: sc.competitorFirstSeen || null,
       };
     }
-    if (ageDays == null) return { score: null, source: "unknown" };
+    if (ageDays == null) return { score: null, source: "unknown" };    if (ageDays == null) return { score: null, source: "unknown" };
     if (ageDays <= 180) {
       return {
         score: null, source: "unknown",
@@ -880,6 +909,8 @@
     //    分档由 2026-09-25 的两个实测样本拍定（晚 17 天仍可做 / 晚 44+ 天不可做）——
     //    这是**启发式**，运行 1~2 个月后应按成功样本校准（与早期爆发轨的校准方式一致）。
     var m = d <= 3 ? 1.15 : d <= 14 ? 1.0 : d <= 30 ? 0.85 : d <= 60 ? 0.65 : d <= 120 ? 0.45 : 0.3;
+    // 🛑 限时活动不享受"我们没晚"的奖励：活动类站点天然都是活动开始才建 → ourLagDays ≈ 0 是假信号
+    if (isLimitedEvent(g) && m > 1) m = 1;
     return { mult: m, lagDays: d, firstSeen: cs };
   }
 
@@ -998,9 +1029,21 @@
    * 这是启发式，会有误报 —— 所以只做黄色提示，不否决、不扣分。
    */
   var EVENT_HINT = /\b(the hunt|event|festival|anniversary|carnival|season \d|update \d)\b/i;
+  /**
+   * 限时活动（🛑 2026-09-25：从"只提示"升级为"**不进可做档**"）。
+   *
+   * 为什么必须升级：实测 The Hunt: Roblox 20 拿 87 分（还叠了 ×1.15）排到推荐**第二**，
+   * 而它 9/17–9/28 只有 12 天窗口、当时只剩 3 天 —— 新站在窗口内不可能有排名，活动一结束需求断崖。
+   * 更糟的是"早发现"那条乘数在这里**天然被满足**：活动类站点几乎都是活动开始才建，
+   * 于是 ourLagDays ≈ 0 → 白拿 ×1.15。对"找能做站的游戏"，这类标的不是机会而是陷阱。
+   *
+   * 判据是启发式（名字里 the hunt / event / season N / update N …），会有误报 ——
+   * 所以**只降档、不硬否**（降到「观察」并写清理由），想做时效页的人仍可自己判断。
+   */
+  function isLimitedEvent(g) { return EVENT_HINT.test(String(g.name || "")); }
   function eventFlag(g) {
-    if (!EVENT_HINT.test(String(g.name || ""))) return "";
-    return "⚠️ 像是限时活动：先确认结束时间 —— 窗口太短的话新站来不及排上去（本评分不区分持久需求与一次性活动）";
+    if (!isLimitedEvent(g)) return "";
+    return "⚠️ 限时活动：窗口通常 1~2 周、结束即需求断崖 —— 已**不计入「值得做」**（除非只做时效页；活动还没开始的另算）";
   }
 
   /** 自动竞争核查用的查询词（随 games.json 下发，单一事实源在 src/lib/serp.mjs） */
@@ -1034,14 +1077,18 @@
     // （实测事故：Clash of Clans / Roblox 靠这条凑出竞争 100 分判「值得做」排到最前。）
     // 兼容旧口径缓存（无 dedicated 字段）：v1 的 open≤2 = 独立域名总数 ≥8，同样是"媒体全覆盖"。
     var sc0 = g.serp;
+    var d0 = serpDerived(sc0);
+    // 旧口径记录（v1，无 dedicated 字段）兼容：v1 的 open ≤2 = 独立域名总数 ≥8，同样是"媒体全覆盖"
     var legacySaturated = sc0 && sc0.dedicated == null && sc0.open != null && sc0.open <= 2 && (sc0.domains || 0) >= 6;
-    if (sc0 && sc0.open != null && (sc0.dedicated === 0 || legacySaturated) &&
-        (sc0.domains || 0) >= 6 && r.parts.demand != null && r.parts.demand >= 80) {
+    if (sc0 && d0 && d0.open != null && (d0.dedicated === 0 || legacySaturated) &&
+        (d0.domains || 0) >= 6 && r.parts.demand != null && r.parts.demand >= 80) {
       return { k: "no", t: "通用媒体已垄断",
-        why: "「" + (sc0.query || serpQueryOf(g.name)) + "」前十 " + sc0.domains +
-          " 个域名全是通用媒体、无一专用站，且需求分 " + Math.round(r.parts.demand) + "（≥80）—— 大作形态的饱和：长尾被通用媒体全覆盖，专用站少不是空位" };
+        why: "「" + (sc0.query || serpQueryOf(g.name)) + "」前十 " + d0.domains +
+          " 个域名全是通用媒体、无一专用站" +
+          (d0.ownExcluded && d0.ownExcluded.length ? "（平台自指域名 " + d0.ownExcluded.join("/") + " 不算专用站）" : "") +
+          "，且需求分 " + Math.round(r.parts.demand) + "（≥80）—— 大作形态的饱和：长尾被通用媒体全覆盖，专用站少不是空位" };
     }
-    // 🛑 2026-09-25 新增：**我们先手太晚** → 直接降档，不看总分。
+    // 🛑 2026-09-25 新增：**我们先手太晚**    // 🛑 2026-09-25 新增：**我们先手太晚** → 直接降档，不看总分。
     //    依据：用户口径「我们不惧怕竞争，只是不能比别人晚太多」+ 实测对照
     //    （Dressmaker：我们首次发现日晚于首个专站最早快照 45~110 天 → 无论总分多高都做不了）。
     //    放在 comingSoon 之前：未发售游戏的 leadDays 为正，不会被这两条命中。
@@ -1116,6 +1163,12 @@
     // 上线很久 → 长尾多半已固化：不否决，但降档（"上线时间长是负面因素"的兑现）
     if (r.ageDays != null && r.ageDays > 1460 && r.score >= 65) {
       return { k: "warn", t: "上线超 4 年", why: "长尾大概率已固化（新鲜度与竞争项已扣分），建议先做 1~2 页试水" };
+    }
+    // 🛑 2026-09-25：限时活动不进可做档（见 isLimitedEvent 的注释）—— 窗口短到建站来不及，且"早发现"在这里是假信号
+    if (isLimitedEvent(g)) {
+      return { k: "warn", t: "限时活动（不进可做档）",
+        why: "名字像限时活动：这类窗口通常 1~2 周，活动一结束需求断崖，新站来不及被收录。" +
+          "分数只反映「此刻有多热」，不反映「能不能做成站」—— 要嘛确认还有 ≥1 个月的窗口，要嘛只做 1~2 页时效页" };
     }
     if (r.score >= 65) return { k: "yes", t: "值得做", why: "需求够 + 竞争未饱和（竞争来源：" + (COMP_LABEL[r.comp.source] || "未测") + "）" };
     if (r.score >= 45) return { k: "warn", t: "可小试", why: "有条件但不够硬，建议先做 1~2 页试水" };

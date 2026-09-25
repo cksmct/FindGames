@@ -41,6 +41,25 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const DDG = "https://html.duckduckgo.com/html/?q=";
 
 /** 不算"占位专业站"的域名：应用商店 / 视频社交 / 通用百科 */
+
+/**
+ * 🛑 平台自指 / 官方域名（2026-09-25）：**永不算"为这个游戏新建的站"**。
+ *   事故：条目 `Roblox` 的前十里 `roblox.com` 含游戏名 slug → 被判成 1 个"专用站" → `dedicated = 1`
+ *   → 「通用媒体已垄断」硬否**失效**（那条要求 `dedicated === 0`）→ 竞争给 75 分 → 87 分排到推荐**第一**。
+ *   判据：这些域名是**官方页 / 平台本体**（roblox.com / steampowered.com / play.google.com …），不是对手。
+ *   名单随产物下发（`SERP_RULES.platformOwn`），前端据此**重算旧记录** —— 不必等 7 天重测。
+ */
+export const PLATFORM_OWN_DOMAINS = [
+  "roblox.com", "robloxlabs.com",
+  "steampowered.com", "steamcommunity.com", "steamdb.info",
+  "apple.com", "itunes.apple.com",
+  "google.com", "play.google.com", "android.com",
+  "itch.io", "poki.com", "crazygames.com",
+  "xbox.com", "nintendo.com", "playstation.com", "epicgames.com",
+];
+const PLATFORM_OWN = new Set(PLATFORM_OWN_DOMAINS);
+/** 名称本身就是平台 / 渠道（不是作品）时，任何域名都不算它的专用站 */
+const PLATFORM_NAMES = /^(roblox|steam|playstation|xbox|nintendo|google play|app store|itch|poki|crazygames)$/i;
 const NOISE = /^(play\.google\.com|apps\.apple\.com|itunes\.apple\.com|youtube\.com|youtu\.be|facebook\.com|instagram\.com|tiktok\.com|x\.com|twitter\.com|pinterest\.[a-z.]+|twitch\.tv|discord\.com|discord\.gg|wikipedia\.org|amazon\.[a-z.]+|google\.[a-z.]+|bing\.com|duckduckgo\.com|linkedin\.com|threads\.net|snapchat\.com)$/;
 
 // 多段后缀（co.uk / com.br / co.jp …）：算站点时要多取一层，否则会把不同站点并成一个
@@ -81,6 +100,8 @@ const slugOf = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 export function isDedicatedSite(site, name) {
   const g = slugOf(name);
   if (g.length < 4) return false;
+  if (PLATFORM_NAMES.test(String(name || "").trim())) return false;   // 平台名不是作品
+  if (PLATFORM_OWN.has(site)) return false;                        // 官方页 / 平台本体，不是对手
   return slugOf(site).includes(g);
 }
 
@@ -119,7 +140,11 @@ export const SERP_RULES = {
   query: "<游戏名> codes",
   bands: "**专用站**数（域名含游戏名 slug ＝「专为这个游戏建的站」）→ 0 个=100 · 1~2 个=75 · 3~4 个=50 · 5~7 个=25 · ≥8 个=10",
   noise: "不计入：应用商店（Play / App Store）· 视频社交（YouTube / Facebook / TikTok / X / Pinterest 等）· 通用百科（Wikipedia）",
+  // 🆕 机器可读：分档表 + 平台自指域名随产物下发 → 前端据此**重算**旧记录（不必等 7 天重测）
+  bandTable: BANDS.map((b) => [Number.isFinite(b[0]) ? b[0] : 1e15, b[1]]),
+  platformOwn: PLATFORM_OWN_DOMAINS,
   caveats: [
+    "🛑 2026-09-25 修正：**平台自指 / 官方域名不算「专用站」**（roblox.com · steampowered.com · play.google.com …），名称本身就是平台/渠道时（Roblox / Steam / Poki …）任何域名都不算专用站。实测事故：条目 `Roblox` 的前十里 `roblox.com` 含游戏名 slug → 被判成 1 个专用站 → `dedicated = 1` → 「通用媒体已垄断」硬否**失效**（那条要求 dedicated === 0）→ 竞争给 75 分 → 87 分排到推荐**第一**",
     "🛑 2026-09-25 口径修正（用户：「**我们的对手当然是新建的站**」）：分档输入从「前十独立域名**总数**」改为「**专用站数**」（域名含游戏名 slug，如 `dressmaker.wiki` / `nethros.wiki`）。实测反例：Roblox 潜伏条目的前十全是 `progameguides.com` / `pocketgamer.com` / `beebom.com` / `destructoid.com` / `tryhardguides.com` —— 这些通用媒体对**每个**游戏都写 codes 页，按总数分档会把 5/5 条全判「竞争已起」，误杀最该做的标的",
     "通用站数仍如实记在 `domains` / `hosts` 里（那是事实），只是**不参与分档**；`dedicated` / `dedicatedHosts` 才是判据",
     "🛑 2026-09-25 结构版本：v2 = 专用站口径（`dedicated`）。v1 记录（无 `dedicated`、open 按域名总数分档）与新口径**不可比** → 一律当**未测**，不等 7 天 TTL 就作废重测（缓存文件由 `_v` 整体作废；已烘进 `games.json` 的旧记录由前端 `compRoom` 同一判定拦住）",
@@ -221,10 +246,36 @@ function measure(hosts, c, name) {
   return {
     domains: sites.length,                    // 前十独立域名总数（含通用游戏媒体）
     hosts: sites,
-    dedicated: dedicated.length,              // 🆕 其中"专为这个游戏建的站"
+    dedicated: dedicated.length,              // 其中"专为这个游戏建的站"（已排除平台自指域名）
     dedicatedHosts: dedicated,
+    ownExcluded: sites.filter((s) => PLATFORM_OWN.has(s)),   // 被排除的平台 / 官方域名（如实留痕）
     open: bandOf(dedicated.length),           // 🛑 分档输入 = 专用站数
   };
+}
+
+/**
+ * 从一条 SERP 记录里**重算**竞争字段（🆕 2026-09-25）。
+ *
+ * 为什么需要：`dedicated` / `open` 是写记录时算好的标量，但口径改过（专用站定义、平台自指域名）
+ * → 旧记录里的标量会失真。而 `hosts` / `dedicatedHosts` 是**原始事实**，可以随时重算：
+ * 凡是消费这条记录的地方（潜伏评分、前端 compRoom）都该用 `deriveComp()`，而不是直接读标量。
+ * 这样口径修正立刻生效，不必等 7 天 TTL 重测（实测事故：`Roblox` 靠 roblox.com 拿下 75 分排第一）。
+ */
+export function deriveComp(rec) {
+  if (!rec) return null;
+  const hosts = rec.hosts || [];
+  const dedRaw = rec.dedicatedHosts || [];
+  const ded = dedRaw.filter((h) => !PLATFORM_OWN.has(h));
+  const own = dedRaw.filter((h) => PLATFORM_OWN.has(h));
+  if (!dedRaw.length && rec.dedicated == null) return Object.assign({}, rec, { dedicated: null, open: null, ownExcluded: own });
+  const n = dedRaw.length ? ded.length : rec.dedicated;
+  return Object.assign({}, rec, {
+    domains: rec.domains == null ? hosts.length : rec.domains,
+    dedicated: n,
+    dedicatedHosts: dedRaw.length ? ded : [],
+    ownExcluded: own,
+    open: bandOf(n),
+  });
 }
 
 /**
@@ -405,7 +456,15 @@ export async function enrichSerpComp(items, cfg) {
    */
   const needSerp = (g) => {
     const a = ageDaysOf(g);
-    if (a != null && a > (c.maxAgeDays == null ? 180 : c.maxAgeDays)) return c.onlyUnknownAge === false;
+    if (a != null && a > (c.maxAgeDays == null ? 180 : c.maxAgeDays)) {
+      // 🆕 2026-09-25：老条目不再一律跳过 —— 只要"看起来可做"（有内容面 + 过需求门槛）就测。
+      //    为什么改：老条目的竞争分只能靠**年龄猜**（≤1 年 40 · ≤2 年 25 · ≤4 年 15 · >4 年 5），
+      //    而这条猜测**永远不会被推翻** —— 线上实测 54 条老条目因此长期挂着猜来的竞争分，
+      //    其中 8 条靠它进了可做档附近（反例：`mall game` 66 分排推荐第二，comp 是"上线 528 天 → 25"的猜值）。
+      //    只放"有内容面 + 过需求门槛"的那批（54 条 ≈ 5 轮铺完），不是把所有老条目塞进队列。
+      if (c.onlyUnknownAge === false) return true;                       // 调试：老条目也全测
+      return (g.words || []).length >= (c.minWords == null ? 3 : c.minWords) && overDemand(g);
+    }
     // 🆕 极新（≤ `minAgeDays`，默认 7 天）：**需求数据天然还没起来**（刚上线，在线/评价都是个位数），
     //    按普通门槛它们会被判"没需求"而永远不测 —— 但**这正是先手价值最高的一段**
     //    （实测样本：After the Silence / Garfield / Coin Rush 全是上线 2~7 天、需求未起量的新游）。
@@ -437,7 +496,16 @@ export async function enrichSerpComp(items, cfg) {
     if (!needSerp(g)) continue;
     todo.push(g);
   }
-  todo.sort((a, b) => demandOf(b) - demandOf(a));
+  // 🛑 排序 = 测了会不会改变行动（2026-09-25 再修）：
+  //    过饱和（亿级需求）的老条目即便测出来也几乎必然「通用媒体已垄断」→ 只从「未测」变「否」，不改变任何行动；
+  //    而未过饱和的老条目，测出来的竞争分**直接决定它能不能进可做档**。
+  //    实测教训：只按 demand 排序时，12 条/轮的配额第一轮就被 Adopt Me! / Blox Fruits / Piggy 这类巨头吃光，
+  //    而真正靠「年龄猜竞争」撑在可做档的条目（如 mall game 66 分排推荐第二）永远轮不到。
+  const saturated = (g) => {
+    const st = g.stats || {};
+    return (st.visits != null && st.visits >= 1e8) || (st.ratings != null && st.ratings >= 1e7);
+  };
+  todo.sort((a, b) => (saturated(a) ? 1 : 0) - (saturated(b) ? 1 : 0) || demandOf(b) - demandOf(a));
 
   for (const g of todo.slice(0, c.maxPerRun || 12)) {
     out.tested++;
