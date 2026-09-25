@@ -17,6 +17,7 @@
     "serve": "node src/serve.mjs",
     "doctor": "node src/doctor.mjs",
     "verdicts": "node src/audit-verdicts.mjs",
-    "verdicts:online": "node src/audit-verdicts.mjs --from-ref origin/radar-data --top 12"
+    "verdicts:online": "node src/audit-verdicts.mjs --from-ref origin/radar-data --top 12",
+    "verdicts:breakdown": "node src/audit-verdicts.mjs --from-ref origin/radar-data --breakdown 12"
   }
 }

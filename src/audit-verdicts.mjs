@@ -2,6 +2,7 @@
 /**
  * 判级分布复算（验收工具）
  *   node src/audit-verdicts.mjs [--data <dir>] [--from-ref <ref>] [--logic current|<ref>] [--compare [ref]] [--top N]
+ *                                   [--breakdown [N]] [--html]
  *
  * 为什么需要它：本项目的「判断力」全在浏览器里（web/app.js 的 rankability / pickVerdict）。
  * 每改一次判级规则，只有打开页面才知道分布变成什么样 —— 「推荐页被打瘫」还是「误判被修掉」
@@ -120,7 +121,7 @@ function analyze(L, gamesDoc) {
       if (d > 0) a.lead.positive++;
       for (const b of a.lead.buckets) if (b.hit(d)) { b.n++; break; }
     }
-    a.rows.push({ name: g.name, k: v.k, t: v.t, score: r.score, leadDays: r.leadDays, lagDays: (r.lag && r.lag.lagDays != null) ? r.lag.lagDays : null, comp: cs, src: g.src });
+    a.rows.push({ name: g.name, k: v.k, t: v.t, score: r.score, leadDays: r.leadDays, lagDays: (r.lag && r.lag.lagDays != null) ? r.lag.lagDays : null, comp: cs, src: g.src, g: g, r: r });
     const cr = (g.stats && g.stats.created) || g.srcCreated;
     const ageD = cr ? (Date.now() - new Date(cr).getTime()) / 86400000 : null;
     const ab = a.byAge.filter(function (x) { return x.hit(ageD); })[0];
@@ -249,6 +250,61 @@ function compare(Lold, aOld, aNew, ref) {
   console.log("    新沉入「未测」 " + toUnknown.length + " 条" + (toUnknown.length ? "（竞争项不再用上线时长推断 + 旧口径记录作废 —— 都要等 SERP 实测补齐）：" + toUnknown.slice(0, 5).map(function (x) { return x.name; }).join(" · ") : ""));
 }
 
+/**
+ * 分数明细（文本版，2026-09-25）：把「这一分是怎么来的」逐项打出来。
+ * 为什么：用户要按分数给算法反馈 —— 只给一个总分没法讨论，必须能看见每项的输入、权重与贡献。
+ * 同时做三件事：
+ *   ① 可做性分：每维「值 × 权重 = 贡献」→ Σ ÷ Σ权重 → × 乘数；
+ *   ② 雷达分：后端 scoreParts 的每一项（老条目没回填则注明）；
+ *   ③ 前端那两个明细块的 HTML 渲染冒烟（确认页面上的折叠块不会抛错）。
+ */
+function r1(v) {
+  if (v == null) return "—";
+  if (!isFinite(v)) return "—";
+  return String(Math.round(Number(v) * 10) / 10);
+}
+const pickLabelOf = (L, k) => String((L.PICK_LABEL && L.PICK_LABEL[k]) ? L.PICK_LABEL[k] : k).replace(/\(.*?\)/g, "");
+function printBreakdown(L, a, n) {
+  const rows = a.rows.filter((x) => x.r && x.r.score != null).sort((x, y) => y.r.score - x.r.score).slice(0, n);
+  console.log("");
+  console.log("══ 分数明细 Top " + rows.length + "（可做性分；雷达分另列一行）══");
+  for (const x of rows) {
+    const r = x.r, g = x.g, p = r.parts;
+    console.log("");
+    console.log("  " + pad(r.score, 5) + pad(VERDICT_LABEL[x.k], 6) + x.name + "　（竞争来源 " + (r.comp && r.comp.source) + "）");
+    const cells = [];
+    let sum = 0, wsum = 0;
+    for (const k in L.PICK_W) {
+      const v = p[k];
+      if (v == null) { cells.push(pad(pickLabelOf(L, k), 14) + "缺项"); continue; }
+      sum += v * L.PICK_W[k];
+      wsum += L.PICK_W[k];
+      cells.push(pad(pickLabelOf(L, k), 14) + Math.round(v) + "×" + L.PICK_W[k] + "=" + Math.round(v * L.PICK_W[k]));
+    }
+    console.log("    " + cells.join(" "));
+    console.log("    Σ(值×权重)=" + Math.round(sum) + " ÷ Σ权重=" + wsum + " = " + (wsum ? (sum / wsum).toFixed(1) : "—") +
+      " × 乘数 " + (r.mult == null ? "—" : Number(r.mult.toFixed(2))) + " → " + r.score +
+      (r.missing && r.missing.length ? "　（缺项 " + r.missing.length + " 项：未计入、也没归一化）" : ""));
+    const sp = g.scoreParts;
+    if (sp) {
+      console.log("    雷达分 " + (g.score == null ? 0 : g.score) + " = 搜索量 " + sp.vol + "→" + r1(sp.volScore) +
+        " + 涨幅 " + sp.growth + "%→" + r1(sp.growthScore) + " + 起飞档(hype " + r1(sp.hype) + ")→" + r1(sp.hypeScore) +
+        " + 权重 " + sp.weight + "×2=" + r1(sp.weightScore) + " + 人工 " + (sp.feedbackBoost == null ? 0 : sp.feedbackBoost));
+    } else {
+      console.log("    雷达分 " + (g.score == null ? 0 : g.score) + "（scoreParts 未回填：字段 2026-09-25 才加，等下一轮采集）");
+    }
+    try {
+      const v2 = L.pickVerdict(g, r);
+      const h1 = L.pickDetail ? String(L.pickDetail(g, r, v2)) : "";
+      const h2 = L.scoreDetail ? String(L.scoreDetail(g)) : "";
+      const ok = h1.indexOf("分数明细") >= 0 && h2.indexOf("分数明细") >= 0;
+      console.log("    HTML 明细渲染：" + (ok ? "✓ 建站推荐 " + h1.length + " 字符 · 雷达 " + h2.length + " 字符" : "✗ 没渲染出明细块"));
+      if (args.html && h1) console.log("    " + h1.slice(0, 400));
+    } catch (e) {
+      console.log("    ✗ HTML 明细渲染抛错：" + e.message);
+    }
+  }
+}
 // ── 主流程 ──
 const dir = resolveDataset();
 const logic = args.logic ? String(args.logic) : "current";
@@ -265,3 +321,5 @@ if (args.compare) {
   const LOld = await loadLogic(ref, dir);
   compare(LOld, analyze(LOld, LOld.games), a, ref);
 }
+// 分数明细（--breakdown [N]）：逐项打出「分是怎么来的」—— 给算法反馈用，也顺带冒烟前端两个明细块
+if (args.breakdown) printBreakdown(L, a, Number(args.breakdown) > 0 ? Number(args.breakdown) : 10);

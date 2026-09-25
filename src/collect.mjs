@@ -20,7 +20,7 @@ import { recordRound } from "./lib/verdict-history.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh, enrichBaseline } from "./lib/interest.mjs";
 import {
-  noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo,
+  noiseLabel, gameCandidate, scoreKeyword, scoreBreakdown, matchWatch, tokensOf, relevantTo,
   feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES, AAA_FRANCHISES, looksNonEnglish,
 } from "./lib/detect.mjs";
 import { judgeCandidates } from "./lib/judge.mjs";
@@ -30,7 +30,7 @@ import {
 } from "./lib/store.mjs";
 import { buildKeywordPool } from "./lib/pool.mjs";
 import { translateToZh } from "./lib/translate.mjs";
-import { collectSourceCandidates } from "./lib/sources.mjs";
+import { collectSourceCandidates, normalizeName } from "./lib/sources.mjs";
 import { enrichGameStats } from "./lib/roblox.mjs";
 import { enrichSteamStats } from "./lib/steam.mjs";
 import { enrichMobileStats } from "./lib/mobile.mjs";
@@ -195,7 +195,13 @@ if (!cfg._onlyGames) {
 // ── 3. 新游戏雷达 ──
 if (cfg.games.enabled) {
   const gamesDoc = loadGames(cfg);
-  const known = new Map(gamesDoc.items.map((g) => [g.name.toLowerCase(), g]));
+  // 🆕 2026-09-25：读入时也做名字归一化 —— 否则旧条目（`Dear Fridge,`）会一直以旧键留在库里，
+  //   而来源下一轮报的是归一化后的名字（`Dear Fridge`）→ 同一个游戏两条记录（重复 + 竞争数据分叉）。
+  const known = new Map(gamesDoc.items.map((g) => {
+    const nm = normalizeName(g.name);
+    if (nm !== g.name) g.name = nm;
+    return [nm.toLowerCase(), g];
+  }));
   const prefGeos = new Set(cfg.games.geos || []);
   // 🆕 英文闸：默认开。`latinOnly` 拦不住西/德/法/葡/土 —— 它们都是拉丁字母（见 detect.mjs 的 NON_EN_* 段）
   const englishOnly = cfg.games.englishOnly !== false;
@@ -495,11 +501,14 @@ if (cfg.games.enabled) {
     if (curveErr) log("dim", `  ${c.q} 曲线拿不到（${curveErr.message}）→ 来源目录条目，用官方数据收录`);
 
     const hype = hasCurve ? hypeRatio(curve.series) : 0;
-    const score = scoreKeyword({
+    // 🆕 2026-09-25：分数**明细**（逐项得分 + 原始输入）一并算出来、随条目落盘 ——
+    //   用户要求「标出每个游戏的分数具体怎么来的」；前端只渲染 scoreParts，不重算公式（铁律 7）。
+    const scoreParts = scoreBreakdown({
       vol: c.vol, growth: c.growth, hype, weight: c.weight,
       // feedback.boost 里的词加分：你判断值得做的，让它排前面
       feedbackBoost: feedbackVerdict(c.q, cfg.feedback) === "boost" ? FEEDBACK_BOOST_PTS : 0,
     });
+    const score = scoreParts.total;
     // Rising 先做相关性过滤（剔除同期爆红的无关词），Top 本身质量高、不过滤
     // （无曲线时 curve 为 null，必须都做空值保护）
     const nameTokens = tokensOf(c.q);
@@ -535,6 +544,7 @@ if (cfg.games.enabled) {
       sightings: (prev?.sightings || 0) + 1,
       hype,
       score,
+      scoreParts,
       reason: prev?.reason || (promoted && !hasCurve
         ? (c.srcInfo.via === "watchlist-live" ? "潜伏清单转正（Trends 暂无曲线）" : "新游目录收录（Trends 暂无曲线）")
         : c.reason),

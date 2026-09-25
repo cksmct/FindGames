@@ -46,6 +46,10 @@ const HOOK = `
     PICK_W: __auditPick("PICK_W"),
     PRE_W: __auditPick("PRE_W"),
     COMP_LABEL: __auditPick("COMP_LABEL"),
+    PICK_LABEL: __auditPick("PICK_LABEL"),
+    // 前端两个「分数明细」渲染函数（2026-09-25）：只为冒烟验证不抛错，不重算分数
+    scoreDetail: __auditPick("scoreDetail"),
+    pickDetail: __auditPick("pickDetail"),
     get games() { return __auditPick("games"); },
     get manualComp() { return __auditPick("MANUAL_COMP"); },
   };

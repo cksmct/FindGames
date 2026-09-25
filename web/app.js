@@ -479,6 +479,7 @@
         (g.geos && g.geos.length ? " · 热于 " + esc(g.geos.slice(0, 4).join("/")) : "") +
         (g.chart_geo ? " · 曲线地区 " + esc(g.chart_geo) : "") +
         (g.src ? " · " + srcLink(g) : "") + "</div>" +
+        scoreDetail(g) +
         cooled +
         chart + kwHtml +
         '<div class="gmeta"><a href="' + exploreUrl(g.name, g.chart_geo) + '" target="_blank" rel="noopener">查看趋势' +
@@ -963,10 +964,13 @@
     }
     var mc = manualComp(g.name);
     // 只把「对手发稿滞后」当全局乘数（open 已经进了竞争项，不能重复计一次）
-    var mult = 1;
+    // 🆕 2026-09-25：拆出 manualMult —— 原先 manual.mult 存的是**总乘数**（含我方滞后），
+    //    卡片却把它标成「发稿滞后乘数」：两个乘数同时生效时，那个数字对谁都不成立（明细要能核对）。
+    var manualMult = 1;
     if (mc && mc.lagHours != null) {
-      mult *= mc.lagHours <= 12 ? 0.6 : mc.lagHours <= 24 ? 0.8 : mc.lagHours >= 72 ? 1.1 : 1;
+      manualMult = mc.lagHours <= 12 ? 0.6 : mc.lagHours <= 24 ? 0.8 : mc.lagHours >= 72 ? 1.1 : 1;
     }
+    var mult = manualMult;
     // 我方滞后乘数（2026-09-25 新增）：**我们比首个专站晚了几天**。与上面的 lagHours 独立相乘
     // （前者是"对手多快"，后者是"我们多晚"，两个不同的量）。无数据时 ×1，不猜不罚。
     var lag = lagMultOf(g);
@@ -979,7 +983,7 @@
       score: Math.round(clamp01((sum / wsum) * mult)),
       parts: parts, missing: missing, comp: comp, ageDays: ageDays, mult: mult,
       leadDays: leadDays, lag: lag,
-      manual: mc ? { mult: Number(mult.toFixed(2)), note: mc.note || "" } : null,
+      manual: mc ? { mult: manualMult, lagHours: mc.lagHours != null ? mc.lagHours : null, note: mc.note || "" } : null,
     };
   }
 
@@ -1267,9 +1271,12 @@
         : "") +
       // 来自潜伏清单转正的条目：没有 Trend 曲线，需求动能项会是"缺项"，必须说明原因
       (/潜伏/.test(String(g.reason || "")) ? '<div class="pk-verdict pk-flag">来自「🚀 潜伏列表」转正（该游戏上线时被潜伏清单抓到；暂无 Google Trends 曲线，所以需求动能缺失）</div>' : "") +
-      (r.manual ? '<div class="pk-verdict pk-flag">人工竞争：发稿滞后乘数 ×' + r.manual.mult +
+      (r.manual ? '<div class="pk-verdict pk-flag">' + (r.manual.lagHours != null
+        ? "人工竞争：对手发稿滞后 ×" + r.manual.mult + "（" + r.manual.lagHours + " 小时内发稿）"
+        : "人工竞争：已人工核查竞争档（无发稿滞后记录 → 乘数 ×1）") +
         (r.manual.note ? " · " + esc(r.manual.note) : "") + "</div>" : "") +
       bars +
+      pickDetail(g, r, v) +
       '<div class="gmeta">' + metaLine + "</div>" +
       '<div class="gmeta">竞争来源 ' + esc(compSrc) +
       (r.comp.domains != null ? "（" + r.comp.domains + " 个独立域名占位" +
@@ -1299,6 +1306,65 @@
         ? '<div class="gmeta pk-dim">缺项（未计入，不是 0）：' + r.missing.map(function (k) { return PICK_LABEL[k]; }).join(" · ") + "</div>"
         : "") +
       "</div>";
+  }
+
+  /**
+   * 🆕 2026-09-25 分数明细（雷达分）：逐项显示「这一分是怎么来的」。
+   * 为什么：用户要按分数给算法反馈 —— 只给一个总分没法讨论，必须能看见每一项的输入与得分。
+   * 🛑 只渲染后端算好的 scoreParts（公式在 src/lib/detect.mjs 的 scoreBreakdown），前端不重算（铁律 7）。
+   *    老条目没有这个字段（2026-09-25 才加）：如实说明，等它下一轮被刷新（每条 6 小时一轮）。
+   */
+  var r1 = function (v) { return v == null || !isFinite(v) ? "—" : String(Math.round(Number(v) * 10) / 10); };
+  function hypeWord(h) { return h >= 99 ? "爆发 ≥99" : h >= 3 ? "起飞 ≥3" : h >= 1.5 ? "微升 ≥1.5" : "平 <1.5"; }
+  function scoreDetail(g) {
+    var p = g.scoreParts;
+    if (!p) {
+      return '<details class="sdetail"><summary>分数明细（score ' + (g.score || 0) + "）</summary>" +
+        '<div class="sd-note">明细字段是 2026-09-25 之后才随条目下发的，这条还没回填 —— 下一轮采集（每条 6 小时一轮）会带上。</div></details>';
+    }
+    var rows = [
+      ["搜索量", fmtVol(p.vol) + " → log₂(量/1000)×2（<1 千不倒扣）", p.volScore],
+      ["涨幅", (p.growth ? "+" + p.growth + "%" : "无") + " → ÷100", p.growthScore],
+      ["起飞档", "hype " + r1(p.hype) + "（7 天曲线后段÷前段，" + hypeWord(p.hype || 0) + "）", p.hypeScore],
+      ["识别权重", "权重 " + (p.weight || 0) + " → ×2", p.weightScore],
+      ["人工加分", p.feedbackBoost ? "feedback.boost 命中 → +" + p.feedbackBoost : "无", p.feedbackBoost || 0],
+    ];
+    return '<details class="sdetail"><summary>分数明细（score ' + (g.score || 0) + " 怎么来的）</summary>" +
+      '<table class="sd"><thead><tr><th>项</th><th>依据</th><th class="num">得分</th></tr></thead><tbody>' +
+      rows.map(function (x) {
+        return "<tr><td>" + x[0] + "</td><td>" + x[1] + '</td><td class="num">' + r1(x[2]) + "</td></tr>";
+      }).join("") +
+      '<tr class="sd-total"><td>合计</td><td>雷达分 = 验证优先级，不是可做性</td><td class="num">' + (g.score || 0) + "</td></tr>" +
+      "</tbody></table></details>";
+  }
+
+  /**
+   * 🆕 2026-09-25 分数明细（可做性分）：值 × 权重 = 贡献，再 ÷ 累计权重、× 两个乘数。
+   * 🛑 缺项（null）既不参与、也**不归一化**（历史事故：归一化能把 gta 6 凑到 99 分）—— 明细里如实写「缺项」。
+   */
+  function pickDetail(g, r, v) {
+    var rows = "", sum = 0, wsum = 0;
+    for (var k in PICK_W) {
+      var val = r.parts[k] == null ? null : r.parts[k];
+      var w = PICK_W[k];
+      if (val != null) { sum += val * w; wsum += w; }
+      rows += "<tr><td>" + PICK_LABEL[k] + '</td><td class="num">' + (val == null ? "—" : Math.round(val)) +
+        '</td><td class="num">' + w + '</td><td class="num">' + (val == null ? "缺项" : Math.round(val * w)) + "</td></tr>";
+    }
+    var avg = wsum ? sum / wsum : null;
+    var tail = [];
+    if (r.manual && r.manual.lagHours != null) tail.push("×" + r.manual.mult + "（对手 " + r.manual.lagHours + " 小时内发稿）");
+    if (r.lag && r.lag.mult !== 1) tail.push("×" + r.lag.mult + "（我方" + (r.lag.lagDays > 7 ? "晚于首个专站 " + Math.round(r.lag.lagDays) + " 天" : "未晚于首个专站") + "）");
+    var math = "Σ(值×权重) " + Math.round(sum) + " ÷ Σ权重 " + wsum + " = " + r1(avg) + (tail.length ? " → " + tail.join(" ") : "");
+    return '<details class="sdetail"><summary>分数明细（' + (r.score == null ? "—" : r.score) + " 怎么来的）</summary>" +
+      '<table class="sd"><thead><tr><th>维度</th><th class="num">值</th><th class="num">权重</th><th class="num">值×权重</th></tr></thead><tbody>' +
+      rows +
+      '<tr class="sd-total"><td>加权</td><td class="num">—</td><td class="num">' + wsum + '</td><td class="num">' + Math.round(sum) + "</td></tr>" +
+      "</tbody></table>" +
+      '<div class="sd-note">' + esc(math) + " = " + (r.score == null ? "—（给不出总分）" : r.score) +
+      (r.missing.length ? "<br>缺项（<b>未计入</b>，不是 0）：" + r.missing.map(function (k) { return PICK_LABEL[k]; }).join(" · ") : "") +
+      (v && v.k === "no" && v.why ? "<br>硬否决：" + esc(v.why) : "") +
+      "</div></details>";
   }
 
   function renderPick() {

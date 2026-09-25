@@ -210,7 +210,11 @@ export async function collectSourceCandidates(cfg) {
     try {
       const list = await fn();
       log("dim", "  来源 " + label + "：" + list.length + " 个");
-      out.push(...list);
+      // 🆕 入库前**只在这里**归一化一次（各来源的解析器不必各改一遍），rawName 保留原始标题备查
+      out.push(...list.map((x) => {
+        const nm = normalizeName(x.name);
+        return nm === x.name ? x : { ...x, name: nm, rawName: x.rawName || x.name };
+      }));
     } catch (e) {
       log("warn", "来源 " + label + " 失败：" + e.message);
     }
@@ -338,6 +342,16 @@ const APPSTORE_FEEDS = [
  * 🛑 必须处理**数字实体**（`&#039;` / `&#x27;`）：实测 itch 的标题里 `One Night at Miku&#039;s`
  * 如果只替换具名实体，就会带着 `&#039;` 进库，之后拿去查 Trends 是一条查不到的假词。
  */
+/**
+ * 🆕 2026-09-25 名字归一化：去掉**尾部**的逗号/分号/冒号/顿号与多余空白。
+ * 为什么：itch 上真有标题自带逗号的游戏（`Dear Fridge,` —— 页面标题就是 `Dear Fridge, by Magister Waldemar`），
+ *   就是作者自己写成了逗号；Steam / App Store 也有 `Genesee County 4km,` 这种。尾标点在搜索里没有任何意义
+ *   （这个名字是 Trends / SERP / 页面词的**查询键**），留着只会让看板出现「名字像被截断」的假象。
+ * 🛑 只动**尾部**：`Go, Bobby, Go!` / `I, The One` 这类内部逗号是名字的一部分，必须保留。
+ */
+export const normalizeName = (s) =>
+  String(s || "").replace(/\s+/g, " ").trim().replace(/[,;:、]+$/g, "").trim();
+
 const unescape = (s) => String(s || "")
   .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
   .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
