@@ -876,6 +876,39 @@
   var VERDICT_RANK = { yes: 0, warn: 1, unknown: 2, no: 3 };
 
   /**
+   * **待测优先度**（0~100）——只用于「🔍 竞争待核查」这一批的排序。
+   *
+   * 🛑 它**不是可做性分数**，也**不能**顶替总分：竞争项缺失时把其它项归一化凑一个总分，
+   *    正是旧版的事故（`sony playstation` / `gta 6` 靠"内容面 + 动能 + 新鲜度"凑出 99 分排到第一）。
+   *    所以这里用一个**不同名、不同权重**的指标，它只回答一个问题：
+   *    「这批**看得见、判不了**的条目里，我该先去看哪一条？」
+   *
+   * 权重刻意与 PICK_W 不同：这批缺的正是竞争项，而**需求高的条目会被自动补测**
+   *   （`serpComp` 有需求门槛：Roblox 访问 ≥1e6 / Steam 在线 ≥100 或评价 ≥100 / 手游评分人数 ≥1000），
+   *   所以这里更看重「机器暂时看不到、需要人亲自看一眼」的信号：
+   *   内容面(surface，决定值不值得做) 与 我方时机(lead，决定来不来得及)。
+   */
+  var PRE_W = { demand: 30, surface: 25, lead: 20, momentum: 15, quality: 10 };
+  function preScore(r) {
+    if (!r || !r.parts) return null;
+    // 🛑 **绝不做归一化**（这条是踩过坑才写的，2026-09-25）：
+    //    第一版写成 `sum / wsum`（只对非空项归一化），实测 946 条未测条目里
+    //    一堆"只有 momentum 有值"的噪音条并列 **100 分**，`Caravan SandWitch` / `10000000` /
+    //    `wow forever beta installieren` 排到了最前面 —— 与 README 警告过的事故同形
+    //    （sony playstation / gta 6 靠"内容面+动能"归一化凑 99 分排第一）。
+    //    → 改用**固定分母**（PRE_W 合计 100）：缺项就是少拿分。对"待测优先度"而言
+    //      "缺项多 = 证据少 = 不值得优先看"是**语义正确的**，不是误罚。
+    //    必须配合一条下限：连"值不值得看"的依据都没有（内容面/需求/动能全缺）→ 返回 null 沉底。
+    if (r.parts.surface == null && r.parts.demand == null && r.parts.momentum == null) return null;
+    var sum = 0;
+    for (var k in PRE_W) {
+      var v = r.parts[k];
+      if (v != null) sum += v * PRE_W[k];
+    }
+    return Math.round(sum / 100);
+  }
+
+  /**
    * 限时活动提示（只是提醒，不参与打分）。
    *
    * 为什么需要：评分不区分「持久需求」和「一次性活动」。
@@ -1058,7 +1091,12 @@
       " · 攻略词 " + (g.words || []).length + " 个</div>" +
       // 竞争未测 → 给出"填一行就有分"的可复制片段（人工核查仍是首选口径，比机器数域名更准）
       (r.comp.score == null
-        ? '<div class="gmeta pk-dim">竞争未测 → 点「查竞争（SERP）」数一下前十有几个**专为该游戏建的站**（域名里含游戏名的，如 dressmaker.wiki / nethros.wiki —— 通用媒体 progameguides / pocketgamer 不算，它们对每个游戏都有 codes 页），' +
+        ? '<div class="gmeta pk-dim">🔎 <b>待测优先度 ' + (preScore(r) == null ? "—" : preScore(r)) + "</b>（" +
+          ["demand", "surface", "lead", "momentum", "quality"].map(function (k) {
+            return String(PICK_LABEL[k]).replace(/\(.*?\)/g, "") + " " + (r.parts[k] == null ? "—" : Math.round(r.parts[k]));
+          }).join(" · ") + "）" +
+          "　🛑 这不是可做性分数，只回答「这批**看得见、判不了**的条目里，该先看谁」<br>" +
+          "竞争未测 → 点「查竞争（SERP）」数一下前十有几个**专为该游戏建的站**（域名含游戏名，如 dressmaker.wiki / nethros.wiki；通用媒体 progameguides / pocketgamer 不算，它们对每个游戏都有 codes 页），" +
           "再把这一行加进 config.json 的 <code>games.competition</code>，下一轮就有分：<br>" +
           '<code>"' + esc(g.name) + '": {"open": 3},</code>' +
           "　（open 5=0 个专用站 · 4=1~2 个 · 3=3~4 个 · 2=5~7 个 · 1=≥8 个）</div>"
@@ -1094,13 +1132,17 @@
     //   verdict（默认）先按结论档位、同档按分数 —— 避免"可小试 63 分"被"不建议 67 分"压下去
     //   newest / oldest 按**上线日**（正是"新鲜度"项的输入）—— 想抢新游戏就用这个
     rows = rows.slice().sort(function (a, b) {
-      // 竞争待核查视图按**需求**降序（总分恰恰是缺的那个，用不了）—— 最值钱的先看
+      // 竞争待核查视图按**待测优先度**降序（总分恰恰是缺的那个，用不了）。
+      // 🛑 2026-09-25 改：原先只按需求降序，但**需求高的会被自动补测**（serpComp 有需求门槛），
+      //    真正容易被漏掉的是"需求没过门槛、但内容面好 / 我方时机不差"的那批 ——
+      //    所以改用 preScore（demand 30 + surface 25 + lead 20 + momentum 15 + quality 10）。
       if (state.pick === "nocomp") {
-        var da = a.r.parts.demand, db = b.r.parts.demand;
-        if (da == null && db == null) return 0;
-        if (da == null) return 1;
-        if (db == null) return -1;
-        return db - da;
+        var pa = preScore(a.r), pb = preScore(b.r);
+        if (pa == null && pb == null) return 0;
+        if (pa == null) return 1;
+        if (pb == null) return -1;
+        if (pb !== pa) return pb - pa;
+        return ((b.r.parts.demand == null ? -1 : b.r.parts.demand)) - ((a.r.parts.demand == null ? -1 : a.r.parts.demand));
       }
       if (state.pickSort === "newest" || state.pickSort === "oldest") {
         var va = a.r.ageDays, vb = b.r.ageDays;
@@ -1119,8 +1161,11 @@
     var shown = rows.slice(0, state.rowsShown);
     var yes = all.filter(function (x) { return x.v.k === "yes"; }).length;
     var judgeable = all.filter(function (x) { return x.r.score != null; }).length;
+    // 🛑 竞争未测的条数必须显式给出：它们是"看得见、判不了"的那批，
+    //    沉在列表里最容易被忽略 —— 点「🔍 竞争待核查」能按待测优先度集中看。
+    var unmeasured = all.length - judgeable;
     $("pick-meta").textContent = "共 " + all.length + " 个（平台：" + (GSRC_LABEL[state.gsrc] || "全部平台") + "）· 可评估 " + judgeable +
-      " 个 · 值得做 " + yes + " 个 · 显示 " + shown.length;
+      " 个 · 值得做 " + yes + " 个 · 竞争未测 " + unmeasured + " 个（点「🔍 竞争待核查」按待测优先度看）· 显示 " + shown.length;
     el.innerHTML = shown.map(function (x) { return pickRow(x.g); }).join("") ||
       '<p class="empty">没有符合条件的游戏</p>';
     if (rows.length > shown.length) {

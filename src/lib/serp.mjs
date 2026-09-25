@@ -109,6 +109,7 @@ export const SERP_RULES = {
     "🛑 2026-09-25 口径修正（用户：「**我们的对手当然是新建的站**」）：分档输入从「前十独立域名**总数**」改为「**专用站数**」（域名含游戏名 slug，如 `dressmaker.wiki` / `nethros.wiki`）。实测反例：Roblox 潜伏条目的前十全是 `progameguides.com` / `pocketgamer.com` / `beebom.com` / `destructoid.com` / `tryhardguides.com` —— 这些通用媒体对**每个**游戏都写 codes 页，按总数分档会把 5/5 条全判「竞争已起」，误杀最该做的标的",
     "通用站数仍如实记在 `domains` / `hosts` 里（那是事实），只是**不参与分档**；`dedicated` / `dedicatedHosts` 才是判据",
     "🛑 2026-09-25 取样范围修正：旧版只测「拿不到官方上线日」的条目，结果**最需要核查的新游戏反而被跳过**（有上线日 → 跳过 → 竞争项被上线时长推断接管 → 白送满分，Dressmaker 事故）。现在「无上线日 **或** 上线 ≤ `maxAgeDays`（默认 180 天）」都测",
+    "🛑 2026-09-25 加**需求门槛**（方案 A）：上面那两类还要再满足 `minVisits 1e6`（Roblox 终身访问）/ `minPlaying 100` 或 `minReviews 100`（Steam）/ `minRatings 1000`（手游）才测。原因：线上 1115 条里需要实测的有 950 条，而 DDG 通道每轮只成功约 2 条 → 铺满要 20 天，期间 950 条长期「竞争未测（不给总分）」。加门槛后降到约 151 条（Brave 1 天 / DDG 3 天）。**低需求条目因此会长期停在「未测」——这是刻意的取舍，不是故障**",
     "🆕 `g.serp.competitorFirstSeen` ＝ 前十**专用站**的 Wayback CDX 最早快照（**下界**：未被收录的域名查不到，如 `dressmaker.wiki`）。前端据此算 `ourLagDays`（我们比首个专站晚了多少）→ **>30 天直接判「我们晚了」**；查不到就跳过，不猜",
     "查询词固定为「<游戏名> codes」：它是最值钱的长尾，也是竞争最先被占的位置",
     "自动通道默认走 DuckDuckGo 作代理（实测限流很紧，常返回反爬页）；人工核查建议看 Google —— 两者数字会略有差异",
@@ -319,17 +320,53 @@ export async function enrichSerpComp(items, cfg) {
     return isFinite(d) ? d : null;
   };
   /**
+   * 需求是否过实测门槛（🆕 2026-09-25，方案 A）。
+   * 🛑 为什么必须有它：线上 `games.json` 1115 条里，「无上线日 403 + 抢首发区间 547」= **950 条**
+   *    都需要实测，而 DDG 通道每轮只成功约 2 条 → 铺满要 **475 轮 ≈ 20 天**，
+   *    期间会有 950 条长期挂在「竞争未测（不给总分）」，等于把推荐页打瘫。
+   *    加门槛后（默认档）需实测降到 **约 151 条** → Brave 1 天 / DDG 3 天铺满。
+   * 阈值按平台分开（数量级差 4~6 倍，绝不能共用一条线）：
+   *   Roblox 终身访问 ≥ `minVisits` · Steam 在线 ≥ `minPlaying` 或评价数 ≥ `minReviews` · 手游评分人数 ≥ `minRatings`
+   */
+  const overDemand = (g) => {
+    const st = g.stats || {};
+    const p = st.platform || (st.visits != null ? "roblox" : "none");
+    if (p === "steam") {
+      return (st.playing == null ? 0 : st.playing) >= (c.minPlaying == null ? 100 : c.minPlaying) ||
+        (st.reviews == null ? 0 : st.reviews) >= (c.minReviews == null ? 100 : c.minReviews);
+    }
+    if (p === "ios" || p === "android") {
+      return (st.ratings == null ? 0 : st.ratings) >= (c.minRatings == null ? 1000 : c.minRatings);
+    }
+    if (p === "roblox") {
+      return (st.visits == null ? 0 : st.visits) >= (c.minVisits == null ? 1e6 : c.minVisits);
+    }
+    // 🛑 无官方数据的条目（platform none，实测 449 条）：**拿不到任何需求数字**，
+    //    按上面的口径它们永远过不了门槛 → 永久「未测」死角。
+    //    而这里面恰恰有真游戏（实测样本：`aion 2` / `fire emblem` / `horizon forbidden west`）。
+    //    → 改用**内容面**当门槛：有 ≥ `minWords`（默认 3）个可做词 = 有东西可写，才值得查竞争。
+    return (g.words || []).length >= (c.minWords == null ? 3 : c.minWords);
+  };
+
+  /**
    * 哪些条目需要实测？
    *   - 拿不到官方上线日 → 只能靠实测（旧行为，安卓）
    *   - **抢首发区间（≤ maxAgeDays）→ 也测**（🆕 2026-09-25，见文件头第 2 条护栏）
    *   - 其余（>maxAgeDays 的老条目）已有 age 推断可用，不重复花请求
-   * `onlyUnknownAge: false` 可退回"全部测"，仅调试用。
+   * 🆕 上面两类都要**再过一道需求门槛**（`overDemand`）—— 低需求的长尾不值得占稀缺的请求配额。
+   *    `onlyUnknownAge: false` 可退回"全部测"，仅调试用。
    */
   const needSerp = (g) => {
     const a = ageDaysOf(g);
-    if (a == null) return true;
-    if (a <= (c.maxAgeDays == null ? 180 : c.maxAgeDays)) return true;
-    return c.onlyUnknownAge === false;
+    if (a != null && a > (c.maxAgeDays == null ? 180 : c.maxAgeDays)) return c.onlyUnknownAge === false;
+    // 🆕 极新（≤ `minAgeDays`，默认 7 天）：**需求数据天然还没起来**（刚上线，在线/评价都是个位数），
+    //    按普通门槛它们会被判"没需求"而永远不测 —— 但**这正是先手价值最高的一段**
+    //    （实测样本：After the Silence / Garfield / Coin Rush 全是上线 2~7 天、需求未起量的新游）。
+    //    → 对它们放宽为"只要有内容面（≥ minWords 个可做词）就测"，不因为"还没量"把先手机会漏掉。
+    if (a != null && a <= (c.minAgeDays == null ? 7 : c.minAgeDays)) {
+      return (g.words || []).length >= (c.minWords == null ? 3 : c.minWords) || overDemand(g);
+    }
+    return overDemand(g);
   };
 
   const todo = [];
