@@ -954,6 +954,17 @@
     if (mc && mc.open != null && mc.open <= 2) {
       return { k: "no", t: "竞争饱和（人工判断）", why: mc.note || "长尾已被专用 wiki / 专业站占据" };
     }
+    // 🛑 2026-09-25 新增：**通用媒体已垄断** → 直接否，不看总分。
+    //    「专用站=0」对独立小游戏是空位；但 codes 前十 6+ 家全是通用媒体 + 需求顶级 = 大作的饱和形态：
+    //    通用媒体只给有量的游戏写 codes 页，它们的"全覆盖"本身就是长尾被占死的证据。
+    //    （实测事故：Clash of Clans / Roblox 靠这条凑出竞争 100 分判「值得做」排到最前。）
+    var sc0 = g.serp;
+    if (sc0 && sc0.open != null && sc0.dedicated === 0 && (sc0.domains || 0) >= 6 &&
+        r.parts.demand != null && r.parts.demand >= 80) {
+      return { k: "no", t: "通用媒体已垄断",
+        why: "「" + (sc0.query || serpQueryOf(g.name)) + "」前十 " + sc0.domains +
+          " 个域名全是通用媒体、无一专用站，且需求分 " + Math.round(r.parts.demand) + "（≥80）—— 大作形态的饱和：长尾被通用媒体全覆盖，专用站少不是空位" };
+    }
     // 🛑 2026-09-25 新增：**我们先手太晚** → 直接降档，不看总分。
     //    依据：用户口径「我们不惧怕竞争，只是不能比别人晚太多」+ 实测对照
     //    （Dressmaker：我们首次发现日晚于首个专站最早快照 45~110 天 → 无论总分多高都做不了）。

@@ -175,7 +175,10 @@ const NON_LATIN =
 // 对做内容站的人是纯噪音 —— 出现在雷达里只会浪费取曲线的配额。
 // 注意：默认**关闭**（`games.excludeAAA`），因为也有人想拿它看大盘热度。
 // 自建 IP 续作不在名单里（那种恰恰是能做的新赛道）。
-const AAA_FRANCHISES =
+// 🛑 2026-09-25 导出：目录直收 / 队列曲线通道也要过这道闸（collect.mjs 共用）——
+//    excludeAAA 只在热搜候选里生效时，Roblox 榜单 / Play 热榜照样把 AAA 灌进库
+//    （实测线上 25 条：Roblox / Clash of Clans / Township / Royal Match…）。
+export const AAA_FRANCHISES =
   /^(fortnite|minecraft|gta|gta ?[0-9iv]+|grand theft auto.*|call of duty|cod|warzone|valorant|apex legends|overwatch|league of legends|lol|roblox|genshin impact|honkai.*|counter[- ]strike|cs ?2|csgo|fifa.*|ea sports fc.*|nba ?2k.*|pubg|brawl stars|clash royale|clash of clans|mobile legends|free fire|honor of kings|pubg mobile|pokémon go|pokemon go|candy crush|among us)$/i;
 
 /**

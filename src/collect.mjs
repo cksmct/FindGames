@@ -20,7 +20,7 @@ import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh } from "./lib/interest.mjs";
 import {
   noiseLabel, gameCandidate, scoreKeyword, matchWatch, tokensOf, relevantTo,
-  feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES,
+  feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES, AAA_FRANCHISES,
 } from "./lib/detect.mjs";
 import { judgeCandidates } from "./lib/judge.mjs";
 import {
@@ -294,6 +294,10 @@ if (cfg.games.enabled) {
       if (!key || known.has(key)) continue;
       if (!it.source) continue;                       // 热搜词不吃这条通道（它们靠曲线）
       if (feedbackVerdict(it.name, cfg.feedback) === "block") continue;
+      // 🛑 AAA 闸（2026-09-25）：目录直收不收饱和大作 —— 它们留在队列里自然 21 天过期，
+      //    但不为它们花"入库 + 官方数据 + SERP 实测"的配额（实测 25 条 AAA 全来自 Play 热榜直收）。
+      //    热搜候选的同类过滤在 gameCandidate({excludeAAA}) 里，这里补齐目录/队列两条通道。
+      if (excludeAAA && AAA_FRANCHISES.test(String(it.name || "").trim())) continue;
       // 🛑 2026-09-24 实测纠偏：**低优先级 ≠ 不该收**。
       //    原规则「prio < minPrio 一律不收」把 Google Play **整源**挡在门外：
       //    Play 没有新游入口 → 全部条目都是热榜 → queue.mjs 一律给 prio 1
@@ -335,6 +339,8 @@ if (cfg.games.enabled) {
     if (candMap.has(key)) continue;
     // 你的反馈永远优先：写进 feedback.block 的名字不验证、不入库（存量条目也会被后面的重筛清掉）
     if (feedbackVerdict(it.name, cfg.feedback) === "block") continue;
+    // 🛑 AAA 闸（2026-09-25）：排队等曲线验证的候选同理 —— 不把最贵的 Trends 配额花在饱和大作上
+    if (excludeAAA && AAA_FRANCHISES.test(String(it.name || "").trim())) continue;
     const cur = known.get(key);
     if (cur && Date.now() - new Date(cur.chart_at || 0).getTime() < refreshMs) continue;
     candMap.set(key, {
