@@ -96,6 +96,20 @@ export const openScore = (v) => OPEN_SCORE[Math.max(1, Math.min(5, Math.round(v)
 export const COMP_SATURATED_OPEN = 2;
 
 /**
+ * SERP 缓存结构版本（2026-09-25）。
+ * v2 = 专用站口径（有 dedicated / dedicatedHosts 字段，open 按专用站数分档）。
+ * v1 = open 按「前十独立域名总数」分档、无 dedicated 字段 —— 与新口径**不可比**：
+ *      同一条记录 v1 可能给 10 分（域名多），按新口径应是 100 分（一个专用站都没有）。
+ * 所以凡读到 v1 记录一律当**未测**（既不是 0 竞争，也不是负缓存），等重测补齐。
+ * 🛑 版本判定必须在**所有读写点一致**：本文件的采集（enrichSerpComp）、潜伏评分
+ *    （watchlist.mjs 共用同一份 .serp-cache.json）、以及前端 compRoom（games.json 里
+ *    已经烘进条目的旧记录）—— 漏掉任何一处，同一份缓存就会有两种口径在同时算分。
+ */
+export const SERP_CACHE_VERSION = 2;
+/** 这条 SERP 记录是不是当前口径（v2）？旧口径记录不能算"已测"。 */
+export const isCurrentSerpRecord = (rec) => !!rec && rec.dedicated != null;
+
+/**
  * 自述随产物下发（`games.json.serp`）→ 前端规则块据实展示，**单一事实源在这里**，
  * 前端不再手抄一份档位（手抄过一次就已经抄错了，见 demandAnchorsText 的教训）。
  */
@@ -108,6 +122,7 @@ export const SERP_RULES = {
   caveats: [
     "🛑 2026-09-25 口径修正（用户：「**我们的对手当然是新建的站**」）：分档输入从「前十独立域名**总数**」改为「**专用站数**」（域名含游戏名 slug，如 `dressmaker.wiki` / `nethros.wiki`）。实测反例：Roblox 潜伏条目的前十全是 `progameguides.com` / `pocketgamer.com` / `beebom.com` / `destructoid.com` / `tryhardguides.com` —— 这些通用媒体对**每个**游戏都写 codes 页，按总数分档会把 5/5 条全判「竞争已起」，误杀最该做的标的",
     "通用站数仍如实记在 `domains` / `hosts` 里（那是事实），只是**不参与分档**；`dedicated` / `dedicatedHosts` 才是判据",
+    "🛑 2026-09-25 结构版本：v2 = 专用站口径（`dedicated`）。v1 记录（无 `dedicated`、open 按域名总数分档）与新口径**不可比** → 一律当**未测**，不等 7 天 TTL 就作废重测（缓存文件由 `_v` 整体作废；已烘进 `games.json` 的旧记录由前端 `compRoom` 同一判定拦住）",
     "🛑 2026-09-25 取样范围修正：旧版只测「拿不到官方上线日」的条目，结果**最需要核查的新游戏反而被跳过**（有上线日 → 跳过 → 竞争项被上线时长推断接管 → 白送满分，Dressmaker 事故）。现在「无上线日 **或** 上线 ≤ `maxAgeDays`（默认 180 天）」都测",
     "🛑 2026-09-25 加**需求门槛**（方案 A）：上面那两类还要再满足 `minVisits 1e6`（Roblox 终身访问）/ `minPlaying 100` 或 `minReviews 100`（Steam）/ `minRatings 1000`（手游）才测。原因：线上 1115 条里需要实测的有 950 条，而 DDG 通道每轮只成功约 2 条 → 铺满要 20 天，期间 950 条长期「竞争未测（不给总分）」。加门槛后降到约 151 条（Brave 1 天 / DDG 3 天）。**低需求条目因此会长期停在「未测」——这是刻意的取舍，不是故障**",
     "🆕 `g.serp.competitorFirstSeen` ＝ 前十**专用站**的 Wayback CDX 最早快照（**下界**：未被收录的域名查不到，如 `dressmaker.wiki`）。前端据此算 `ourLagDays`（我们比首个专站晚了多少）→ **>30 天直接判「我们晚了」**；查不到就跳过，不猜",
@@ -316,7 +331,27 @@ export async function enrichSerpComp(items, cfg) {
   if (!c.enabled) return out;
 
   const file = dataPath(cfg, ".serp-cache.json");
-  const cache = readJson(file, {}) || {};
+  // 🛑 结构版本（2026-09-25）：v2 = 专用站口径（dedicated / dedicatedHosts，open 按专用站分档）。
+  //    v1 条目（open 按独立域名总数分档、无 dedicated 字段）与新口径不可比 → 主动作废重测，
+  //    不等 7 天 TTL —— 实测线上 46 条缓存里混着 9-24 的旧口径数据仍在参与计分。
+  //    `_v` 是保留键：清理循环与命中判定都要跳过它；watchlist 侧共用同一份缓存、同一套版本判定
+  //    （版本号定义在文件顶部的 SERP_CACHE_VERSION / isCurrentSerpRecord，单一事实源）。
+  let cache = readJson(file, {}) || {};
+  let versionDropped = 0;
+  let versionStamped = false;
+  if (cache._v !== SERP_CACHE_VERSION) {
+    for (const [k, v] of Object.entries(cache)) {
+      if (k === "_v") continue;
+      // 只作废**旧口径记录**（无 dedicated 字段）；已经是当前口径的记录留着 ——
+      // 它们虽然是"没有版本号时代"写进去的，但形状已经是 v2，扔掉等于白扔已花掉的请求配额
+      // （线上实测：46 条缓存里 27 条旧口径、19 条已是当前口径）。
+      if (isCurrentSerpRecord(v)) continue;
+      delete cache[k];
+      versionDropped++;
+    }
+    cache._v = SERP_CACHE_VERSION;
+    versionStamped = true;
+  }
   const now = Date.now();
   const ttl = (c.ttlDays || 7) * 86400000;
 
@@ -381,12 +416,23 @@ export async function enrichSerpComp(items, cfg) {
     return overDemand(g);
   };
 
+  // 🛑 版本作废要落到**条目上**，不能只清缓存文件：`g.serp` 是上一轮已经写进 games.json 的
+  //    记录，不清掉它，前端 compRoom 那道判定就得永远替后端兜底（也会让 doctor 一直报旧口径）。
+  //    清掉之后，本轮过门槛的会被重测；没过门槛的保持「未测」—— 这正是"作废"该有的样子。
+  let itemDropped = 0;
+  for (const g of items || []) {
+    if (g && g.serp && !isCurrentSerpRecord(g.serp)) { delete g.serp; itemDropped++; }
+  }
+  if (itemDropped) log("dim", `    清除条目上的旧口径竞争记录 ${itemDropped} 条（等重测补齐）`);
+
   const todo = [];
   for (const g of items || []) {
     if (!g || !g.name) continue;
     const k = keyOf(g.name);
     const hit = cache[k];
-    const fresh = hit && hit.at && now - new Date(hit.at).getTime() < ttl;
+    // 🛑 旧口径（v1）记录不当命中：版本升级清的是**缓存文件**，而同样的旧记录可能已经写进了
+    //    games.json 的条目（前端 compRoom 有同一道判定）；这里再拦一次，两条腿口径才一致。
+    const fresh = hit && hit.at && now - new Date(hit.at).getTime() < ttl && isCurrentSerpRecord(hit);
     if (fresh) { g.serp = hit; out.cached++; continue; }     // 命中缓存 → 直接挂上，不发请求
     if (!needSerp(g)) continue;
     todo.push(g);
@@ -414,8 +460,10 @@ export async function enrichSerpComp(items, cfg) {
   // 清掉长期用不到的条目（列表 30 天滚动，缓存留 60 天足够）
   let dropped = 0;
   for (const [k, v] of Object.entries(cache)) {
+    if (k === "_v") continue;
     if (!v || !v.at || now - new Date(v.at).getTime() > 60 * 86400000) { delete cache[k]; dropped++; }
   }
-  if (out.ok || dropped) writeJson(file, cache, true);
+  if (versionDropped) log("dim", `    SERP 缓存版本对齐 v${SERP_CACHE_VERSION}：作废旧口径条目 ${versionDropped} 个（1~2 轮内重测补齐）`);
+  if (out.ok || dropped || versionStamped) writeJson(file, cache, true);
   return out;
 }

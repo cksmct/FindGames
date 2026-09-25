@@ -225,7 +225,9 @@ export function gameCandidate(item, opts = {}) {
  * 与原站 score 数值不追求一致（其算法未知），仅保证越大越值得做。
  */
 export function scoreKeyword({ vol = 0, growth = 0, hype = 0, weight = 0, feedbackBoost = 0 }) {
-  const volScore = vol > 0 ? Math.log2(vol / 1000) * 2 : 0; // 2万≈8.6, 200万≈22
+  // 低量不倒扣（2026-09-25）：log₂ 尺度在 vol<1000 时为负，曾让"权重≥3 的低量真游戏"
+  // 被扣分 —— 与「识别权重比搜索量更能区分早期真游戏」的排序哲学相悖，钳到 0。
+  const volScore = vol > 0 ? Math.max(0, Math.log2(vol / 1000) * 2) : 0; // 2千≈2, 2万≈8.6, 200万≈22
   const growthScore = growth / 100;                          // 1000% → 10
   const hypeScore = hype >= 99 ? 8 : hype >= 3 ? 5 : hype >= 1.5 ? 2 : 0;
   return Math.round(volScore + growthScore + hypeScore + weight * 2 + feedbackBoost);
@@ -239,7 +241,7 @@ export const SCORE_RULES = {
   title: "雷达分数 = 验证优先级，不是可做性",
   formula: "score = log₂(搜索量/1000)×2 + 涨幅%÷100 + 起飞档(0/2/5/8) + 识别权重×2 + 人工加分(+6)",
   items: [
-    "搜索量：log₂ 尺度 —— 2 千 ≈ 2 · 2 万 ≈ 8.6 · 20 万 ≈ 15 · 200 万 ≈ 22",
+    "搜索量：log₂ 尺度 —— 2 千 ≈ 2 · 2 万 ≈ 8.6 · 20 万 ≈ 15 · 200 万 ≈ 22 · **<1 千 = 0（低量不倒扣）**",
     "涨幅：+100% 加 1 分，+1000% 加 10 分（⚠️ 低量噪音的涨幅往往更高，所以它排在权重之后）",
     "起飞档：hype（7 天曲线后半段 ÷ 前半段）≥99 → 8 · ≥3 → 5 · ≥1.5 → 2 · 其余 0",
     "识别权重 ×2：分类 + 平台词/意图词（权重 ≥3 才算强信号，人名噪音全在 2）",

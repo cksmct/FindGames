@@ -1,0 +1,452 @@
+{
+  "date": "2026-09-25",
+  "skill": "game-opportunity",
+  "note": "本文件是整条链路唯一的判断入口，全部字段由 AI 判读后写入（脚本只透传）。未测项一律为 null 并计入 decisionAudit.missingEvidence，不得按 0 计。",
+  "siteDomain": null,
+  "candidates": [
+    {
+      "entityId": "dynasty-warriors-3-complete-edition-remastered",
+      "names": {
+        "official": "DYNASTY WARRIORS 3: Complete Edition Remastered",
+        "aliases": [
+          "dynasty warriors 3 remastered",
+          "dw3 remastered",
+          "dynasty warriors 3 complete edition remastered",
+          "dynasty warriors 3 remaster"
+        ],
+        "localized": [
+          "真・三國無双2 with 猛将伝 Remastered",
+          "shin sangoku musou 2 with moushouden remastered"
+        ],
+        "originalGame": "Dynasty Warriors 3 / 真・三國無双2"
+      },
+      "urls": {
+        "official": "https://www.koeitecmoamerica.com/dw3-re/us/",
+        "store": "https://store.playstation.com/en-cy/product/JP0106-PPSA32935_00-DW3CEREMASTERED0"
+      },
+      "platforms": ["PlayStation 5", "Xbox Series X|S", "Nintendo Switch 2", "PC (Steam)"],
+      "languages": ["en"],
+      "markets": ["US", "GB", "CA", "AU"],
+      "pageType": "game-adjacent",
+      "playable": false,
+      "playableNote": "主机/PC 商业游戏，无可嵌入的在线可玩供给（iframe/demo 网页版均不存在）",
+      "gameReleasedAt": "2026-10-01",
+      "originalGameReleasedAt": {
+        "PS2 Asia(JP)": "2001-09-20",
+        "PS2 US": "2001-11-26",
+        "PS2 EU": "2002-03-22",
+        "Xbox US": "2002-09-24"
+      },
+      "demoReleasedAt": "2026-09-24",
+      "daysToRelease": 6,
+      "keyDatesSource": [
+        "gematsu.com 2026-06-03（发售日与平台）",
+        "vgtimes/pixelsinorbit 2026-09-20（Demo 9/24、在线双人 2027-01）",
+        "kongming.net/dw3/（原版各地发行日，页面发行表）"
+      ],
+      "keywords": [
+        {
+          "keyword": "dynasty warriors 3",
+          "market": "US",
+          "language": "en",
+          "semrushVolume": null,
+          "semrushKd": null,
+          "webcafeKd": null,
+          "status": "not-queried",
+          "note": "搜索量/KD 未测：本机缺 opencli 运行时，Semrush 脚本 spawn opencli ENOENT"
+        },
+        {
+          "keyword": "dynasty warriors 3 remastered",
+          "market": "US",
+          "language": "en",
+          "semrushVolume": null,
+          "semrushKd": null,
+          "status": "not-queried"
+        },
+        {
+          "keyword": "dynasty warriors 3 remastered demo",
+          "market": "US",
+          "language": "en",
+          "status": "observed-in-trends-rising",
+          "semrushVolume": null,
+          "semrushKd": null
+        }
+      ],
+      "keywordStrategy": {
+        "entityType": "brand",
+        "clusters": [
+          {
+            "cluster": "remastered 信息型（AI 实测 Top/Rising，全部来自复刻版）",
+            "terms": [
+              "dynasty warriors 3 remaster",
+              "dynasty warriors 3 remastered",
+              "dynasty warriors 3 remastered demo",
+              "dynasty warriors 3 remaster release date",
+              "dynasty warriors 3 complete edition remastered",
+              "dynasty warriors 3 remake",
+              "dynasty warriors 3 remastered release date"
+            ],
+            "source": "Google Trends RELATED_QUERIES（US, now 7-d, 实测）"
+          },
+          {
+            "cluster": "玩法长尾（SERP 实测存在低权重新站空位）",
+            "terms": [
+              "dynasty warriors 3 remastered 4th weapons",
+              "dynasty warriors 3 remastered unlock all characters",
+              "dynasty warriors 3 remastered level 10 11 weapons",
+              "dynasty warriors 3 remastered rare item locations"
+            ],
+            "source": "Brave/web SERP 实测（kongming.net / ludo.guide / xmodhub / neoseeker / asoh.xyz / black-ogre.com）"
+          },
+          {
+            "cluster": "复刻版专属新内容（老站尚未覆盖）",
+            "terms": [
+              "dynasty warriors 3 remastered fuxi",
+              "dynasty warriors 3 remastered new characters",
+              "dynasty warriors 3 remastered online co-op",
+              "dynasty warriors 3 remastered demo vs full game"
+            ]
+          }
+        ],
+        "excluded": [
+          "中文词簇（用户既定只做英文单语，不做多语言）",
+          "日文词簇（真・三國無双2 等，仅记录用于识别实体，不作主攻）"
+        ]
+      },
+      "demandProof": {
+        "track": "search",
+        "score": 40,
+        "scoreCeiling": 100,
+        "scoredItems": [
+          { "item": "Google 前十存在多个独立域名且意图与游戏一致", "score": 10, "max": 10, "evidence": "SERP 实测：koeitecmoamerica.com(官方) / koeitecmo.wiki / koei.fandom.com / pcgamingwiki.com / game8.co / kongming.net，意图一致" },
+          { "item": "7 天 Trends 形成连续曲线并向上", "score": 10, "max": 10, "evidence": "US now-7-d：0,0,…,0,22,16,50,0,14,26,66,32,34,36,82 — 后段快速抬升" },
+          { "item": "SERP 有低权重、新页面或独立站空位", "score": 10, "max": 10, "evidence": "xmodhub.com（2-3 天前发 DW3 Remastered 指南）、ludo.guide（2026-09-08 起分 part 连载）、asoh.xyz、black-ogre.com 均属低权重站且已进前十" },
+          { "item": "目标国家与搜索意图匹配", "score": 10, "max": 10, "evidence": "英语区为主要市场（US 曲线有量；英文媒体报道密集）" }
+        ],
+        "unmeasuredItems": [
+          { "item": "目标国家精确词月搜（1-99/100-499/500-1999/2000+ → 5/10/15/20）", "score": null, "reason": "Semrush 未测" },
+          { "item": "Similarweb 竞品自然搜索词可见该词（5）", "score": null, "reason": "未测" },
+          { "item": "KD 分档（≤30/31-40/41-50/>50 → 15/12/8/3）", "score": null, "reason": "Web.Cafe 与 Semrush 均未测" }
+        ],
+        "zeroItems": [
+          { "item": "可玩供给 / 移动端稳定 / 两天内可上线（10/5/5）", "score": 0, "reason": "主机商业游戏，无可嵌入供给；‘可玩供给稳定’是 develop 硬门槛之一，本项客观不成立" }
+        ],
+        "sameScaleBenchmark": {
+          "method": "Google Trends 同一次请求内多词共享 0-100 尺度（findnews fetchCompareGroup）",
+          "window": "US, now 7-d",
+          "result": {
+            "dynasty warriors 3": { "peak": 82, "hasData": true },
+            "dynasty warriors origins（2025 系列新作）": { "peak": 11, "hasData": true },
+            "dynasty warriors 4": { "peak": 0, "hasData": false }
+          },
+          "reading": "DW3 在共享尺度上的峰值是系列最新作 Origins 的约 7 倍 —— 需求侧信号强，非‘老游戏自然长尾’量级"
+        },
+        "secondBenchmark": {
+          "window": "US, now 7-d",
+          "result": {
+            "dynasty warriors 3 remastered": { "peak": 22, "hasData": true },
+            "dynasty warriors origins": { "peak": 20, "hasData": true },
+            "dynasty warriors 9": { "peak": 0, "hasData": false }
+          },
+          "reading": "复刻版专属新词已与系列新作同量级，且为新出现的词（历史无底量）"
+        }
+      },
+      "trend": {
+        "direction": "rising",
+        "windows": {
+          "7d": { "geo": "US", "series": [0, 0, 0, 0, 12, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 21, 21, 50, 0, 15, 14, 34, 47, 66, 51, 32, 34, 39, 46, 0], "reading": "前 27 点近零 → 后段抬升，与 Demo（9/24）上线时点吻合" },
+          "12m": { "geo": "US", "series": [68, 16, 19, 19, 21, 22, 19, 35], "reading": "年度底量 16-22，末段 35 抬升；注意抽样为稀疏点，量级仅供参考" },
+          "5y": { "geo": "US", "series": [0, 6, 8, 8, 8, 12, 12, 29, 19], "reading": "长期底量缓慢上行，不是纯一次性事件；但复刻版尖峰本身仍属一次性" }
+        }
+      },
+      "competitionReview": {
+        "serpIntent": "信息型为主（怎么解锁/在哪拿/新内容是什么），与游戏一致",
+        "headTerms": {
+          "verdict": "高竞争 · 新站抢不到",
+          "domains": ["koeitecmoamerica.com（官方）", "koeitecmo.wiki（CF 挑战保护的专业 wiki）", "koei.fandom.com", "pcgamingwiki.com", "game8.co", "kongming.net"]
+        },
+        "longTailTerms": {
+          "verdict": "中等竞争 · 有低权重新站空位",
+          "independentDomains": 6,
+          "weakOrNewSites": ["xmodhub.com（2-3 天前新发）", "ludo.guide（2026-09-08 起连载 part 33/37）", "asoh.xyz", "black-ogre.com"],
+          "kdInterpretation": "按 findnews 档位（5-7 个独立域名 → 25 分），但存在可挤入的低权重占位者，长尾开放度高于泛词"
+        },
+        "incumbentDepth": {
+          "kongming.net": {
+            "files": 28,
+            "detail": "DW3 21 个 FAQ/攻略（5 份完整 Walkthrough、Fourth Weapon Locations、Rare Item Locations、Dim Sum & Wine Locations、Character Unlocking、Stage Reference/Events、Enemy Generals Drop List、声优/译名/头像）+ Xtreme Legends 7 个（含 Fifth Weapon）",
+            "lastUpdated": "2025-11-13",
+            "reading": "原版内容被 20 年老站深挖且在维护，原版玩法词无空位；但其覆盖面止于 PS2/Xbox 原版与 XL，不含复刻版新增内容"
+          }
+        },
+        "weakPositions": ["复刻版专属主题（新增武将、新剧情场景、Demo 与正式版差异、在线双人补丁、PS5/Switch2 技术表现）尚未被任何上述站点系统覆盖"],
+        "newSitePresent": true,
+        "metricConflict": "reviewed（KD 与搜索量两套口径均未测，不做冲突判定）"
+      },
+      "promotionRisk": {
+        "internalTrafficRisk": "low",
+        "campaigns": 0,
+        "independentPublishers": "高（全球媒体密集报道 Demo/发售，含意大利、葡萄牙等本地媒体）",
+        "note": "需求来自独立搜索与独立媒体，不是平台内推荐流量"
+      },
+      "decisionAudit": {
+        "missingEvidence": [
+          "Semrush 分国家月搜索量（US/GB）— 本机 spawn opencli ENOENT",
+          "Web.Cafe / Semrush KD — 同上",
+          "koeitecmo.wiki 覆盖深度（Cloudflare managed challenge，现场已存 2026-09-25-evidence/koeitecmo-wiki-DW3CE-403-challenge.html）",
+          "koei.fandom.com 覆盖深度（HTTP 403，未取到）",
+          "复刻版正式版口碑（未发售，无评分）"
+        ],
+        "blockingForDevelop": [
+          "搜索量未测 → 无法验证 develop 硬门槛（全球精确词 ≥10,000、最高国家 ≥2,000）",
+          "KD 未测 → 无法验证 ≤30 门槛",
+          "可玩供给客观不成立（主机商业游戏），该项硬门槛永久无法满足"
+        ]
+      },
+      "decision": "research",
+      "decisionLabel": "priority-research",
+      "reasons": [
+        "需求侧已实测爆发且量级显著：DW3 在共享 0-100 尺度上为系列新作 Origins 的约 7 倍（82 vs 11）",
+        "复刻版专属新词 dynasty warriors 3 remastered 从零起爆（7d 前 35 点全 0 → 末点 100），且 Trends Top/Rising 全部由复刻版词构成",
+        "窗口正开：Demo 2026-09-24 已上线、正式发售 2026-10-01（距今 6 天）；攻略类需求峰值在发售后而非发售前",
+        "长尾玩法词 SERP 存在低权重新站空位（xmodhub / ludo.guide / asoh.xyz 均属弱站却已进前十），说明该细分成败不取决于域名权重",
+        "复刻版专属内容（新增武将、新剧情场景、Demo 差异、2027-01 在线双人）尚无任何老牌竞品系统覆盖，存在真实空位",
+        "但头部泛词被官方站 + koeitecmo.wiki + Fandom + pcgamingwiki + game8 垄断；原版玩法词被 kongming.net 28 份文档 + 20 年外链垄断 —— 只能做复刻版专属与长尾，不能做通用 DW3 站",
+        "搜索量与 KD 未测，按技能红线不得判 develop（未测既不等于 0 也不等于达标）"
+      ],
+      "nextAction": "先补测 Semrush US/GB 的 dynasty warriors 3 remastered 与 3-4 个长尾词的量与 KD（需 opencli 登录态）；若量达开发门槛且 KD≤40，主攻复刻版词簇与玩法长尾，立即开工（窗口 6 天，发售后 4-8 周为长尾高峰）"
+    },
+    {
+      "entityId": "dressmaker-cozy-lives",
+      "names": {
+        "official": "Dressmaker",
+        "aliases": ["dressmaker game", "dressmaker steam", "dress maker game"],
+        "localized": ["针影裁梦（简中）", "針影裁夢（繁中）"],
+        "developer": "Cozy Lives",
+        "publisher": "Free Lives"
+      },
+      "steamAppId": 4019220,
+      "urls": {
+        "steam": "https://store.steampowered.com/app/4019220/",
+        "itchPrototype": "https://elyaradine.itch.io/dressmaker"
+      },
+      "platforms": ["PC (Steam)", "macOS"],
+      "announcedPlatforms": ["Nintendo Switch（日期未公布 → watch 触发信号）"],
+      "languages": ["en"],
+      "markets": ["US", "GB", "CA", "AU"],
+      "pageType": "game-adjacent",
+      "playable": false,
+      "playableNote": "Steam PC/Mac 单机商业游戏，无可嵌入的在线可玩供给",
+      "gameReleasedAt": "2026-09-21",
+      "releaseDateSource": "Steam 官方 appdetails releaseText（实测 2026-09-25；中文媒体多写 09-22，以官方为准）",
+      "gameAgeDays": 4,
+      "steamOfficial": {
+        "appid": 4019220,
+        "name": "Dressmaker",
+        "releaseText": "Sep 21, 2026",
+        "developer": "Cozy Lives",
+        "genres": ["Casual", "Simulation"],
+        "price": "$13.49",
+        "reviews": 2703,
+        "upVotes": 2621,
+        "downVotes": 82,
+        "reviewDesc": "Overwhelmingly Positive",
+        "approval": 97,
+        "playing": 12205,
+        "fetchedAt": "2026-09-25T06:46:21.181Z"
+      },
+      "thirdPartyContext": {
+        "steamBestSellersTop": 15,
+        "note": "媒体实测：发售 1-3 天冲进 Steam 全球畅销榜前 15，销量一度超过《暗黑破坏神4》《漫威争锋》；约 2000 条评测时 96% 好评（现 2703 条 / 97%）",
+        "source": "18183.com / 9game.cn 2026-09-22~24"
+      },
+      "keywords": [
+        {
+          "keyword": "dressmaker game",
+          "market": "US",
+          "language": "en",
+          "semrushVolume": null,
+          "webcafeKd": null,
+          "status": "not-queried",
+          "note": "搜索量/KD 未测：本机缺 opencli 运行时"
+        },
+        {
+          "keyword": "dressmaker",
+          "market": "US",
+          "language": "en",
+          "semrushVolume": null,
+          "webcafeKd": null,
+          "status": "not-queried",
+          "note": "通用英文词（裁缝职业），存在严重意图污染；Trends top 里同时出现 the dressmaker / dress maker"
+        },
+        {
+          "keyword": "dressmaker characters",
+          "market": "US",
+          "language": "en",
+          "status": "observed-in-trends-rising",
+          "semrushVolume": null,
+          "webcafeKd": null
+        }
+      ],
+      "keywordStrategy": {
+        "entityType": "brand",
+        "clusters": [
+          {
+            "cluster": "品牌信息型",
+            "terms": ["dressmaker game", "dressmaker video game", "dressmaker game platforms", "dressmaker steam"]
+          },
+          {
+            "cluster": "机制/玩法（Trends top 实测观测）",
+            "terms": ["dressmaker characters", "dressmaker wiki", "dress maker game"]
+          },
+          {
+            "cluster": "竞品已覆盖（无空位）",
+            "terms": ["all 32 achievements", "customers list", "fabric tier list", "pattern cutting", "grain vs bias", "how to play"]
+          }
+        ],
+        "pollutionWarning": "dressmaker 单词被裁缝职业/纪录片等通用意图污染；做站必须绑定游戏修饰词（game / steam / wiki / characters）"
+      },
+      "demandProof": {
+        "track": "search",
+        "score": null,
+        "scoreNote": "未按技能分值表给出总分：搜索量与 KD 均未测，且可玩供给客观不成立；但 Steam 官方需求与口碑两项在 findnews 锚点上均达满档（当前在线 12205 → 锚点 5000→100；好评 97% → 锚点 95%→100）",
+        "trends": {
+          "dressmaker game": { "window": "US now 7-d", "sharedScalePeak": 100, "series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 35, 69, 17, 17, 43, 62, 26, 31, 43, 100] },
+          "dressmaker": { "window": "US now 7-d", "sharedScalePeak": 95, "series": [0, 4, 5, 5, 0, 0, 0, 0, 0, 0, 0, 19, 0, 0, 0, 11, 0, 10, 23, 37, 60, 14, 17, 38, 73, 20, 32, 44, 95], "note": "含通用词噪音" },
+          "dressmaker steam": { "sharedScalePeak": 12 },
+          "dressmaker wiki": { "hasData": false }
+        },
+        "relatedQueries": {
+          "top": ["the dressmaker", "steam", "dress maker game", "dress maker", "dressmaker characters", "dressmaker video game", "dressmaker game platforms", "dressmaker wiki"],
+          "rising": ["dressmaker characters", "dressmaker video game"]
+        }
+      },
+      "trend": {
+        "direction": "rising",
+        "windows": {
+          "7d": { "geo": "US", "reading": "从 0 抬升至共享尺度 100，与 09-21 发售吻合；尚处在首发尖峰段，无法区分持久需求" }
+        }
+      },
+      "competitionReview": {
+        "serpIntent": "信息型（怎么玩/成就/顾客/布料/机制），意图与游戏一致",
+        "verdict": "高竞争 · 窗口已关（决定性否决项）",
+        "dedicatedNewSites": [
+          "dressmaker.wiki（10 页，9 栏目，无角色页/无成就页）",
+          "dressmakers.wiki（9 篇 guides + tier-list + tools，2026-09-13 更新，无作者署名）",
+          "dressmaker-game.wiki（含 customers/customer-database，2026-09-08）",
+          "dressmaker-wiki.wiki（约 25-30 页，10 模块，含 characters / achievements / updates）",
+          "dressmakerwiki.lol（commission guide + 32 成就）",
+          "dressmakerwiki.site（characters：十个顾客）",
+          "dressmakergame.com（customer-guide）"
+        ],
+        "thirdPartyOnSameNiche": ["xmodhub.com（32 成就 walkthrough，2 天前）", "trophieshunter.com（成就列表）", "entertainment14.net（繁中全成就）", "3dmgame.com（中文攻略，3 天前）"],
+        "independentDomainCount": "≥8（几乎全部为专为该游戏新建的域名）",
+        "timingEvidence": "多个竞品在**发售前**就铺好了\"预订稿\"（页面已讨论 launch-week 问题，却把发售日写成未来日期）",
+        "competitorQuality": {
+          "site": "dressmaker-wiki.wiki",
+          "finding": "模板化内容站群特征：H1 固定格式、Steam 数据横幅、Latest Updates / Featured Guides / Explore Modules 三段式、S/A/B/C tier 徽标、编号步骤卡、FAQ 手风琴、结尾 'Ready to Master X?' + 'Play on Steam'、底部 'Wiki Navigation → Active Codes: None / Check back soon!'（单机游戏仍保留 codes 占位）；同一批条目被模板重复输出两遍；无作者、无日期、无逐条来源；正文回避一切具体数值",
+          "reading": "竞品薄，但数量已占满；这是同模式批量站群赛道"
+        },
+        "contentCeiling": {
+          "achievements": 32,
+          "characters": 10,
+          "fabrics": 7,
+          "note": "竞品实测规模 10-30 页；cozy 单机模拟无赛季 / 无 live service / 无持续内容供给 → 可做页面总数先天很小，8 个站平分后每家份额 3-5 页"
+        },
+        "newSitePresent": true,
+        "metricConflict": "reviewed（KD 与搜索量均未测）"
+      },
+      "promotionRisk": {
+        "internalTrafficRisk": "low",
+        "campaigns": 0,
+        "independentPublishers": "高（Polygon、indiegame.com、Wholesome Direct 报道）",
+        "note": "需求来自独立搜索与独立媒体，不依赖平台内推荐"
+      },
+      "decisionAudit": {
+        "missingEvidence": [
+          "Semrush 分国家月搜索量（US/GB）— 本机 spawn opencli ENOENT",
+          "Web.Cafe / Semrush KD — 同上",
+          "dressmaker.wiki / dressmakers.wiki / dressmakerwiki.lol / dressmakerwiki.site / dressmakergame.com 的完整页面清单（sitemap 未抓）",
+          "Steam Community Guides 收录情况（未查）"
+        ],
+        "blockingForDevelop": [
+          "窗口已关：SERP 已被 8+ 个专为该游戏新建的独立站占满",
+          "内容面天花板极低：32 成就 / 10 角色 / 7 布料，竞品实测仅 10-30 页",
+          "可玩供给客观不成立（Steam 单机商业游戏）",
+          "搜索量与 KD 未测（不构成主因，主因是窗口与内容面）"
+        ]
+      },
+      "decision": "watch",
+      "decisionLabel": "watch",
+      "reasons": [
+        "需求侧实测很强：Steam 官方 12,205 当前在线、2,703 评测、97% 好评、$13.49；发售 4 天（2026-09-21）",
+        "但窗口已关 —— 这是决定性否决项：SERP 已有 ≥8 个专为该游戏新建的独立域名（dressmaker.wiki / dressmakers.wiki / dressmaker-game.wiki / dressmaker-wiki.wiki / dressmakerwiki.lol / dressmakerwiki.site / dressmakergame.com + xmodhub / trophieshunter / entertainment14.net），且多个在发售前就铺好了预订稿",
+        "与项目既有教训同构：Batomon Showdown 案例「等游戏上线才动手，6 天内 SERP 已出现 7 个专用站，最值钱的词前 8 位被 5 个域名瓜分」",
+        "内容面天花板极低：游戏仅 32 成就 + 10 个顾客/角色 + 7 种布料，竞品站实测也只有 10-30 页；cozy 单机模拟没有赛季/live service/持续更新驱动的长期页面供给，8 个站平分后每家 3-5 页份额，投产比差",
+        "竞品是同模式的批量内容站群（模板三段式 + tier 徽标 + 连单机游戏都保留 'Active Codes: Check back soon!' 占位 + 模板重复渲染 + 无作者无日期）→ 你进场是第 N 个同质站，且晚 4-7 天",
+        "唯一理论出路是做「有真实硬数据 + 一手截图/数值表 + 可追责署名」的那一个（竞品普遍回避具体数值），但要在 25-30 页的 niche 里打消耗战，边际收益低",
+        "需求性质存疑：Steam 12,205 在线是首发尖峰，cozy 单机通关后需求断崖，目前无法区分持久需求与一次性事件",
+        "搜索量与 KD 未测，按技能红线不得据未测推断为达标或为 0"
+      ],
+      "recoverablePaths": [
+        {
+          "path": "① 竞品出清（等）",
+          "whatChanges": "竞争",
+          "evidence": "竞品实测为模板化站群（无作者 / 无日期 / 同一批条目被模板重复渲染两遍 / 单机游戏仍保留 'Active Codes: Check back soon!' 占位）→ 典型一次性收割站，生命周期短",
+          "feasibilitySignal": "3-6 个月后现有 .wiki 停更、或掉出前十",
+          "supportingData": "Steam CCU：历史峰值 16,648 → 当前 12,333（保留 74%），温和回落而非腰斩 → 若在线维持数万，长尾成立（区别于'一波流'）",
+          "status": "待观察"
+        },
+        {
+          "path": "② 游戏扩张（等）",
+          "whatChanges": "内容面天花板 + 新词簇",
+          "feasibilitySignal": "Switch 版定档（官方已确认在计划中、无日期）/ DLC 公告（新顾客 / 新布料 / 新章节）",
+          "status": "Switch 已确认未定档；DLC 无公告；愿望单 40 万+（doope.jp）"
+        },
+        {
+          "path": "③ 换维度：工具化（现在就能做）",
+          "whatChanges": "绕过攻略红海 —— 竞品全是'再写一篇 guide'，没人做交互",
+          "evidence": "本作攻略本质是「什么布料/版型配什么顾客」→ 可计算；模板站群做不出交互工具，且工具页有独立长尾与更高留存",
+          "targetPages": ["布料→顾客 推荐器", "满意度 / 金币收益计算器", "32 成就进度追踪"],
+          "independentKeywords": ["dressmaker calculator", "best fabric for X", "dressmaker tool"],
+          "status": "现在可执行"
+        },
+        {
+          "path": "④ 换维度：硬数据（现在就能做）",
+          "whatChanges": "打在竞品的结构性弱点上",
+          "evidence": "实测 dressmaker-wiki.wiki 整张成就表 0 个数字（原文即 'exact numbers vary by achievement'）、无一手截图、无作者署名 → 竞品集体回避可验证数值",
+          "requirement": "玩通游戏并记录精确阈值 / 金币价格 / 满意度公式 + 一手截图",
+          "status": "现在可执行，成本 = 真玩 + 测量"
+        }
+      ],
+      "watchTriggers": [
+        "Nintendo Switch 版公布发售日（已确认在计划中、无日期）→ 第二波需求 + 掌机市场新词空间",
+        "官方发布 DLC / 大版本更新（新顾客、新布料、新章节）→ 内容面天花板被抬高",
+        "SERP 格局变化：现有专站若停更或掉出前十（它们是模板站群）→ 空位重现"
+      ],
+      "recheckGate": {
+        "enterIf": [
+          "Steam CCU 维持 ≥ 5,000（零密钥接口每周采样）",
+          "或 SERP 前十独立域名数 ≤ 3（出清）",
+          "或 Switch 定档 / DLC 公告"
+        ],
+        "monitoring": [
+          "每周：Steam GetNumberOfCurrentPlayers（api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers?appid=4019220）",
+          "每 2 周：SERP 查 'dressmaker guide / wiki / calculator' 前十独立域名数"
+        ]
+      },
+      "nextAction": "不现在建站。两条并行：① 若要做，走路径 ③/④（工具化 / 硬数据）现在就切，不要写第 N 篇 guide；② 若等，按 recheckGate 每周采样 CCU、每两周查 SERP 出清，达门槛即复评",
+      "scoringSystemVerdict": {
+        "note": "2026-09-25 打分系统落地后的交叉验证：新系统独立得出的结论与 AI 判读一致（此前不一致）",
+        "comp": "serp（自动核查，open=1 → 10 分）",
+        "leadDays": -4,
+        "leadScore": 55,
+        "ourLagDays": 44,
+        "lagMult": 0.65,
+        "score": 51,
+        "verdict": "no「我们晚了」",
+        "before": "旧版六项评分给 96~100 分、判「值得做」（ageDays=4 → 新鲜度 100 且竞争 100，同一变量被双计 32 分）"
+      }
+    }
+  ]
+}

@@ -771,12 +771,19 @@
    *    这一段拿不到实测就如实标「未测」（前端会引导点「查竞争」），而不是编一个满分。
    *    注意：这个改动的前提是后端 `serpComp` 也会覆盖新条目（否则新游戏会全变未测）——
    *    见 src/lib/serp.mjs 的 `maxAgeDays`。
+   * 🛑 结构版本（2026-09-25）：自动 SERP 那一档**只认当前口径(v2)记录** —— 判据是有没有
+   *    `dedicated` 字段（专用站口径）。v1 记录（open 按"前十独立域名总数"分档）与新口径不可比
+   *    → 当**未测**，等后端重测（后端同一判定见 src/lib/serp.mjs 的 isCurrentSerpRecord）。
    */
   function compRoom(g, ageDays) {
     var mc = manualComp(g.name);
     if (mc && mc.open != null) return { score: openScore(mc.open), source: "manual" };
     var sc = g.serp;
-    if (sc && sc.open != null && sc.at && (Date.now() - new Date(sc.at).getTime()) / 86400000 <= SERP_STALE_DAYS) {
+    // 🛑 2026-09-25 结构版本：v2 = 专用站口径。`dedicated` 缺失 = v1 记录（open 按"前十独立域名
+    //    总数"分档）→ 与新口径不可比，当作**未测**，等后端重测（缓存文件已由 serp.mjs 的 `_v`
+    //    整体作废，但**已经烘进 games.json 的旧记录还在**，必须在这里拦住）。
+    //    注意 pickVerdict 的「通用媒体已垄断」只用 domains、不依赖 open 档位 —— 旧记录仍会被它判否。
+    if (sc && sc.open != null && sc.dedicated != null && sc.at && (Date.now() - new Date(sc.at).getTime()) / 86400000 <= SERP_STALE_DAYS) {
       return {
         score: openScore(sc.open), source: "serp",
         domains: sc.domains, hosts: sc.hosts || [], query: sc.query || "", at: sc.at,
@@ -1022,12 +1029,14 @@
       return { k: "no", t: "竞争饱和（人工判断）", why: mc.note || "长尾已被专用 wiki / 专业站占据" };
     }
     // 🛑 2026-09-25 新增：**通用媒体已垄断** → 直接否，不看总分。
-    //    「专用站=0」对独立小游戏是空位；但 codes 前十 6+ 家全是通用媒体 + 需求顶级 = 大作的饱和形态：
-    //    通用媒体只给有量的游戏写 codes 页，它们的"全覆盖"本身就是长尾被占死的证据。
-    //    （实测事故：Clash of Clans / Roblox 靠这条凑出竞争 100 分判「值得做」排到最前。）
+    // 「专用站=0」对独立小游戏是空位；但 codes 前十 6+ 家全是通用媒体 + 需求顶级 = 大作的饱和形态：
+    // 通用媒体只给有量的游戏写 codes 页，它们的"全覆盖"本身就是长尾被占死的证据。
+    // （实测事故：Clash of Clans / Roblox 靠这条凑出竞争 100 分判「值得做」排到最前。）
+    // 兼容旧口径缓存（无 dedicated 字段）：v1 的 open≤2 = 独立域名总数 ≥8，同样是"媒体全覆盖"。
     var sc0 = g.serp;
-    if (sc0 && sc0.open != null && sc0.dedicated === 0 && (sc0.domains || 0) >= 6 &&
-        r.parts.demand != null && r.parts.demand >= 80) {
+    var legacySaturated = sc0 && sc0.dedicated == null && sc0.open != null && sc0.open <= 2 && (sc0.domains || 0) >= 6;
+    if (sc0 && sc0.open != null && (sc0.dedicated === 0 || legacySaturated) &&
+        (sc0.domains || 0) >= 6 && r.parts.demand != null && r.parts.demand >= 80) {
       return { k: "no", t: "通用媒体已垄断",
         why: "「" + (sc0.query || serpQueryOf(g.name)) + "」前十 " + sc0.domains +
           " 个域名全是通用媒体、无一专用站，且需求分 " + Math.round(r.parts.demand) + "（≥80）—— 大作形态的饱和：长尾被通用媒体全覆盖，专用站少不是空位" };

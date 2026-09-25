@@ -501,7 +501,9 @@ export async function enrichCurveRefresh(items, session, cfg) {
         it.series = series;
         if (d.points && d.points.length) it.points = d.points;
         it.peak = d.peak;
-        it.hype = hypeRatio(series);                                   // 动能随新曲线更新（雷达分也会跟着重算）
+        it.hype = hypeRatio(series);                                   // 动能随新曲线更新。
+        // 🛑 注意：`score` **不**随保鲜重算 —— 它的 vol/growth/weight 输入是发现时刻的快照，
+        //    条目上没有存，硬算会失真。score 语义 = 「发现那一刻的验证优先级」（前端排序标签同此口径）。
         it.chart_at = iso();
         it.chart_geo = it.chart_geo || geoDefault;
         it.coolStreak = 0;

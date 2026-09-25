@@ -23,7 +23,7 @@ import { linkUpcomingToRoblox } from "./roblox.mjs";
 import { fetchIosBatch } from "./mobile.mjs";
 import { pushQueue } from "./queue.mjs";
 // 潜伏评分第五维「竞争饱和度」用的单条 SERP 核查（与建站推荐共用同一份实现 + 同一份缓存）
-import { checkOneSerp } from "./serp.mjs";
+import { checkOneSerp, isCurrentSerpRecord, SERP_CACHE_VERSION } from "./serp.mjs";
 import { fetchInterest, hypeRatio } from "./interest.mjs";
 
 const STEAM = "https://store.steampowered.com";
@@ -442,9 +442,15 @@ export async function buildWatchlist(cfg, session) {
     let serpUsed = 0;
     let serpCached = 0;
     const serpKeyOf = (n) => String(n || "").trim().toLowerCase();
+    // 🛑 旧口径（v1，无 dedicated 字段）记录**不作数**：本清单与「🎯 建站推荐」共用同一份
+    //    .serp-cache.json，版本口径必须一致 —— 否则同一条记录在潜伏评分里按"独立域名总数"给分、
+    //    在推荐页按"专用站"给分，同一件事两个结论（版本判定见 serp.mjs 的 isCurrentSerpRecord）。
+    let serpStaleSkipped = 0;
     const serpFor = async (name) => {
       const k = serpKeyOf(name);
-      const hit = serpCache[k];
+      const raw = serpCache[k];
+      const hit = isCurrentSerpRecord(raw) ? raw : null;
+      if (raw && !hit) serpStaleSkipped++;
       if (hit && hit.at && now - new Date(hit.at).getTime() < serpTtlMs) { serpCached++; return hit; }
       if (!serpWindowOpen) return hit || null;             // 未到窗口：只读缓存，把配额让给建站推荐
       if (serpUsed >= serpBudget) return hit || null;      // 超预算：沿用旧结果；没有就留「未测」
@@ -452,6 +458,7 @@ export async function buildWatchlist(cfg, session) {
       try {
         const rec = await checkOneSerp(name, cfg);
         serpCache[k] = rec;
+        serpCache._v = SERP_CACHE_VERSION;   // 与 serp.mjs 同版本号，否则下一轮会被整体作废
         log("dim", `    潜伏 SERP ${name}：独立域名 ${rec.domains} → 竞争档 ${rec.open}` +
           (rec.competitorFirstSeen ? `；首个专站最早快照 ${rec.competitorFirstSeen}` : ""));
         return rec;
@@ -517,8 +524,9 @@ export async function buildWatchlist(cfg, session) {
       writeJson(serpCacheFile, serpCache, true);
       writeJson(serpStateFile, { lastAt: iso(), used: serpUsed }, true);   // 节流窗口记账
     }
-    if (serpUsed || serpCached) {
+    if (serpUsed || serpCached || serpStaleSkipped) {
       notes.push("Roblox 条目的**竞争饱和度**（潜伏评分第五维）本轮实测 " + serpUsed + " 条 · 沿用缓存 " + serpCached +
+        (serpStaleSkipped ? " · 旧口径缓存记录 " + serpStaleSkipped + " 条不作数（等重测）" : "") +
         " 条 —— 用「<游戏名> codes」前十的**专用站**数（域名含游戏名 = 专为它建的站）衡量「**现在有多少人已经在做**」；" +
         "通用游戏媒体（progameguides / pocketgamer 等）对每个游戏都有 codes 页，只如实记数、**不算对手**。" +
         "未测的条目**不等于没人做**，只是还没轮到测（每 " + Math.round(serpEveryMs / 3600000) + " 小时开一次窗口、每次上限 " + serpBudget + " 条 —— " +
