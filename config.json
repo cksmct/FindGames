@@ -294,6 +294,7 @@
     "serpCheck": {
       "enabled": true,
       "maxPerRun": 5,
+      "everyHours": 6,
       "ttlDays": 14
     },
     "roblox": {

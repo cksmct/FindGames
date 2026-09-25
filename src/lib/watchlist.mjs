@@ -393,6 +393,17 @@ export async function buildWatchlist(cfg, session) {
     const serpCfg = w.serpCheck || {};
     const serpBudget = serpCfg.enabled === false ? 0 : (serpCfg.maxPerRun == null ? 5 : serpCfg.maxPerRun);
     const serpTtlMs = (serpCfg.ttlDays == null ? 14 : serpCfg.ttlDays) * 86400000;
+    // 🛑 2026-09-25：**节流**（实测踩过的配额冲突）。
+    //    本函数跑在 `enrichSerpComp`（建站推荐）**之前**，而 DDG 通道每轮只有约 2 条成功配额
+    //    → 潜伏若每轮都抢，建站推荐的竞争实测会被**饿死**（实测：潜伏 5 条尝试吃光配额，
+    //      紧接着建站推荐那 6 条几乎全失败 → 168 条主要数据一条都补不上）。
+    //    潜伏条目 TTL 14 天、总量少（~25 条），**不需要每小时都跑**：
+    //    每 `everyHours`（默认 6）小时才开一次窗口，其余轮次只读缓存、不发请求。
+    const serpEveryMs = (serpCfg.everyHours == null ? 6 : serpCfg.everyHours) * 3600000;
+    const serpStateFile = dataPath(cfg, ".watchlist-serp-state.json");
+    const serpState = readJson(serpStateFile, {}) || {};
+    const serpWindowOpen = serpCfg.enabled !== false && serpBudget > 0 &&
+      (!serpState.lastAt || now - new Date(serpState.lastAt).getTime() >= serpEveryMs);
     let serpUsed = 0;
     let serpCached = 0;
     const serpKeyOf = (n) => String(n || "").trim().toLowerCase();
@@ -400,6 +411,7 @@ export async function buildWatchlist(cfg, session) {
       const k = serpKeyOf(name);
       const hit = serpCache[k];
       if (hit && hit.at && now - new Date(hit.at).getTime() < serpTtlMs) { serpCached++; return hit; }
+      if (!serpWindowOpen) return hit || null;             // 未到窗口：只读缓存，把配额让给建站推荐
       if (serpUsed >= serpBudget) return hit || null;      // 超预算：沿用旧结果；没有就留「未测」
       serpUsed++;
       try {
@@ -464,13 +476,17 @@ export async function buildWatchlist(cfg, session) {
       items.push(item);
       pushed.push(item);
     }
-    if (serpUsed) writeJson(serpCacheFile, serpCache, true);
+    if (serpUsed) {
+      writeJson(serpCacheFile, serpCache, true);
+      writeJson(serpStateFile, { lastAt: iso(), used: serpUsed }, true);   // 节流窗口记账
+    }
     if (serpUsed || serpCached) {
       notes.push("Roblox 条目的**竞争饱和度**（潜伏评分第五维）本轮实测 " + serpUsed + " 条 · 沿用缓存 " + serpCached +
         " 条 —— 用「<游戏名> codes」前十的**专用站**数（域名含游戏名 = 专为它建的站）衡量「**现在有多少人已经在做**」；" +
         "通用游戏媒体（progameguides / pocketgamer 等）对每个游戏都有 codes 页，只如实记数、**不算对手**。" +
-        "未测的条目**不等于没人做**，只是还没轮到测（每轮上限 " + serpBudget + " 条；" +
-        "DuckDuckGo 通道实测**连打约 2 次后即被反爬页挡住** → 想提高覆盖请配 BRAVE_API_KEY 并把 serpComp.provider 换成 brave）。");
+        "未测的条目**不等于没人做**，只是还没轮到测（每 " + Math.round(serpEveryMs / 3600000) + " 小时开一次窗口、每次上限 " + serpBudget + " 条 —— " +
+        "刻意节流：DuckDuckGo 每轮只有约 2 条成功配额，而潜伏跑在「🎯 建站推荐」**之前**，" +
+        "不能把它的配额吃光，否则建站推荐那 168 条主要数据一条都补不上）。");
     }
 
     // ── 已经能玩的（官方数据有访问/在线）→ 推进雷达队列，让它在建站推荐里"接班" ──
