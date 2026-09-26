@@ -1414,6 +1414,25 @@
     return ["本轮没取到（热搜型条目却没有量：该词这轮没进榜）", 0];
   }
 
+  /**
+   * 🆕 2026-09-26「动能·涨幅」这一行与 搜索量 同源（都来自关键词通道的**绝对量**数据）——
+   *   所以来源型条目拿不到时同样是「**不适用**」，不是「无」。它们的动能由上一行「起飞档」承担
+   *   （实测：线上 865 条来源型条目属于这类，其中不少是动能满分 12）。
+   */
+  function growthRowFor(g, p) {
+    if (p.growth > 0) {
+      var txt = "+" + p.growth + "%";
+      if (p.growthRound != null) {
+        if (p.growthRound !== p.growth) txt += "（峰值；本轮 " + p.growthRound + "%）";
+      }
+      return [txt + " → ÷1000（无曲线时的兜底）", r1(p.growthRatio * 12)];
+    }
+    if (g.src) {
+      return ["不适用：与搜索量同源（关键词通道的绝对量），来源型条目拿不到 → 动能由上一行「起飞档」承担", 0];
+    }
+    return ["本轮没取到（热搜型条目却没有涨幅）", 0];
+  }
+
   function scoreDetail(g) {
     var p = g.scoreParts;
     if (!p) {
@@ -1423,6 +1442,7 @@
     // 2026-09-26 新口径：流量 = max(搜索量, 官方量级)；动能 = max(起飞档, 涨幅档)。
     // 老条目（改动之前算的分）没有 traffic 字段 → 如实标成旧口径并列旧口径四项，不假装是新口径。
     var volRow = volRowFor(g, p);
+    var growthRow = growthRowFor(g, p);
     var rows = p.traffic == null
       ? [
           ["搜索量", fmtVol(p.vol) + "（旧口径 log₂）", p.volScore],
@@ -1436,7 +1456,7 @@
           ["流量·官方量级", p.official == null ? "无官方计数（itch/poki 这类来源没有）" : Math.round(p.official) + "/100（Roblox 访问 · Steam 在线 · 手游评分人数）", p.officialScore],
           ["流量小计", "取两者<b>最大</b>，不叠加（同一件事的两种测法）", p.traffic],
           ["动能·起飞档", "hype " + r1(p.hype) + "（7 天曲线后段÷前段，" + hypeWord(p.hype == null ? 0 : p.hype) + "）", r1(p.hypeRatio * 12)],
-          ["动能·涨幅", (p.growth ? "+" + p.growth + "%" : "无") + (p.growthRound != null && p.growthRound !== p.growth ? "（峰值；本轮 " + p.growthRound + "%）" : "") + " → ÷1000（无曲线时的兜底）", r1(p.growthRatio * 12)],
+          ["动能·涨幅", growthRow[0], growthRow[1]],
           ["动能小计", "取两者<b>最大</b>，不叠加（都在说「在涨」）", p.momentumScore],
         ];
     return '<details class="sdetail"><summary>分数明细（' + scoreNum(g) + " 怎么来的）</summary>" +
