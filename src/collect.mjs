@@ -137,6 +137,14 @@ if (!cfg._onlyGames) {
 // ── 2. 合并历史 & 输出 ──
 const hist = loadHistory(cfg);
 log("info", `载入历史留档 ${hist.items.length} 条`);
+  // 🆕 2026-09-26 搜索量口径修正：Google 的 vol 是**分桶**值（100/200/500/1K/2K/5K/10K/…），单轮单地区的采样
+  //   会落在不同桶上 —— 实测 control resonant：本轮 US 抓到 1K（搜索量那项 0 分），而同地区 7 天留档峰值是 10K
+  //   （9 分），池子页显示的正是峰值。所以算分改用 **max(本轮桶值, 7 天峰值)**：分数不该因某一轮采样偏低而归零。
+  const peakOf = new Map();
+  for (const it of hist.items) {
+    if (!it || !it.q || !it.geo) continue;
+    peakOf.set((it.geo + "|" + it.q).toLowerCase(), it.vol_peak == null ? (it.vol == null ? 0 : it.vol) : it.vol_peak);
+  }
 
 let newKeys = new Set();
 if (!cfg._onlyGames) {
@@ -231,6 +239,10 @@ if (cfg.games.enabled) {
     if (feedbackVerdict(it.q, cfg.feedback) === "block") continue;
     const vol = it.vol || 0;
     if (vol < (cfg.games.minVol ?? 0)) continue;
+    // 搜索量 = max(本轮桶值, 7 天峰值)（见 peakOf 的注释）；volRound 留本轮原值，给页面明细显示
+    const volRound = vol;
+    const peakHit = peakOf.get((it.geo + "|" + it.q).toLowerCase());
+    const volPeak = Math.max(vol, peakHit == null ? 0 : peakHit);
     const gc = gameCandidate(it, { latinOnly, excludeAAA, englishOnly, trendTerm: true });
     if (!gc.ok) continue;
     // 低量区（刚冒头的新游戏就在这里）只放行"强信号"候选：
@@ -251,6 +263,8 @@ if (cfg.games.enabled) {
     if (chartFresh && relatedFresh) continue; // 两者都新，本轮跳过
     const cand = {
       ...it,
+      vol: volPeak,
+      volRound: volRound,
       weight: gc.weight,
       reason: gc.reason,
       tracked: !!cur,
@@ -507,7 +521,7 @@ if (cfg.games.enabled) {
     //   识别权重与人工加分已去掉；官方量级在这里通常还拿不到（来源型条目的官方数据在下面 enrich 阶段才补齐）
     //   → 补齐后会**重算一次**（见官方数据阶段末尾），所以不是缺陷，只是时序。
     const scoreParts = scoreBreakdown({
-      vol: c.vol, growth: c.growth, hype,
+      vol: c.vol, volRound: c.volRound == null ? c.vol : c.volRound, growth: c.growth, hype,
       official: officialDemandScore(prev && prev.stats ? prev.stats : null),
     });
     const score = scoreParts.total;

@@ -1403,7 +1403,7 @@
           ["人工加分", "已于 2026-09-26 去掉", p.feedbackBoost == null ? 0 : p.feedbackBoost],
         ]
       : [
-          ["流量·搜索量(Trends)", fmtVol(p.vol) + " → log₂(量/1000)×2（<1 千不倒扣）", p.volScore],
+          ["流量·搜索量(Trends)", fmtVol(p.vol) + (p.volRound == null ? "" : (p.volRound === p.vol ? "" : "（7 天峰值；本轮采样 " + fmtVol(p.volRound) + "）")) + " → log₂(量/1000)×2（<1 千不倒扣）", p.volScore],
           ["流量·官方量级", p.official == null ? "无官方计数（itch/poki 这类来源没有）" : Math.round(p.official) + "/100（Roblox 访问 · Steam 在线 · 手游评分人数）", p.officialScore],
           ["流量小计", "取两者<b>最大</b>，不叠加（同一件事的两种测法）", p.traffic],
           ["动能·起飞档", "hype " + r1(p.hype) + "（7 天曲线后段÷前段，" + hypeWord(p.hype == null ? 0 : p.hype) + "）", r1(p.hypeRatio * 12)],
