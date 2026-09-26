@@ -293,9 +293,13 @@ function printBreakdown(L, a, n) {
       (r.bounds === "上界" ? "　🛑 竞争未测 → 上界" : ""));
     const sp = g.scoreParts;
     if (sp) {
-      console.log("    雷达分 " + (g.score == null ? 0 : g.score) + " = 搜索量 " + sp.vol + "→" + r1(sp.volScore) +
-        " + 涨幅 " + sp.growth + "%→" + r1(sp.growthScore) + " + 起飞档(hype " + r1(sp.hype) + ")→" + r1(sp.hypeScore) +
-        " + 权重 " + sp.weight + "×2=" + r1(sp.weightScore) + " + 人工 " + (sp.feedbackBoost == null ? 0 : sp.feedbackBoost));
+      if (sp.traffic == null) {
+        console.log("    雷达分 " + (g.score == null ? 0 : g.score) + "（旧口径：含识别权重与人工加分，下一轮重算）");
+      } else {
+        console.log("    雷达分 " + (g.score == null ? 0 : g.score) + " = 流量 " + r1(sp.traffic) +
+          "（搜索量 " + sp.vol + "→" + r1(sp.volScore) + " · 官方量级 " + (sp.official == null ? "—" : Math.round(sp.official)) + "→" + r1(sp.officialScore) + "，取最大）" +
+          " + 动能 " + r1(sp.momentumScore) + "（起飞 " + r1(sp.hypeRatio * 12) + " · 涨幅 " + sp.growth + "%→" + r1(sp.growthRatio * 12) + "，取最大）");
+      }
     } else {
       console.log("    雷达分 " + (g.score == null ? 0 : g.score) + "（scoreParts 未回填：字段 2026-09-25 才加，等下一轮采集）");
     }

@@ -20,8 +20,8 @@ import { recordRound } from "./lib/verdict-history.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh, enrichBaseline } from "./lib/interest.mjs";
 import {
-  noiseLabel, gameCandidate, scoreKeyword, scoreBreakdown, matchWatch, tokensOf, relevantTo,
-  feedbackVerdict, FEEDBACK_BOOST_PTS, SCORE_RULES, AAA_FRANCHISES, looksNonEnglish,
+  noiseLabel, gameCandidate, scoreKeyword, scoreBreakdown, officialDemandScore, matchWatch, tokensOf, relevantTo,
+  feedbackVerdict, SCORE_RULES, AAA_FRANCHISES, looksNonEnglish,
 } from "./lib/detect.mjs";
 import { judgeCandidates } from "./lib/judge.mjs";
 import {
@@ -503,10 +503,12 @@ if (cfg.games.enabled) {
     const hype = hasCurve ? hypeRatio(curve.series) : 0;
     // 🆕 2026-09-25：分数**明细**（逐项得分 + 原始输入）一并算出来、随条目落盘 ——
     //   用户要求「标出每个游戏的分数具体怎么来的」；前端只渲染 scoreParts，不重算公式（铁律 7）。
+    // 🆕 2026-09-26 雷达分改口径：流量（Trends 搜索量 ∪ 平台官方量级）+ 动能（起飞 ∪ 涨幅）。
+    //   识别权重与人工加分已去掉；官方量级在这里通常还拿不到（来源型条目的官方数据在下面 enrich 阶段才补齐）
+    //   → 补齐后会**重算一次**（见官方数据阶段末尾），所以不是缺陷，只是时序。
     const scoreParts = scoreBreakdown({
-      vol: c.vol, growth: c.growth, hype, weight: c.weight,
-      // feedback.boost 里的词加分：你判断值得做的，让它排前面
-      feedbackBoost: feedbackVerdict(c.q, cfg.feedback) === "boost" ? FEEDBACK_BOOST_PTS : 0,
+      vol: c.vol, growth: c.growth, hype,
+      official: officialDemandScore(prev && prev.stats ? prev.stats : null),
     });
     const score = scoreParts.total;
     // Rising 先做相关性过滤（剔除同期爆红的无关词），Top 本身质量高、不过滤
@@ -703,6 +705,21 @@ if (cfg.games.enabled) {
   // ── 补手机端官方数据（iOS：真实上线日/价格/评分人数；Android：只有评分，且**没有**首发日）──
   // 与前一层的分工：这一层只认来源明确的 appstore / googleplay 条目，绝不跨平台按名字找同名。
   const mobRes = await enrichMobileStats(list, cfg);
+
+  // 🆕 2026-09-26：官方数据补齐后**重算雷达分**（雷达分的主项是"流量"，而来源型条目的流量来自官方计数 ——
+  //   算分那一刻它还没有 stats，若不重算这批条目永远停在"只有动能"的低分区）。
+  //   只对"官方量级变了"的条目重算（幂等、便宜），并且必须在 writeGames 之前。
+  let rescored = 0;
+  for (const g of list) {
+    if (!g.scoreParts) continue;
+    const official = officialDemandScore(g.stats);
+    if (official == null) continue;
+    if (g.scoreParts.official === official) continue;
+    g.scoreParts = scoreBreakdown({ vol: g.scoreParts.vol, growth: g.scoreParts.growth, hype: g.scoreParts.hype, official: official });
+    g.score = g.scoreParts.total;
+    rescored++;
+  }
+  if (rescored) log("dim", `  雷达分重算（官方量级）：${rescored} 条`);
 
   // ── 曲线保鲜（2026-09-24 新增）──
   // 卡片的曲线是**发现那一刻的快照**，之后从不更新 → 一个几天前爆过、现在已经没人搜的游戏，

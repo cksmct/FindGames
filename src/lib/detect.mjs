@@ -70,7 +70,7 @@ const SPORTS_MEDIA =
 // tcg/trading card 是实体集换卡（"pokemon cards" 类的热搜是买卡不是玩游戏）
 const NOT_A_WORK = /\b(denuvo|gamestar|ign|gamespot|polygon|kotaku|eurogamer|unreal engine|unity engine|dlss|fsr|ray ?tracing|tcg|trading card)\b/i;
 const GAMBLING_I18N =
-  /(xổ số|kết quả xổ|xs(mb|mn|mt)|ngày \d{1,2} tháng|หวย|ロト|当選番号|toto|loto|sorteio|lotofácil|lotomania|quina|primitiva|sorteo|loter[ií]a|mega ?sena|loteria|caixa|timemania|melate|quiniela|bol[ãa]o|大樂透|威力彩|今彩|六合彩|双色球|大乐透|福利彩票|ロト7|로또|복권|福彩|體彩|당첨|\b539\b)/i;
+  /(xổ số|kết quả xổ|xs\s*(mb|mn|mt)|ngày \d{1,2} tháng|หวย|ロト|当選番号|toto|loto|sorteio|lotofácil|lotomania|quina|primitiva|sorteo|loter[ií]a|mega ?sena|loteria|caixa|timemania|melate|quiniela|bol[ãa]o|大樂透|威力彩|今彩|六合彩|双色球|大乐透|福利彩票|ロト7|로또|복권|福彩|體彩|당첨|\b539\b)/i;
 // 赛事查询不是游戏作品："celtic game today" 是赛程，不是游戏名
 // （只覆盖 "<赛事> + 时间词"；裸的 "<队名> game" 由 FIXTURE_FORM 覆盖）
 const FIXTURE = /\b(game|match|fixture|kickoff)s? (today|tonight|live|score|result|on tv|time|channel)\b/i;
@@ -285,22 +285,50 @@ export function gameCandidate(item, opts = {}) {
  * 🛑 公式只有这一份：`scoreKeyword` 就是 `scoreBreakdown().total`，前端只渲染不重算（铁律 7）。
  * 返回值同时带上**原始输入**（vol/growth/hype/weight/feedbackBoost）—— 否则页面只能显示得分、看不到依据。
  */
-export function scoreBreakdown({ vol = 0, growth = 0, hype = 0, weight = 0, feedbackBoost = 0 } = {}) {
-  // 低量不倒扣（2026-09-25）：log₂ 尺度在 vol<1000 时为负，曾让「权重≥3 的低量真游戏」被扣分 ——
-  //   与「识别权重比搜索量更能区分早期真游戏」的排序哲学相悖，钳到 0。
-  const volScore = vol > 0 ? Math.max(0, Math.log2(vol / 1000) * 2) : 0; // 2千≈2, 2万≈8.6, 200万≈22
-  const growthScore = growth / 100;                          // 1000% → 10
-  const hypeScore = hypeTier(hype);
-  const weightScore = weight * 2;
+export function scoreBreakdown({ vol = 0, growth = 0, hype = 0, official = null } = {}) {
+  // 低量不倒扣：log₂ 尺度在 vol<1000 时为负，钳到 0（低量真游戏不该被扣分）
+  const volScore = vol > 0 ? Math.min(TRAFFIC_MAX, Math.max(0, Math.log2(vol / 1000) * 2) * (TRAFFIC_MAX / 22)) : 0;
+  const officialScore = official == null ? 0 : Math.min(TRAFFIC_MAX, (official / 100) * TRAFFIC_MAX);
+  // 🛑 流量证据**取最强者，不叠加**：Trends 搜索量 与 平台官方量级 是同一件事的两种测法
+  //    （尤其来源型条目只有后者）—— 叠加会把“两边都有数据”变成额外加分。
+  const traffic = Math.max(volScore, officialScore);
+  const hypeRatio = hype > 0 ? hypeTier(hype) / 8 : 0;
+  const growthRatio = Math.min(1, (growth || 0) / 1000);
+  const momentumRatio = Math.max(hypeRatio, growthRatio);
+  const momentumScore = Math.round(MOMENTUM_MAX * momentumRatio);
   return {
-    vol, growth, hype, weight, feedbackBoost,
-    volScore, growthScore, hypeScore, weightScore,
-    total: Math.round(volScore + growthScore + hypeScore + weightScore + feedbackBoost),
+    vol, growth, hype, official,
+    volScore, officialScore, traffic, hypeRatio, growthRatio, momentumRatio, momentumScore,
+    total: Math.round(traffic + momentumScore),
   };
 }
 
-/** 起飞档（hype = 7 天曲线后段÷前段）→ 分数。与 scoreBreakdown 同源，供页面解释「这条为什么加 8 分」 */
+/** 起飞档（hype = 7 天曲线后段÷前段）→ 0~8。与 scoreBreakdown 同源，供页面解释「这条为什么加 8 分」 */
 export const hypeTier = (hype) => (hype >= 99 ? 8 : hype >= 3 ? 5 : hype >= 1.5 ? 2 : 0);
+
+/** 雷达分的两项上限（2026-09-26 重做）：流量 30 + 动能 12 = 42 */
+export const TRAFFIC_MAX = 30;
+export const MOMENTUM_MAX = 12;
+
+/**
+ * 平台官方量级 → 0~100（雷达分里“流量”的另一半测法：来源型条目没有 Trends 数据，但有官方计数）。
+ * 🛑 锚点与前端 @@web/app.js@@ 的 @@demandScore@@ **同一套**（Roblox 终身访问 1e5→0 · 1e6→33 · 1e7→66 · 1e8→100；
+ *    Steam 当前在线（缺失退回评价数）1→0 · 100→54 · 5000→100；手游评分人数 1e2→0 · 1e3→25 · 1e4→50 · 1e5→75 · 1e6→100）。
+ *    镜像而非共享：前端是静态页面，不能 import 后端模块 —— 改锚点必须**两边一起改**（README「🧾 分数明细」有对照表）。
+ */
+export function officialDemandScore(stats) {
+  const st = stats || {};
+  const plt = st.platform || (st.visits != null ? "roblox" : "");
+  let raw = null;
+  let kind = "";
+  if (plt === "roblox") { raw = st.visits; kind = "roblox"; }
+  else if (plt === "steam") { raw = (st.playing != null ? st.playing : st.reviews); kind = "steam"; }
+  else if (plt === "ios" || plt === "android") { raw = st.ratings; kind = "mobile"; }
+  if (raw == null || raw <= 0) return null;
+  if (kind === "steam") return Math.max(0, Math.min(100, (Math.log10(raw) / 3.7) * 100));
+  if (kind === "mobile") return Math.max(0, Math.min(100, ((Math.log10(raw) - 2) / 4) * 100));
+  return Math.max(0, Math.min(100, (Math.log10(raw) - 5) * 33));
+}
 
 export function scoreKeyword(input) {
   return scoreBreakdown(input).total;
@@ -312,13 +340,11 @@ export function scoreKeyword(input) {
  */
 export const SCORE_RULES = {
   title: "雷达分数 = 验证优先级，不是可做性",
-  formula: "score = log₂(搜索量/1000)×2 + 涨幅%÷100 + 起飞档(0/2/5/8) + 识别权重×2 + 人工加分(+6)",
+  formula: "score = 流量(0~30) + 动能(0~12)；流量 = max(Trends 搜索量, 平台官方量级)，动能 = max(起飞档, 涨幅档)",
   items: [
-    "搜索量：log₂ 尺度 —— 2 千 ≈ 2 · 2 万 ≈ 8.6 · 20 万 ≈ 15 · 200 万 ≈ 22 · **<1 千 = 0（低量不倒扣）**",
-    "涨幅：+100% 加 1 分，+1000% 加 10 分（⚠️ 低量噪音的涨幅往往更高，所以它排在权重之后）",
-    "起飞档：hype（7 天曲线后半段 ÷ 前半段）≥99 → 8 · ≥3 → 5 · ≥1.5 → 2 · 其余 0",
-    "识别权重 ×2：分类 + 平台词/意图词（权重 ≥3 才算强信号，人名噪音全在 2）",
-    "人工加分：feedback.boost 里的词 +6（够提前、但盖不过全新游戏）",
+    "**流量（主项，0~30）**：Trends 搜索量（log₂ 尺度归一：2 千≈2.7 · 2 万≈11.7 · 20 万≈20 · 200 万≈30）**与**平台官方量级（Roblox 终身访问 / Steam 当前在线 / 手游评分人数，同一套锚点）**取两者最大、不叠加** —— 它们是同一件事的两种测法，来源型条目只有后者",
+    "**动能（0~12）**：起飞档（7 天曲线后段÷前段：≥99→8 · ≥3→5 · ≥1.5→2 · 其余 0）与 涨幅档（+1000%→12 · +500%→6）**取最大、不叠加**（2026-09-26 去重：两者都在说“在涨”，重复计分等于给它双倍权重）",
+    "🆕 2026-09-26 去掉两项：**识别权重**（原 ×2）与 **人工加分**（原 feedback.boost +6）。理由：识别权重对来源型条目是恒定 3（= 固定 +6，排序上等于常数，无信息）；人工加分线上从未使用。**权重的准入作用保留**（低量候选必须权重≥3），**feedback.block 的否决保留**",
   ],
   note: "用途：决定本轮先验证谁。0~100 的「建站可做性」分数在「🎯 建站推荐」，那是另一套（加权平均 + 竞争门槛）。",
 };
@@ -344,7 +370,11 @@ export function feedbackVerdict(q, fb) {
 }
 
 /** 反馈加分的分值：够大能显著提前，但不至于盖过"全新游戏"的优先级 */
-export const FEEDBACK_BOOST_PTS = 6;
+/**
+ * @deprecated 2026-09-26：雷达分已不再使用人工加分（用户判断：这一项没用）。
+ *   保留常量只为兼容旧引用；@@feedback.block@@ 的**否决**仍然有效（那是另一回事）。
+ */
+export const FEEDBACK_BOOST_PTS = 0;
 
 // ── 相关查询的相关性过滤 ──
 // Google 的 Rising 列表有已知问题：会混入同期爆红的**无关**词

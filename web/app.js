@@ -1392,19 +1392,31 @@
       return '<details class="sdetail"><summary>分数明细（score ' + (g.score || 0) + "）</summary>" +
         '<div class="sd-note">明细字段是 2026-09-25 之后才随条目下发的，这条还没回填 —— 下一轮采集（每条 6 小时一轮）会带上。</div></details>';
     }
-    var rows = [
-      ["搜索量", fmtVol(p.vol) + " → log₂(量/1000)×2（<1 千不倒扣）", p.volScore],
-      ["涨幅", (p.growth ? "+" + p.growth + "%" : "无") + " → ÷100", p.growthScore],
-      ["起飞档", "hype " + r1(p.hype) + "（7 天曲线后段÷前段，" + hypeWord(p.hype || 0) + "）", p.hypeScore],
-      ["识别权重", "权重 " + (p.weight || 0) + " → ×2", p.weightScore],
-      ["人工加分", p.feedbackBoost ? "feedback.boost 命中 → +" + p.feedbackBoost : "无", p.feedbackBoost || 0],
-    ];
+    // 2026-09-26 新口径：流量 = max(搜索量, 官方量级)；动能 = max(起飞档, 涨幅档)。
+    // 老条目（改动之前算的分）没有 traffic 字段 → 如实标成旧口径并列旧口径四项，不假装是新口径。
+    var rows = p.traffic == null
+      ? [
+          ["搜索量", fmtVol(p.vol) + "（旧口径 log₂）", p.volScore],
+          ["涨幅", "+" + (p.growth == null ? 0 : p.growth) + "% ÷100", p.growthScore],
+          ["起飞档", "hype " + r1(p.hype) + "（" + hypeWord(p.hype == null ? 0 : p.hype) + "）", p.hypeScore],
+          ["识别权重", "权重 " + (p.weight == null ? 0 : p.weight) + " ×2（已于 2026-09-26 去掉）", p.weightScore],
+          ["人工加分", "已于 2026-09-26 去掉", p.feedbackBoost == null ? 0 : p.feedbackBoost],
+        ]
+      : [
+          ["流量·搜索量(Trends)", fmtVol(p.vol) + " → log₂(量/1000)×2（<1 千不倒扣）", p.volScore],
+          ["流量·官方量级", p.official == null ? "无官方计数（itch/poki 这类来源没有）" : Math.round(p.official) + "/100（Roblox 访问 · Steam 在线 · 手游评分人数）", p.officialScore],
+          ["流量小计", "取两者<b>最大</b>，不叠加（同一件事的两种测法）", p.traffic],
+          ["动能·起飞档", "hype " + r1(p.hype) + "（7 天曲线后段÷前段，" + hypeWord(p.hype == null ? 0 : p.hype) + "）", r1(p.hypeRatio * 12)],
+          ["动能·涨幅", (p.growth ? "+" + p.growth + "%" : "无") + " → ÷1000（无曲线时的兜底）", r1(p.growthRatio * 12)],
+          ["动能小计", "取两者<b>最大</b>，不叠加（都在说「在涨」）", p.momentumScore],
+        ];
     return '<details class="sdetail"><summary>分数明细（score ' + (g.score || 0) + " 怎么来的）</summary>" +
       '<table class="sd"><thead><tr><th>项</th><th>依据</th><th class="num">得分</th></tr></thead><tbody>' +
       rows.map(function (x) {
         return "<tr><td>" + x[0] + "</td><td>" + x[1] + '</td><td class="num">' + r1(x[2]) + "</td></tr>";
       }).join("") +
       '<tr class="sd-total"><td>合计</td><td>雷达分 = 验证优先级，不是可做性</td><td class="num">' + (g.score || 0) + "</td></tr>" +
+      '<tr><td colspan="3" class="sd-note">🆕 2026-09-26：<b>识别权重</b>不再计分（仍作准入闸：低量候选必须权重>=3）、<b>人工加分</b>已去掉（feedback.block 的否决仍有效）；涨幅与起飞改为<b>取最大</b>，不再叠加</td></tr>' +
       "</tbody></table></details>";
   }
 
