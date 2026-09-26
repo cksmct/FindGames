@@ -383,11 +383,18 @@ if (cfg.games.enabled) {
     if (englishOnly && looksNonEnglish(String(it.name || ""))) continue;   // 🆕 英文闸
     const cur = known.get(key);
     if (cur && Date.now() - new Date(cur.chart_at || 0).getTime() < refreshMs) continue;
+    // 🆕 2026-09-26：来源型条目的「搜索量」以前在这里**硬编码 0** —— 于是它们只剩「官方量级」一条路，
+    //   没有官方数据的 itch / poki / crazygames 条目流量恒为 0（雷达分只剩动能 ≤12 → 实测 87% 的条目
+    //   是个位数分）。而**名字作为搜索词被采集过**的条目在 7 天留档里有真实量：线上实测
+    //   `Samsung Galaxy S26 Ultra` 留档 2,000 / 条目存 0、`ALARM` 留档 500 / 条目存 0。
+    //   这里接上留档峰值（同一个 peakOf，与热搜型条目同一口径）。
+    const _geo0 = (cfg.games.geos || ["US"])[0];
+    const _pool = peakOf.get((_geo0 + "|" + it.name).toLowerCase());
     candMap.set(key, {
       q: it.name,
       geo: (cfg.games.geos || ["US"])[0],
-      vol: 0,
-      growth: 0,
+      vol: _pool == null ? 0 : _pool.v,
+      growth: _pool == null ? 0 : _pool.g,
       cats: [],
       weight: 3,
       reason: "来源:" + it.source + (it.kind ? ":" + it.kind : ""),
@@ -732,17 +739,31 @@ if (cfg.games.enabled) {
   // 🆕 2026-09-26：官方数据补齐后**重算雷达分**（雷达分的主项是"流量"，而来源型条目的流量来自官方计数 ——
   //   算分那一刻它还没有 stats，若不重算这批条目永远停在"只有动能"的低分区）。
   //   只对"官方量级变了"的条目重算（幂等、便宜），并且必须在 writeGames 之前。
-  let rescored = 0;
+  let rescored = 0, backfilled = 0;
   for (const g of list) {
-    if (!g.scoreParts) continue;
     const official = officialDemandScore(g.stats);
+    if (!g.scoreParts) {
+      // 🆕 2026-09-26 **存量补分**（用户问「是存量还没来得及改吗」→ 是，而且以前**永远**改不了）：
+      //   老条目没有 scoreParts 字段，而旧代码第一句就是 `if (!g.scoreParts) continue;` —— 每轮都跳过，
+      //   于是永远补不上。实测线上 2483/3000 条没有这个字段（Roblox 那支 0/339），页面上的雷达分与
+      //   「分数明细」一直是空的/旧的。现在用**现有数据**补一份：搜索量/涨幅取 7 天留档峰值（名字是
+      //   搜索词时才有值）、动能取已存的起飞档、流量取平台官方量级 —— 都没有就是 0（真的没有数据，不伪造）。
+      const _pk = peakOf.get(((g.chart_geo || (cfg.games.geos || ["US"])[0]) + "|" + g.name).toLowerCase());
+      g.scoreParts = scoreBreakdown({
+        vol: _pk == null ? 0 : _pk.v, growth: _pk == null ? 0 : _pk.g,
+        hype: g.hype == null ? 0 : g.hype, official: official,
+      });
+      g.score = g.scoreParts.total;
+      backfilled++;
+      continue;
+    }
     if (official == null) continue;
     if (g.scoreParts.official === official) continue;
     g.scoreParts = scoreBreakdown({ vol: g.scoreParts.vol, growth: g.scoreParts.growth, hype: g.scoreParts.hype, official: official });
     g.score = g.scoreParts.total;
     rescored++;
   }
-  if (rescored) log("dim", `  雷达分重算（官方量级）：${rescored} 条`);
+  if (rescored || backfilled) log("dim", `  雷达分：重算（官方量级变化）${rescored} 条 · **存量补分** ${backfilled} 条（此前每轮都跳过）`);
 
   // ── 曲线保鲜（2026-09-24 新增）──
   // 卡片的曲线是**发现那一刻的快照**，之后从不更新 → 一个几天前爆过、现在已经没人搜的游戏，

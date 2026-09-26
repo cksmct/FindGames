@@ -1648,7 +1648,7 @@
       var hb = b.source === "steam" && b.rank ? b.rank : 1e6 - (b.players || 0);
       return ha - hb;
     },
-    // 🎯 潜伏评分（只有 Roblox 未发售条目有；Steam 没有这项 → 沉底）
+    // 🎯 潜伏评分（2026-09-26 起 Roblox / Steam / App Store 三来源都有；未测维度权重跳过）
     assess: function (a, b) {
       var sa = a.assess ? a.assess.score : -1;
       var sb = b.assess ? b.assess.score : -1;
@@ -1668,7 +1668,8 @@
 
   /** 评估列：分数 + 分档，鼠标悬停看四个分项的理由（让人能一眼反驳） */
   /**
-   * 评估列：Roblox 未发售 → 潜伏评分；其它来源没有潜伏评分 → **给出可操作的去处**。
+   * 评估列：三来源各有自己的评分（Roblox/Steam 未发售 = 潜伏；App Store 已上架 = 新上架「值得先做」）；
+   * 没有评分的（各维全缺）→ **给出可操作的去处**，别只写一句「未进雷达」。
    * 🆕 2026-09-26（用户反馈）：旧版对 App Store / Steam 一律写「走建站推荐评估」，但常常兑现不了 ——
    *   Steam 清单只显示距发售 ≥7 天的条目（<7 天那轮就转正、从清单消失），
    *   所以清单里看到的 Steam 条目此刻**必然不在雷达里**。现在分三种情况如实说。
@@ -1814,7 +1815,9 @@
     }
     if (!rows.length) { el.innerHTML = '<p class="empty">该筛选下暂无候选（换来源，或点「显示未定档」）</p>'; return; }
     el.innerHTML = '<div class="table-wrap"><table><thead><tr>' +
-      '<th class="num">#</th><th>游戏</th><th class="hide-sm">潜伏评估</th><th class="hide-sm">来源</th><th>发售日</th>' +
+      // 🆕 2026-09-26：列头改成「评估（潜伏/新上架）」—— Roblox/Steam 是未发售（潜伏），
+//   App Store 那支是**已上架的「新上架」**（用户问过「为什么上架了还有潜伏」）。
+'<th class="num">#</th><th>游戏</th><th class="hide-sm">评估（潜伏/新上架）</th><th class="hide-sm">来源</th><th>发售日</th>' +
       '<th class="num">距今</th><th>窗口</th><th>链接</th>' +
       "</tr></thead><tbody>" + rows.map(watchRowHtml).join("") + "</tbody></table></div>";
   }

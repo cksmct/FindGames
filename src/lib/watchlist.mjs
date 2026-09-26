@@ -807,6 +807,9 @@ export async function buildWatchlist(cfg, session) {
       `，再用 lookup 拿**真实上线日**过滤（榜上 ${iosStat.total} → 查详情 ${iosStat.picked} → 有日期 ${iosStat.dated}、无日期跳过 ${iosStat.undated}、超过 ${(w.mobile && w.mobile.maxAgeDays) || 60} 天 ${iosStat.tooOld}）。` +
       "窗口标「🆕 新上架」；评分人数是需求代理、星级是口碑（0 人评 = 刚上架，不是口碑差）。" +
       "🆕 **预购 / 未上架**（releaseDate 在未来）不再丢弃：按「N 天后发售」进清单 —— lookup 的未来日期是带确切发售日的潜伏来源（零新增请求）。");
+    notes.push("🆕 **这一支是「已上架」的**（用户问「为什么上架了还有潜伏，潜伏不都是没上架吗」→ 问得对）：App Store 条目来自 new* / top 榜，" +
+      "真实上线日已经过去，所以「潜伏」对它们的意思是「**还来得及做**」而不是「还没上线」—— 档位因此叫「**值得先做** / 观察 / 暂不」。" +
+      "Roblox 与 Steam 两支才是**未发售**（真·潜伏，档位叫「值得潜伏」）。三套维度不同，分数只在同来源内可比。");
     notes.push("🛑 **不要相信 Apple 的 new* feed 就等于「刚上线」**：实测 2026-09-24 该 feed 的 `updated` 是新的，" +
       "但里面每个游戏的上线日都停在 **2026-07-03~07-08**（113/114 条挤在 76~83 天）—— 它返回的是**冻结的旧批次**。" +
       "所以本清单靠 **lookup 的真实 releaseDate** 判窗口，而不是靠它在不在 new 榜上。");

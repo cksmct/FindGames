@@ -74,11 +74,18 @@ export function bandOf(score, o) {
   //   并把「开发者」这一项**从计分里去掉**（40/40 都有值 = 常数，只会整体抬分、不产生区分度）。
   const go = BAND_GO[opts.source] == null ? 70 : BAND_GO[opts.source];
   const watch = BAND_WATCH[opts.source] == null ? 55 : BAND_WATCH[opts.source];
-  if (opts.source === "steam") { if (d != null) { if (d < 7) return { k: "too-late", t: "窗口已过（≤7 天）" }; } }
-  if (opts.source === "appstore") { if (d != null) { if (d <= -60) return { k: "too-late", t: "已上线 >60 天" }; } }
+  // 🆕 2026-09-26 档位名按来源：用户问「为什么上架了还有潜伏，潜伏不都是没上架吗」—— 问得对。
+  //   App Store 那一支来自 new* 榜、真实上线日已经过去了（≤ 窗口），它对「潜伏」的用法是
+  //   「**还来得及做**」而不是「还没上线」。所以那一支的档位叫「值得先做」，不叫「值得潜伏」；
+  //   Roblox / Steam 两支才是真·未发售。
+  const SB = opts.source === "appstore"
+    ? { go: "值得先做", late: "已上线 >60 天（错过窗口）" }
+    : { go: "值得潜伏", late: "窗口已过（≤7 天）" };
+  if (opts.source === "steam") { if (d != null) { if (d < 7) return { k: "too-late", t: SB.late }; } }
+  if (opts.source === "appstore") { if (d != null) { if (d <= -60) return { k: "too-late", t: SB.late }; } }
   if (opts.saturated) return { k: "taken", t: "竞争已起（前十专用站 ≥5 个）" };
   if (score == null) return { k: "no", t: "数据不足" };
-  if (score >= go) return { k: "go", t: "值得潜伏" };
+  if (score >= go) return { k: "go", t: SB.go };
   if (score >= watch) return { k: "watch", t: "观察" };
   return { k: "no", t: "暂不" };
 }
