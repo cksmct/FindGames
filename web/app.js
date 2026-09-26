@@ -1676,6 +1676,12 @@
   function assessCell(it) {
     var a = it.assess;
     if (a) {
+      if (a.score == null) {
+        // 🆕 2026-09-26：评分器跑过但**各维度全缺**（列不出分）—— 如实说「数据不足」，
+        //   绝不显示 null；理由与缺项照旧挂在 title 上，便于核对。
+        return '<span class="dim" title="' + esc("数据不足：\n" + a.reasons.join("\n") +
+          (a.missing.length ? "\n缺：" + a.missing.join(" / ") : "")) + '">数据不足（' + esc(a.band.t) + "）</span>";
+      }
       var tip = "评分 " + a.score + " · " + a.band.t + "\n" + a.reasons.join("\n") +
         (a.missing.length ? "\n缺：" + a.missing.join(" / ") : "") +
         (it.serp && it.serp.at ? "\nSERP 测于 " + String(it.serp.at).slice(0, 10) : "");
@@ -1691,7 +1697,7 @@
     else if (d >= 0) why = "未进雷达（临门 " + d + " 天：本轮已推入雷达队列，下一轮采集后出现）";
     else if (d >= -14) why = "未进雷达（已发售 " + Math.abs(d) + " 天：在转正窗口内，下一轮出现）";
     else why = "未进雷达（已发售 " + Math.abs(d) + " 天，超出 14 天转正窗口 → 不会自动补入；可在建站推荐按名字搜）";
-    return '<span class="dim" title="潜伏评分只评 Roblox 未发售条目（发布确定性/日期/内容面/社区/竞争五维）">' + esc(why) + "</span>";
+    return '<span class="dim" title="潜伏评分覆盖三来源：Roblox 五维（发布确定性/日期/内容面/社区/竞争）· Steam 六维（愿望单序位/发售窗口/可玩信号/官方热度/日期/竞争）· App Store 六维（榜单名次/新鲜度/口碑证据/内容面/开发者/竞争）">' + esc(why) + "</span>";
   }
 
   function watchRowHtml(it, i) {
@@ -1773,7 +1779,16 @@
       chip("按状态", s.byStatus) +
       chip("按窗口", s.byWindow) +
       chip("按潜伏评估", s.byBand) +
-      chip("类型 Top", s.byGenre);
+      chip("类型 Top", s.byGenre) +
+      (function () {
+        // 🆕 2026-09-26：三来源共用的分档统计（上面那块只统计 Roblox）
+        var as = (watch.stats == null ? null : watch.stats.assess);
+        if (!as) return "";
+        return chip("三来源潜伏评估（Roblox · Steam · App Store）", [["已评分", as.scored], ["未评分", as.unscored]]) +
+          chip("按来源", as.bySource) +
+          chip("按分档", as.byBand) +
+          chip("平均分", [["三来源", as.avgScore == null ? "—" : as.avgScore]]);
+      })();
   }
 
   function renderWatch() {

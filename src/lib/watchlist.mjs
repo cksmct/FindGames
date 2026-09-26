@@ -19,6 +19,8 @@
 import { dataPath, readJson, writeJson, iso, log, sleep } from "./util.mjs";
 import { fetchSteamPopularUpcoming, fetchSteamList, fetchRobloxSortGames, fetchIosNewGames } from "./sources.mjs";
 import { loadRobloxUpcoming, normalizeEntry, scoreUpcoming, UPCOMING_RULES } from "./roblox-upcoming.mjs";
+// 🆕 2026-09-26：Steam / App Store 的潜伏评分（三来源各用自己能测的维度，形状与 Roblox 那套一致）
+import { scoreUpcomingSteam, scoreUpcomingAppStore, UPCOMING_RULES_EXTRA } from "./upcoming.mjs";
 import { linkUpcomingToRoblox } from "./roblox.mjs";
 import { fetchIosBatch } from "./mobile.mjs";
 import { pushQueue } from "./queue.mjs";
@@ -832,6 +834,36 @@ export async function buildWatchlist(cfg, session) {
   if (stats.trendsMode === "off") notes.push("Trends 本轮未查（省配额）：每条都带 Google Trends 与 SERP 直链，可自己点开看。");
   notes.push("未测 ≠ 没有需求：字段标「未测」时请以链接实测为准。");
 
+  // 🆕 2026-09-26：**Steam / App Store 也进潜伏评分**（此前只有 Roblox 有 → 那两支的评估列只能写「未进雷达（…）」，
+  //   而用户真正想要的是「这两个来源该不该盯」）。
+  //   为什么放在这里（产物组装前）：① Steam 的评价/在线是上面 enrich 阶段才补进来的；② iOS 条目在 Roblox 段之后才构建。
+  //   Roblox 条目在构建时就评过了（it.assess 已存在）→ 跳过。故意不 catch：评分器出错要立刻暴露。
+  let scoredSteam = 0, scoredIos = 0;
+  for (const it of items) {
+    if (it.assess) continue;
+    if (it.source === "steam") { it.assess = scoreUpcomingSteam(it); scoredSteam++; continue; }
+    if (it.source === "appstore") { it.assess = scoreUpcomingAppStore(it); scoredIos++; }
+  }
+  if (scoredSteam || scoredIos) {
+    notes.push("潜伏评分已覆盖三来源：Steam " + scoredSteam + " 条（愿望单序位 / 发售窗口 / 可玩信号 / 官方热度 / 日期精确度 / 竞争）· " +
+      "App Store " + scoredIos + " 条（榜单名次 / 新鲜度 / 口碑证据 / 内容面 / 竞争；开发者只作上下文、不计分）。" +
+      "🛑 跨来源**不能直接比大小**（三套维度不同），分数只在**同来源内**可比；跨来源排序请用「窗口 / 发售日」。");
+  }
+  // 三来源共用的分档统计（robloxStats 只统计 Roblox 自己；这里给一个全局视角，前端单独画一块）
+  const scoredAll = items.filter((x) => x.assess && x.assess.score != null);
+  const tallyBy = (arr, fn) => {
+    const m = new Map();
+    for (const x of arr) { const k = fn(x); m.set(k, (m.get(k) == null ? 0 : m.get(k)) + 1); }
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  };
+  stats.assess = {
+    scored: scoredAll.length,
+    unscored: items.length - scoredAll.length,
+    bySource: tallyBy(scoredAll, (x) => x.source),
+    byBand: tallyBy(scoredAll, (x) => x.assess.band.t),
+    avgScore: scoredAll.length ? Math.round(scoredAll.reduce((a, x) => a + x.assess.score, 0) / scoredAll.length) : null,
+  };
+
   const doc = {
     updated: iso(),
     geo,
@@ -839,7 +871,16 @@ export async function buildWatchlist(cfg, session) {
     defaultGeo: cfg.trendsDefaultGeo || geo,
     stats,
     notes,
-    rules: UPCOMING_RULES,   // 算法自述随产物下发（前端据实展示，单一事实源在 scoreUpcoming 旁边）
+    // 算法自述随产物下发（前端 rulesHtml() 直接渲染；单一事实源在各评分器旁边 —— 铁律 7）
+    rules: {
+      title: "潜伏评分（三来源各用自己能测的维度）",
+      formula: UPCOMING_RULES.formula,
+      weights: UPCOMING_RULES_EXTRA.weights,
+      items: UPCOMING_RULES.items.concat(UPCOMING_RULES_EXTRA.items),
+      bands: UPCOMING_RULES.bands,
+      caveats: UPCOMING_RULES_EXTRA.caveats,
+      note: UPCOMING_RULES.note + " ／ " + UPCOMING_RULES_EXTRA.note,
+    },
     items: limited,
   };
   writeJson(dataPath(cfg, "watchlist.json"), doc);

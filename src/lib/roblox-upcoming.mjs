@@ -276,12 +276,9 @@ async function getText(url, label, timeoutMs = 30000, retries = 1) {
  * 🛑 这是**启发式**，不是实测：内容面靠 genres 推断（页面没有"能写多少页"这种字段）。
  *    所以理由必须跟着分数一起显示，让人能一眼反驳它。
  */
-const GENRE_TIERS = [
-  { re: /monster catching|turn based|rpg|adventure|open world/i, score: 92, why: "有单位/技能/养成体系（图鉴·配队·流派页可写）" },
-  { re: /survival|tycoon|simulator|simulation|sports|strategy/i, score: 70, why: "有系统/道具/升级线（攻略页中等）" },
-  { re: /action|shooter|horror|anime|racing|puzzle|fighting|battle/i, score: 52, why: "攻略面偏薄（多为机制/通关说明）" },
-  { re: /escape|obby|platformer|rng|party|casual|social|utility/i, score: 28, why: "内容面窄，通常只值得做 codes 页" },
-];
+// 🆕 2026-09-26：类型分档表移到 ./upcoming.mjs（Steam / App Store 的潜伏评分也要用它）——
+//   单一事实源，别在这里再复制一份（改一处两边都变）。
+import { GENRE_TIERS } from "./upcoming.mjs";
 const STATUS_TIERS = [
   { re: /confirmed|release date|launch date/i, score: 100, label: "已确认" },
   { re: /beta|early access/i, score: 82, label: "测试中" },
@@ -305,7 +302,7 @@ export const UPCOMING_RULES = {
     "社区地基：Discord +12 · YouTube +5 · Roblox 群组 +3（上限 20）—— Discord 是 Roblox 独立游戏社区的基本盘，对未发售小游戏而言社群是**最早**的需求信号（搜索量是滞后指标）",
     "🆕 竞争饱和度（0~100，与建站推荐的竞争项**共用同一张分档表**）：SERP 前十**专用站**数（域名含游戏名 slug = 专为它建的站；通用媒体 progameguides 等对每个游戏都有 codes 页，不算对手）→ 0 个=100 · 1~2 个=75 · 3~4 个=50 · 5~7 个=25 · ≥8 个=10。**未测 = 不适用（权重跳过），不是 0 分**",
   ],
-  bands: "≥70 = 值得潜伏；已延期 / 可能取消 → 风险档；**SERP 前十专用站 ≥5（竞争已起）→ 竞争已起档**；距发售 ≤7 天 → 窗口已过（新站来不及）",
+  bands: "≥70 = 值得潜伏 · ≥55 = 观察（Roblox / Steam）；🆕 **App Store 上调到 ≥78 / ≥62** —— 那张是「新上架小榜」，名次与新鲜度天然偏高（实测同一门槛下 40 条里 38 条落进「值得潜伏」，该档等于失效）；已延期 / 可能取消 → 风险档；**SERP 前十专用站 ≥5（竞争已起）→ 竞争已起档**；距发售 ≤7 天（Steam）/ 已上线 >60 天（App Store）→ 窗口已过",
   note: "这是「上线前」的分；游戏上线后走「🎯 建站推荐」那套（需求/内容面/新鲜度/竞争）。两套不能互相比。" +
     " 🛑 「未发售」本身不是空位的证据 —— 实测有游戏在发售前就被多家专站占满（Dressmaker），所以竞争饱和度是你判断潜伏机会时**必看**的一维。",
 };
@@ -347,9 +344,13 @@ export function scoreUpcoming(g) {
   if (social.discord) { community += 12; have.push("Discord"); }
   if (social.youtube) { community += 5; have.push("YouTube"); }
   if (social.robloxGroup) { community += 3; have.push("Roblox 群组"); }
-  community = Math.min(20, community);
+  // 🆕 2026-09-26 修一个**权重口径 bug**：这里累加的是 0~20 的原始分（+12/+5/+3，封顶 20），
+  //   而下面按 0.20 的权重乘进总分 —— 等于这一维的实际贡献只有 4%（0.20 × 20/100），
+  //   而规则文案写的是 20%。实测影响（线上 25 条 Roblox 条目）：**25/25 条分数都变、17 条跨档**、平均 +7，
+  //   典型如 `Beyond Nen` 56 → 76（观察 → 值得潜伏）。修法：把原始分归一化到 0~100（×5），让 20% 是真 20%。
+  community = Math.min(100, Math.round(community * 5));
   if (!have.length) missing.push("无任何社媒链接");
-  reasons.push(`社区地基 ${community}（${have.join(" + ") || "无"}）`);
+  reasons.push(`社区地基 ${community}（${have.join(" + ") || "无"}；原始分 0~20 → 归一到 0~100 后按 20% 权重计入）`);
 
   // ⑤ 竞争饱和度（2026-09-25 新增）—— **未发售 ≠ 空位**
   //    实测 Dressmaker：发售前（2026-08 甚至 6 月）就已有专站，等正式上线时 SERP 已被 8+ 个站占满。
