@@ -1,0 +1,2076 @@
+{
+  "parserVersion": 5,
+  "fetchedAt": "2026-09-26T17:17:06.643Z",
+  "snapshotAt": "2026-08-13T00:00:00.000Z",
+  "source": "wayback:cached-url",
+  "raw": [
+    {
+      "id": 30870,
+      "name": "Scrooms",
+      "developer": "",
+      "description": "Scrooms is an up-and-coming creature-capture Roblox Experience where you use the power of magical instruments to discover and capture unique mushroom creatures. You will explore islands, collect instruments, and fill…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/scrooms-featured-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/themes/bloxinformer-theme/assets/images/roblox_release_hub.png",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/scrooms/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Sometime in August 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Adventure",
+        "Open World Action"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/users/764791626/profile",
+        "discord": "https://discord.gg/gsENvETwf",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 0,
+      "featured": false
+    },
+    {
+      "id": 30743,
+      "name": "Muskets and Magic",
+      "developer": "",
+      "description": "Muskets and Magic is an upcoming faction v faction Napoleonic era Roblox title, where players will battle it out with both fire arms and arms of fire. Choose a class,…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/Musket-and-Magic-Logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/Muskets-and-Magic-Featured-Image.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/Muskets-and-Magic-Featured-Image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/muskets-and-magic/",
+      "releaseTimestamp": 1788040800000,
+      "releaseDateLabel": "16d 17h 31m 24s",
+      "countdownTier": "this-month",
+      "colorClass": "text-yellow-400",
+      "isCountdown": true,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "Shooter"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/13731064/Nanoplex-Studio#!/about",
+        "discord": "https://discord.com/invite/mwPwpRdR6W",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@SirPlayer/videos"
+      },
+      "popularity": 30,
+      "featured": true
+    },
+    {
+      "id": 30722,
+      "name": "FUT",
+      "developer": "FUT: Group",
+      "description": "FUT is a realistic football experience on Roblox in its Pre-Alpha phase. You and other playres join a team or create one of your own in order to compete with…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/FUT-logo-wiki.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/FUT-feature-image.webp",
+      "gameplayImage": "",
+      "robloxLink": "https://www.roblox.com/games/88033955914813/FUT",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/fut/",
+      "releaseTimestamp": 1787025600000,
+      "releaseDateLabel": "4d 23h 31m 24s",
+      "countdownTier": "soon",
+      "colorClass": "text-orange-400",
+      "isCountdown": true,
+      "statuses": [
+        {
+          "label": "Pre-Alpha",
+          "color": "#1e73be"
+        },
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Sports"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/34250916/FUT-Group#!/about",
+        "discord": "https://www.roblox.com/communities/34250916/FUT-Group#!/about",
+        "tiktok": "https://www.tiktok.com/@efut26?_r=1&_t=ZN-97qXj0lbF58",
+        "youtube": "https://www.youtube.com/@eFUT26"
+      },
+      "popularity": 75,
+      "featured": true
+    },
+    {
+      "id": 30730,
+      "name": "Nethros",
+      "developer": "Prival Studios",
+      "description": "Nethros is an expansive Roblox RPG where players journey to the newly discovered continent of Pandora to wage war over its lands and resources through faction-based PvP and guild alliances.…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2025/09/nethroslogo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2025/09/nethrosfeature.webp",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/nethros/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/34797995/Prival-Studios#!/about",
+        "discord": "https://discord.com/invite/nethros",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@NethrosRBLX"
+      },
+      "popularity": 23,
+      "featured": false
+    },
+    {
+      "id": 30720,
+      "name": "Anime Origins",
+      "developer": "Origins Project",
+      "description": "Anime Origins is an upcoming Roblox tower defense game where players summon and deploy units inspired by popular anime and manga characters to defend against increasingly difficult waves of enemies…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/anime-origins-logo-feature-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/anime-origins-feature-image-1024x507.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/anime-origins-release-hub-gameplay.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/anime-origins/",
+      "releaseTimestamp": 1786680000000,
+      "releaseDateLabel": "23h 31m 24s",
+      "countdownTier": "imminent",
+      "colorClass": "text-red-400",
+      "isCountdown": true,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Anime",
+        "Tower Defense"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/111457579/Origins-Project#!/about",
+        "discord": "https://discord.com/invite/animeorigins",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@AnimeOriginsTeam"
+      },
+      "popularity": 29,
+      "featured": false
+    },
+    {
+      "id": 30719,
+      "name": "Tokyo: RE",
+      "developer": "9sGames",
+      "description": "Inspired by Tokyo Ghoul: re, Tokyo: RE is a fast-paced, action-combat Roblox experience centered around high-stakes PvP and faction warfare between the CCG and Ghoul factions. Choosing your side dictates…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/tokyo-re-logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2025/09/fgasashfa.png",
+      "gameplayImage": "",
+      "robloxLink": "https://www.roblox.com/games/13026442119/",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/tokyo-re/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/17362961/9sGames#!/about",
+        "discord": "https://discord.com/invite/tokyore",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@noxxy3563"
+      },
+      "popularity": 12,
+      "featured": false
+    },
+    {
+      "id": 30712,
+      "name": "Aternis",
+      "developer": "prettyliesn3",
+      "description": "Aternis is a Christian Gothic Roblox title, in which you will fight for God or Satan in order to defeat the opposing faction. During each game, you will fight for…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/Aternis.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-Aternis.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-Aternis.webp",
+      "robloxLink": "https://www.roblox.com/games/110012992741922/Aternis",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/aternis/",
+      "releaseTimestamp": 1786312800000,
+      "releaseDateLabel": "Released!",
+      "countdownTier": "released",
+      "colorClass": "text-green-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "",
+        "discord": "",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@officialaternis"
+      },
+      "popularity": 0,
+      "featured": false
+    },
+    {
+      "id": 30709,
+      "name": "Vox Seas",
+      "developer": "Vox Seas",
+      "description": "Vox Seas is an open-world Roblox RPG where players sail between unique islands, complete quests, and allocate earned EXP into stats to build increasingly powerful characters. Starting off with one…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/vox-seas-logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2025/08/voxseasfeature.webp",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/vox-seas/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/35566755/Vox-Seas#!/about",
+        "discord": "https://discord.com/invite/VoxSeas",
+        "tiktok": "https://www.tiktok.com/@bloxseasofficial?enable_tiktok_webview=true",
+        "youtube": "https://www.youtube.com/@VoxSeasGame"
+      },
+      "popularity": 34,
+      "featured": false
+    },
+    {
+      "id": 30707,
+      "name": "Infected Lands",
+      "developer": "Infected Lands",
+      "description": "Infected Lands is an up-and-coming survival zombie RPG Roblox Experience where you kill different types of zombies, loot, and explore unique structures and areas. You will encounter hordes of Zombies,…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/infected-lands-logo-1.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/infected-lands-featured-image.png",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/infected-lands-gameplay1.gif",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/infected-lands/",
+      "releaseTimestamp": 1787421600000,
+      "releaseDateLabel": "9d 13h 31m 24s",
+      "countdownTier": "this-month",
+      "colorClass": "text-yellow-400",
+      "isCountdown": true,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "Shooter"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/34362500/Infected-Lands#!/about",
+        "discord": "https://discord.com/invite/gd9uzTwmN",
+        "tiktok": "https://www.tiktok.com/@paale_studios?is_from_webapp=1&sender_device=pc",
+        "youtube": "https://www.youtube.com/@Infectedlands/videos"
+      },
+      "popularity": 7,
+      "featured": false
+    },
+    {
+      "id": 30700,
+      "name": "Rogueblox",
+      "developer": "Rogueblox",
+      "description": "Rogueblox is a permadeath roguelike Roblox RPG where players explore the chaos-ridden open world of Veyra to battle monsters, clear dungeons, and engage in high-risk PvP. Emphasizing high replayability and…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/rogueblox-game-logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2025/07/roguebloxfeatured.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/rogueblox-gameplay.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/rogueblox/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Open World Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/5161694/Rogueblox#!/about",
+        "discord": "https://discord.com/invite/rogueblox",
+        "tiktok": "https://www.tiktok.com/@roguebloxdev",
+        "youtube": "https://www.youtube.com/@RoguebloxGame"
+      },
+      "popularity": 57,
+      "featured": false
+    },
+    {
+      "id": 30690,
+      "name": "Hekmatyar",
+      "developer": "Heartsake and Partners",
+      "description": "Hekmatyar is a looter-shooter Roblox experience. Loot gear, fight other players and NPCs, get better guns and raise your reputation. The game is inspired by Jormungand anime and manga series.…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/Hekmatyar-Icon-Wiki.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2025/06/hekmatyarfeature.webp",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/hekmatyar/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Anime",
+        "Shooter"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/33770718/Heartsake-and-Partners#!/about",
+        "discord": "https://discord.com/invite/G87RAhbBkw",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 30,
+      "featured": false
+    },
+    {
+      "id": 30687,
+      "name": "Heian",
+      "developer": "Bludies",
+      "description": "Heian is an open world Action RPG inspired by Jujutsu Kaisen anime and manga series. You get to make your own character, use various cursed techniques and become stronger as…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/Heian-Wiki-Logo-New.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2025/06/heianfeature.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2025/06/ice-formation-quest-npc-heian.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/heian/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "Anime",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/32428911/Bludies#!/about",
+        "discord": "https://discord.com/invite/EYpSkYUrnX",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@HeianRoblox"
+      },
+      "popularity": 35,
+      "featured": false
+    },
+    {
+      "id": 30674,
+      "name": "Unscathed",
+      "developer": "Happy Goof Games!",
+      "description": "Unscathed is an aura-collecting, Roblox RPG where players roll for a dynamic arsenal of over 50 distinct auras, using them like battle creatures in non-linear PvP and PvE content across…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/channels4_profile.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/Unscathed-Wiki-Featured-Image.png",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/unscathed-gameplay.webp",
+      "robloxLink": "https://www.roblox.com/games/122951224417794/Unscathed",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/unscathed/",
+      "releaseTimestamp": 1786233600000,
+      "releaseDateLabel": "Released!",
+      "countdownTier": "released",
+      "colorClass": "text-green-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "Released",
+          "color": "#81d742"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "Aura",
+        "RNG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/35854874/Happy-Goof-Games",
+        "discord": "https://discord.com/invite/unscathedroblox",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/channel/UCUzQ19Tc3Xm-jtoU1BQKpow"
+      },
+      "popularity": 93,
+      "featured": true
+    },
+    {
+      "id": 30678,
+      "name": "Itami",
+      "developer": "FreshThingInnit",
+      "description": "Itami is an upcoming Roblox action RPG developed by v2 Itami and inspired by the My Hero Academia universe. Players start by creating a custom character and choosing a morality…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2025/12/itami-featured-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2025/12/itami-featured-image.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/itami-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/itami/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/34303467/v2-Itami#!/about",
+        "discord": "https://discord.com/invite/itami",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@fresh33m"
+      },
+      "popularity": 0,
+      "featured": false
+    },
+    {
+      "id": 30668,
+      "name": "Pocket Anime",
+      "developer": "Gamyng Corp",
+      "description": "Pocket Anime is a monster catching Roblox title, where instead of capturing different creatures you will be catching iconic anime characters known as animos. Fill up your arsenal with animes…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/Site-logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-hq720.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-hq720.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/pocket-anime/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "monster catching",
+        "RPG",
+        "Turn Based"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/13493421/Gamyng-Corp#!/about",
+        "discord": "https://discord.com/invite/pocketanime",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 4,
+      "featured": true
+    },
+    {
+      "id": 30666,
+      "name": "Ninja",
+      "developer": "Shadows Amongst Men",
+      "description": "Ninja (CC) is a an action adventure RPG Roblox title, inspired by Hell’s Paradise franchise as well as other parry based games. It fuses both permadeath style gameplay with roguelike elements, which players…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2025/12/ninja-wiki-icon.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-ninja-wiki-feature.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-ninja-wiki-feature.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/ninja/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        },
+        {
+          "label": "Maybe Cancelled",
+          "color": "#dd3333"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "Anime"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/33189313/Shadows-Amongst-Men#!/about",
+        "discord": "",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 1,
+      "featured": false
+    },
+    {
+      "id": 30654,
+      "name": "ENVY",
+      "developer": "Envy_Roblox",
+      "description": "ENVY is an open-world survival RPG inspired by Rogue Lineage where players traverse a sprawling landscape to battle mobs, world bosses, and rival players while fighting for one of two…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2025/12/envy-featured-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2025/12/envy-featured-image.webp",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/envy/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Open World Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/35876754/Envy-Roblox#!/about",
+        "discord": "https://discord.com/invite/envyroblox",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 46,
+      "featured": false
+    },
+    {
+      "id": 30653,
+      "name": "WONDERLAND",
+      "developer": "ScaryPlay",
+      "description": "WONDERLAND is a horror experience on roblox where you and up to 4 more people (5 in total) try and escape the creepy play ground world of WONDERLAND as creepy…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/wonderland-wiki-icon.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/Wonderland-Wiki-Feature.webp",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/wonderland/",
+      "releaseTimestamp": 1786752000000,
+      "releaseDateLabel": "1d 19h 31m 24s",
+      "countdownTier": "imminent",
+      "colorClass": "text-red-400",
+      "isCountdown": true,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        },
+        {
+          "label": "Delayed",
+          "color": "#dd3333"
+        }
+      ],
+      "featuredTags": [
+        {
+          "label": "Most Anticipated",
+          "color": "#ffd700"
+        },
+        {
+          "label": "Staff Pick",
+          "color": "#e66200"
+        }
+      ],
+      "genres": [
+        "Escape",
+        "Horror",
+        "Survival"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/32538104/ScaryPlay#!/about",
+        "discord": "https://discord.com/invite/scaryplay",
+        "tiktok": "https://www.tiktok.com/@scaryplayofficial?_t=8n9DUtEoPQB&_r=1https://www.tiktok.com/@scaryplayofficial?_t=8n9DUtEoPQB&_r=1",
+        "youtube": "https://www.youtube.com/@ScaryPlayWonderland/featured"
+      },
+      "popularity": 85,
+      "featured": true
+    },
+    {
+      "id": 30652,
+      "name": "Grand Alfheim",
+      "developer": "Grand Alfheim",
+      "description": "Grand Alfheim is an immersive Roblox MMORPG inspired by the Alfheim Online arc of Sword Art Online, where players fly across an expansive world, complete diverse questlines, and attempt to…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/01/Game_Icon.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/01/asuna_vs_yuki_without_logo-1024x576.jpg",
+      "gameplayImage": "",
+      "robloxLink": "https://www.roblox.com/games/16361990076/Grand-Alfheim",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/grand-alfheim/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "Early Access",
+          "color": "#20c0c9"
+        },
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/32393597/Grand-Alfheim#!/about",
+        "discord": "https://discord.com/invite/GrandAlfheim",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 98,
+      "featured": false
+    },
+    {
+      "id": 30649,
+      "name": "Eleons",
+      "developer": "Eleon Co.",
+      "description": "Eleons is the highly anticipated Monster Catching game on Roblox. You will start your adventure by choosing one of three starting monsters (eleons) and embark on your journey to become…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/noFilter-1.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-dedeeddededede-1024x663-1-1024x576.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-dedeeddededede-1024x663-1.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/eleons/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "2027",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Adventure",
+        "monster catching"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/34937845/Eleon-Co#!/about",
+        "discord": "https://discord.com/invite/eleons",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@eleonsroblox"
+      },
+      "popularity": 80,
+      "featured": true
+    },
+    {
+      "id": 30643,
+      "name": "RELL Seas",
+      "developer": "RELL GAMES",
+      "description": "RELL Seas is an anime action-adventure Roblox experience inspired by One Piece that immerses players in a vast, open ocean filled with distinct islands, quest-giving NPCs, and high-stakes boss battles.…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/01/RELL-Seas-Wiki-logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/01/Rell-Seas-Feature-wiki-1024x576.webp",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/rell-seas/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [
+        {
+          "label": "Most Anticipated",
+          "color": "#1e73be"
+        }
+      ],
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/4939446/RELL-GAMES#!/about",
+        "discord": "https://discord.com/invite/rellgames",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/channel/UCLaduTRRWdzU8kq9AoqTRlw"
+      },
+      "popularity": 100,
+      "featured": false
+    },
+    {
+      "id": 30646,
+      "name": "Holy War X",
+      "developer": "Alphirex",
+      "description": "Holy War X is an upcoming Roblox RPG developed by Alphirex Studio and heavily inspired by the Seven Deadly Sins universe. Featuring a blend of linear and non-linear progression, players…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/01/holy-war-x-logo-featured-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/01/holy-war-x-featured-image-1024x458.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/holy-war-x-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/holy-war-x/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/2914853/Alphirex-Studio#!/about",
+        "discord": "https://discord.com/invite/holywar",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@Alphirex"
+      },
+      "popularity": 86,
+      "featured": false
+    },
+    {
+      "id": 30639,
+      "name": "Magoi",
+      "developer": "Magoi",
+      "description": "Magoi is an MMO Action RPG inspired by Magi, a famous anime/manga series. In Magoi you get to explore the world of Magi as you interact with other players, fight enemies, clear dungeons, and…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/03/MAGOI-game-icon-wiki.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/03/MAGOI-Featured-Image-WiKI.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/Magoi-Gif.gif",
+      "robloxLink": "https://www.roblox.com/games/14504814749/Magoi",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/magoi/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "2027",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Anime",
+        "Open World Action"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/15505644/Magoi#!/about",
+        "discord": "https://discord.com/invite/magoi",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@MagoiRBLX"
+      },
+      "popularity": 20,
+      "featured": true
+    },
+    {
+      "id": 30641,
+      "name": "Severity",
+      "developer": "Severity Official",
+      "description": "Severity is an upcoming Roblox tornado-chasing experience that immerses players in cinematic supercells featuring hyper-realistic weather effects like dynamic rain, cloud structures, flying debris, and high-fidelity tornadoes. Navigating a massive…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/03/severity-main-wiki-logo-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/03/severity-wiki-feature-image-1024x510.webp",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/severity/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Late 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/695028244/Severity-Official#!/about",
+        "discord": "https://discord.com/invite/Severity",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@SeverityRBX"
+      },
+      "popularity": 12,
+      "featured": false
+    },
+    {
+      "id": 30640,
+      "name": "Ascension",
+      "developer": "Alp",
+      "description": "Ascension is an open-world Roblox RPG featuring turn-based combat heavily inspired by Fear &amp; Hunger, standing out from typical action titles by integrating timing-based dodge mechanics and five distinct minigames…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/01/noFilter-1.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/01/image-7-1.png",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/ascension/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "RPG",
+        "Turn Based"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/3467623/Ascensions#!/about",
+        "discord": "https://discord.com/invite/VJbGkPa3Q9",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@TheGoldKiller"
+      },
+      "popularity": 34,
+      "featured": false
+    },
+    {
+      "id": 30633,
+      "name": "Build A Soccer Squad!",
+      "developer": "Bloxheed",
+      "description": "Build A Soccer Squad is a unique Roblox sports experience where you collect and assemble a roster from a massive pool of over 1,000 historical and modern players spanning from…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/07/Build-a-soccer-squad-wiki-icon-1.png",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/07/Build-a-soccer-squad-wiki-feature.webp",
+      "gameplayImage": "",
+      "robloxLink": "https://www.roblox.com/games/82524183928567/Build-A-Soccer-Squad",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/build-a-soccer-squad/",
+      "releaseTimestamp": 1784239200000,
+      "releaseDateLabel": "Released!",
+      "countdownTier": "released",
+      "colorClass": "text-green-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "Beta",
+          "color": "#eeee22"
+        },
+        {
+          "label": "Released",
+          "color": "#81d742"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Sports",
+        "Sports &amp; Racing"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/365587858/Bloxheed",
+        "discord": "",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 80,
+      "featured": false
+    },
+    {
+      "id": 30626,
+      "name": "Four Blues",
+      "developer": "Four Blues",
+      "description": "Four Blues is an upcoming Roblox action-adventure game inspired by the popular One Piece series, where players sail the open seas and fight powerful enemies. Gameplay centers on forming or…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/05/four-blues-logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/05/four-blues-featured-image-1024x594.png",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/four-blues-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/four-blues/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Q4 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "Adventure"
+      ],
+      "platforms": [],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/34223726/FOUR-BLUES#!/about",
+        "discord": "https://discord.com/invite/four-blues-1233557965135417395",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@MeloInteractive/featured"
+      },
+      "popularity": 55,
+      "featured": false
+    },
+    {
+      "id": 30624,
+      "name": "Slayers 2",
+      "developer": "Ouw Productions",
+      "description": "Slayers 2 (also known as Project Slayers 2) is an upcoming open-world Action RPG on Roblox developed by Ouw Production, bringing players into the universe of Demon Slayer. Players create…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/06/project-slayers-2-wiki-feature-icon.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/06/project-slayers-2-wiki-feature-image-1024x577.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/slayers-2-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/slayers-2/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "",
+        "discord": "https://discord.com/invite/projectslayers",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@ouwproductions/featured"
+      },
+      "popularity": 78,
+      "featured": false
+    },
+    {
+      "id": 30620,
+      "name": "Beyond Nen",
+      "developer": "Decay",
+      "description": "Beyond Nen is a Roblox action RPG set in the Hunter x Hunter universe, where players embark on a journey across Whale Island and beyond to become a Pro Hunter.…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/07/Beyond-Nen-Wiki-Featured-Logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/07/Beyond-Nen-Wiki-Featured-Image-Roblox-experience-1024x576.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/beyond-nen-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/beyond-nen/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Summer 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/8407093/Beyond-Nen#!/about",
+        "discord": "https://discord.com/invite/9yfvegdWvF",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@DecxyRbx"
+      },
+      "popularity": 50,
+      "featured": false
+    },
+    {
+      "id": 30628,
+      "name": "GRAVEBOUND",
+      "developer": "Octik",
+      "description": "GRAVEBOUND is an upcoming Roblox souls-like experience developed by a single creator, drawing heavy inspiration from Bloodborne and other FromSoftware titles. Players must navigate a dark, cryptic world filled with…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/02/gravebound-wiki-feature-icon.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/02/gravebound-wiki-feature-image-1024x564.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/gravebound-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/gravebound/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Q4 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/16353753/District-1#!/about",
+        "discord": "https://discord.com/invite/xjS8KSAPsq",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@DISTRICT_1/videos"
+      },
+      "popularity": 43,
+      "featured": false
+    },
+    {
+      "id": 30605,
+      "name": "100 Crimson Nights",
+      "developer": "100 Crimson Nights",
+      "description": "100 Crimson Nights is an open-world survival-horror RPG with a dark fantasy twist where players must endure an increasingly dangerous, apocalyptic land ruled by Dracula. Combining \"open-world Alien Isolation\" gameplay…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/07/crimson-nights.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/07/100-Crimson-Nights-Featured-banner-wiki-1024x341.jpg",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/100-crimson-nights-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/100-crimson-nights/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "August 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Horror"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/1047197560/100-Crimson-Nights#!/about",
+        "discord": "https://discord.com/invite/crimsonnights",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@a100crimsonnights"
+      },
+      "popularity": 62,
+      "featured": false
+    },
+    {
+      "id": 30632,
+      "name": "Windbound",
+      "developer": "Windbound",
+      "description": "Windbound is an open-world Roblox action RPG developed by the creators of Peroxide, where players explore four main sky islands and various hidden locations. Your adventure centers on experimenting with…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/02/Windbound-Wiki-Featured-Image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/02/Windbound-Wiki-Featured-Image.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/windbound-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/windbound/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/34161421/Windbound#!/about",
+        "discord": "https://discord.com/invite/Q9ShtFESqb",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@ShaelRBLX"
+      },
+      "popularity": 51,
+      "featured": false
+    },
+    {
+      "id": 30636,
+      "name": "Mashle Academy",
+      "developer": "Tony",
+      "description": "Mashle Academy is an upcoming Roblox action RPG inspired by the anime and manga series Mashle: Magic and Muscles, where players step into a world dominated by physical strength and…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/01/mashle-academy-wiki-logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/01/mashle-academy-feature-image-wiki.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/mashle-academy-release-hub-feature-image.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/mashle-academy/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/32643289/Mashle-Academy#!/about",
+        "discord": "https://discord.com/invite/EZM2YjWUQS",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@Aricku/featured"
+      },
+      "popularity": 46,
+      "featured": false
+    },
+    {
+      "id": 30602,
+      "name": "Demonic Week",
+      "developer": "Gatete Dev Team",
+      "description": "Demonic Week is an intense Roblox survival horror experience where you and up to eight friends must gather supplies, set traps, and fortify your position during daylight before taking cover…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/08/Demonic-Week-Wiki-Logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/noFilter.webp",
+      "gameplayImage": "",
+      "robloxLink": "https://www.roblox.com/games/108410079429186/Demonic-Week",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/demonic-week/",
+      "releaseTimestamp": 1784854800000,
+      "releaseDateLabel": "Released!",
+      "countdownTier": "released",
+      "colorClass": "text-green-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "Early Access",
+          "color": "#1e73be"
+        },
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        },
+        {
+          "label": "Released",
+          "color": "#81d742"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Horror",
+        "Survival"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/193562151/Gatete-Dev-Team#!/about",
+        "discord": "",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 10,
+      "featured": false
+    },
+    {
+      "id": 30609,
+      "name": "REELED",
+      "developer": "Reeled",
+      "description": "REELED is a Roblox game that puts an action-packed shooter twist on standard fishing mechanics by requiring you to hook aquatic targets before blasting them mid-air. Through a simple click-based…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/07/reeled-wiki-icon-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/07/Reeled-Wiki-Featured-Logo-1-1024x501.png",
+      "gameplayImage": "",
+      "robloxLink": "https://www.roblox.com/games/137783946150684/Reeled",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/reeled/",
+      "releaseTimestamp": 1785546000000,
+      "releaseDateLabel": "Released!",
+      "countdownTier": "released",
+      "colorClass": "text-green-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "Beta",
+          "color": "#eeee22"
+        },
+        {
+          "label": "Released",
+          "color": "#81d742"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Adventure",
+        "Fishing"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/697359830/Reeled",
+        "discord": "https://discord.com/invite/reeled",
+        "tiktok": "",
+        "youtube": ""
+      },
+      "popularity": 2,
+      "featured": false
+    },
+    {
+      "id": 30616,
+      "name": "Warden",
+      "developer": "Sonar Studios",
+      "description": "Set in the world of Creatures of Sonaria, Warden is a Dead by Daylight-inspired PvE title where you select from several unique creature types, each boasting distinct stats and abilities,…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/07/noFilter.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/07/noFilter-1.webp",
+      "gameplayImage": "",
+      "robloxLink": "https://www.roblox.com/games/130929507719087/Warden",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/warden/",
+      "releaseTimestamp": 1784260800000,
+      "releaseDateLabel": "Released!",
+      "countdownTier": "released",
+      "colorClass": "text-green-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "Released",
+          "color": "#81d742"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Escape",
+        "Survival"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/2919215/Sonar-Studios",
+        "discord": "https://discord.com/invite/wardencos",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@WardenRBLX"
+      },
+      "popularity": 65,
+      "featured": false
+    },
+    {
+      "id": 30637,
+      "name": "Aurora",
+      "developer": "fliesies0",
+      "description": "Aurora is an upcoming Roblox RPG that delivers a story-driven spin on turn-based monster-catching through questing across various towns, stealth-based captures, and dynamic player trading. After choosing from 7 distinct…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/01/aurora-icon.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/01/aurora-featured-image.png",
+      "gameplayImage": "",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/aurora/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Middle of 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "RPG",
+        "Turn Based"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "",
+        "discord": "https://discord.com/invite/playaurora",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@AuroraOnRoblox"
+      },
+      "popularity": 27,
+      "featured": false
+    },
+    {
+      "id": 30629,
+      "name": "Eyes of Diamond",
+      "developer": "Eyes of Diamond",
+      "description": "Eyes of Diamond is an upcoming Jojo's Bizarre Adventure Roblox title. It will be set in Morioh-cho where you will paly through a unique story, battle fierce bosses from across…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/04/eyes-of-diamond-logo-feature-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-Eyes-of-Diamond-1-1024x576.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/resized-Eyes-of-Diamond-1.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/eyes-of-diamond/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "TBA",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "Anime",
+        "RPG"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        },
+        {
+          "icon": "fa-gamepad",
+          "color": "#fdcb6e",
+          "label": "Console"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/4318317/Eyes-of-Diamond#!/about",
+        "discord": "https://discord.com/invite/eod",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@eyes_of_diamond"
+      },
+      "popularity": 9,
+      "featured": false
+    },
+    {
+      "id": 30619,
+      "name": "Shinsei",
+      "developer": "Parallel DevTeam",
+      "description": "Shinsei is an upcoming immersive Naruto Roblox title. Unlike other Naruto titles, Shinsei ambitiously wants the player to explore the world, and live life as a shionobi would in the…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/04/Shinsei-Roblox-game-Wiki-main-image.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/Shinsei-Featured-Image-1024x576.webp",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/Shinsei.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/shinsei/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Late 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [
+        {
+          "label": "Most Anticipated",
+          "color": "#eeee22"
+        }
+      ],
+      "genres": [
+        "Anime"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/6328633/Parallel-DevTeam#!/about",
+        "discord": "https://discord.com/invite/shinsei",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/channel/UC9QlVuas5BvpFJfJ_9JxxZw"
+      },
+      "popularity": 80,
+      "featured": true
+    },
+    {
+      "id": 30606,
+      "name": "A Bizarre Race",
+      "developer": "A Bizarre Race",
+      "description": "A Bizarre Race is an Anime Racing Roblox title, inspired by upcoming Jojo season, Steel Ball Run. You will race against a wave of other players, each having unique stand…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/05/A-Bizarre-Race-Wiki-Robblox-title-based-on-Steel-Ball-Run-ABR-Wiki-Logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/08/A-Bizarre-Race-Roblox-Jojo-game-1024x576.jpg",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/A-Bizarre-Race-Upcoming-Image.webp",
+      "robloxLink": "https://www.roblox.com/games/75601918647229/A-Bizarre-Race",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/a-bizarre-race/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Q4 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [
+        {
+          "label": "Highly Anticipated",
+          "color": "#8224e3"
+        }
+      ],
+      "genres": [
+        "Anime",
+        "Racing"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/847719076/A-Bizarre-Race#!/about",
+        "discord": "https://discord.com/invite/Abizarrerace",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@ABizarreRaceOfficial"
+      },
+      "popularity": 2,
+      "featured": false
+    },
+    {
+      "id": 30599,
+      "name": "Scrapbook Saga",
+      "developer": "Faded's Projects",
+      "description": "Scrapbook Saga is a Paper Mario-inspired RPG that turns your personal avatar into a paper figure as you embark on a multi-chapter adventure solo or alongside up to three friends.…",
+      "logo": "https://bloxinformer.com/wp-content/uploads/2026/07/Scrapbook-Saga-Logo.webp",
+      "banner": "https://bloxinformer.com/wp-content/uploads/2026/07/scrapbook-saga-feature-1024x576.png",
+      "gameplayImage": "https://bloxinformer.com/wp-content/uploads/2026/08/scrapbook-saga-featured-2.webp",
+      "robloxLink": "",
+      "permalink": "https://bloxinformer.com/upcoming-roblox-games/scrapbook-saga/",
+      "releaseTimestamp": null,
+      "releaseDateLabel": "Summer 2026",
+      "countdownTier": "undefined",
+      "colorClass": "text-purple-400",
+      "isCountdown": false,
+      "statuses": [
+        {
+          "label": "In Development",
+          "color": "#dd9933"
+        }
+      ],
+      "featuredTags": [],
+      "genres": [
+        "RPG",
+        "Turn Based"
+      ],
+      "platforms": [
+        {
+          "icon": "fa-desktop",
+          "color": "#a1a1a1",
+          "label": "PC"
+        },
+        {
+          "icon": "fa-mobile-alt",
+          "color": "#00b894",
+          "label": "Mobile"
+        }
+      ],
+      "social": {
+        "robloxGroup": "https://www.roblox.com/communities/8233608/Fadeds-Projects#!/about",
+        "discord": "https://discord.com/invite/ZsEEmJN",
+        "tiktok": "",
+        "youtube": "https://www.youtube.com/@FadedBFox"
+      },
+      "popularity": 50,
+      "featured": false
+    }
+  ],
+  "snapshotUrl": "http://web.archive.org/web/20260813043445id_/https://bloxinformer.com/upcoming-roblox-games/"
+}

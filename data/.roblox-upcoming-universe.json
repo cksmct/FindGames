@@ -1,0 +1,83 @@
+{
+  "names": {
+    "nethros": {
+      "universeId": null,
+      "at": "2026-09-21T07:25:25.483Z"
+    },
+    "vox seas": {
+      "universeId": null,
+      "at": "2026-09-21T14:21:05.276Z"
+    },
+    "rogueblox": {
+      "universeId": null,
+      "at": "2026-09-21T19:37:33.527Z"
+    },
+    "hekmatyar": {
+      "universeId": null,
+      "at": "2026-09-21T23:23:09.994Z"
+    },
+    "heian": {
+      "universeId": null,
+      "at": "2026-09-22T01:42:18.864Z"
+    },
+    "itami": {
+      "universeId": null,
+      "at": "2026-09-22T07:48:08.521Z"
+    },
+    "pocket anime": {
+      "universeId": null,
+      "at": "2026-09-22T13:29:52.946Z"
+    },
+    "ninja": {
+      "universeId": 10764632548,
+      "matchType": "prefix",
+      "at": "2026-09-22T18:09:56.191Z"
+    },
+    "envy": {
+      "universeId": null,
+      "at": "2026-09-22T21:29:23.968Z"
+    },
+    "eleons": {
+      "universeId": null,
+      "at": "2026-09-23T00:43:34.452Z"
+    },
+    "rell seas": {
+      "universeId": null,
+      "at": "2026-09-23T06:06:20.131Z"
+    },
+    "holy war x": {
+      "universeId": null,
+      "at": "2026-09-23T11:51:25.405Z"
+    },
+    "ascension": {
+      "universeId": 5062785776,
+      "matchType": "exact",
+      "at": "2026-09-23T17:15:43.872Z"
+    },
+    "four blues": {
+      "universeId": null,
+      "at": "2026-09-23T20:31:17.242Z"
+    },
+    "slayers 2": {
+      "universeId": 5595353122,
+      "matchType": "exact",
+      "at": "2026-09-23T23:47:43.591Z"
+    },
+    "gravebound": {
+      "universeId": null,
+      "at": "2026-09-24T05:04:05.367Z"
+    },
+    "windbound": {
+      "universeId": null,
+      "at": "2026-09-24T05:56:54.405Z"
+    },
+    "mashle academy": {
+      "universeId": null,
+      "at": "2026-09-24T08:10:36.834Z"
+    },
+    "eyes of diamond": {
+      "universeId": null,
+      "at": "2026-09-24T10:13:17.354Z"
+    }
+  }
+}

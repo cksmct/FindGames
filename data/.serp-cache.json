@@ -1,0 +1,5552 @@
+{
+  "heian": {
+    "at": "2026-09-25T07:36:25.596Z",
+    "query": "Heian codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "pockettactics.com",
+      "pcgamesn.com",
+      "mrguider.org",
+      "urgametips.com",
+      "twinfinite.net",
+      "robloxden.com",
+      "destructoid.com",
+      "echoes-of-heian.wiki"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "echoes-of-heian.wiki"
+    ],
+    "open": 4
+  },
+  "itami": {
+    "at": "2026-09-25T07:36:41.942Z",
+    "query": "Itami codes",
+    "domains": 8,
+    "hosts": [
+      "itamiwiki.com",
+      "world-airport-codes.com",
+      "airportsbase.org",
+      "airport-code.com",
+      "iata-codes.com",
+      "osaka-airport.co.jp",
+      "airportcodeguide.com",
+      "seatlink.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "itamiwiki.com"
+    ],
+    "open": 4
+  },
+  "pocket anime": {
+    "at": "2026-09-25T07:37:08.055Z",
+    "query": "Pocket Anime codes",
+    "domains": 5,
+    "hosts": [
+      "progameguides.com",
+      "fandom.com",
+      "clashiverse.com",
+      "pocket-codes.com",
+      "ign.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "ninja": {
+    "at": "2026-09-25T07:37:08.645Z",
+    "query": "Ninja codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "twinfinite.net",
+      "beebom.com",
+      "game.guide",
+      "codeninjas.com",
+      "tryhardguides.com",
+      "mrguider.org"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "codeninjas.com"
+    ],
+    "open": 4
+  },
+  "envy": {
+    "at": "2026-09-25T07:37:34.979Z",
+    "query": "ENVY codes",
+    "domains": 8,
+    "hosts": [
+      "dealdrop.com",
+      "groupon.com",
+      "hotdeals.com",
+      "dealrated.com",
+      "fontsquirrel.com",
+      "valuecom.com",
+      "robloxgo.com",
+      "joincheckmate.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "the hunt: roblox 20": {
+    "at": "2026-09-25T07:43:46.367Z",
+    "query": "The Hunt: Roblox 20 codes",
+    "domains": 6,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "the-hunt-roblox20.wiki",
+      "supercheats.com",
+      "thehunt-roblox20.wiki",
+      "fandom.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "the-hunt-roblox20.wiki",
+      "thehunt-roblox20.wiki"
+    ],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-20",
+    "competitorSeenList": [
+      {
+        "domain": "the-hunt-roblox20.wiki",
+        "at": "2026-09-20"
+      }
+    ]
+  },
+  "clean all the leaves": {
+    "at": "2026-09-25T07:44:38.903Z",
+    "query": "Clean all the Leaves codes",
+    "domains": 8,
+    "hosts": [
+      "gamingpile.com",
+      "indiatimes.com",
+      "mxblox.com",
+      "clean-all-the-leaves.online",
+      "progameguides.com",
+      "cleanalltheleaves.art",
+      "earnaldo.com",
+      "cleanalltheleaveswiki.wiki"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "clean-all-the-leaves.online",
+      "cleanalltheleaves.art",
+      "cleanalltheleaveswiki.wiki"
+    ],
+    "open": 3
+  },
+  "troll hug tower": {
+    "at": "2026-09-25T07:45:38.786Z",
+    "query": "TROLL Hug Tower codes",
+    "domains": 7,
+    "hosts": [
+      "rouniverse.com",
+      "lawod.com",
+      "dropnite.com",
+      "trollhugtowerwiki.wiki",
+      "mxblox.com",
+      "gobloxy.com",
+      "trollhugtowerguide.wiki"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "trollhugtowerwiki.wiki",
+      "trollhugtowerguide.wiki"
+    ],
+    "open": 4
+  },
+  "run a restaurant!": {
+    "at": "2026-09-25T07:46:19.141Z",
+    "query": "Run a Restaurant! codes",
+    "domains": 10,
+    "hosts": [
+      "supercheats.com",
+      "progameguides.com",
+      "rocodes.gg",
+      "game.guide",
+      "tryhardguides.com",
+      "destructoid.com",
+      "urgametips.com",
+      "robloxden.com",
+      "dexerto.com",
+      "mrguider.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "storage hunters: open world": {
+    "at": "2026-09-25T07:46:22.719Z",
+    "query": "Storage Hunters: Open World codes",
+    "domains": 9,
+    "hosts": [
+      "destructoid.com",
+      "progameguides.com",
+      "mobilematters.gg",
+      "supercheats.com",
+      "fandomwire.com",
+      "storagehunters.wiki",
+      "fandom.com",
+      "urgametips.com",
+      "pockettactics.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "grand alfheim": {
+    "at": "2026-09-25T07:46:56.843Z",
+    "query": "Grand Alfheim codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "fandom.com",
+      "tryhardguides.com",
+      "rocodes.gg",
+      "beebom.com",
+      "game.guide",
+      "robloxden.com",
+      "pockettactics.com",
+      "destructoid.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "eleons": {
+    "at": "2026-09-25T07:46:57.418Z",
+    "query": "Eleons codes",
+    "domains": 6,
+    "hosts": [
+      "eleonadventures.org",
+      "eleondb.com",
+      "guidedex.app",
+      "eleonadventure.com",
+      "eleonadventures.com",
+      "progameguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "rell seas": {
+    "at": "2026-09-25T07:54:19.850Z",
+    "query": "RELL Seas codes",
+    "domains": 5,
+    "hosts": [
+      "fandom.com",
+      "tryhardguides.com",
+      "beebom.com",
+      "rellseaswiki.com",
+      "pockettactics.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "rellseaswiki.com"
+    ],
+    "open": 4,
+    "competitorFirstSeen": "2026-07-26",
+    "competitorSeenList": [
+      {
+        "domain": "rellseaswiki.com",
+        "at": "2026-07-26"
+      }
+    ]
+  },
+  "holy war x": {
+    "at": "2026-09-25T07:54:50.497Z",
+    "query": "Holy War X codes",
+    "domains": 6,
+    "hosts": [
+      "progameguides.com",
+      "earnaldo.com",
+      "game.guide",
+      "roblox.com",
+      "robloxden.com",
+      "fandom.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "magoi": {
+    "at": "2026-09-25T07:54:51.038Z",
+    "query": "Magoi codes",
+    "domains": 9,
+    "hosts": [
+      "ucngame.com",
+      "mtgazone.com",
+      "robloxden.com",
+      "fandom.com",
+      "pocketgamer.com",
+      "mtgacodes.com",
+      "draftsim.com",
+      "happygamer.com",
+      "wizards.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "ascension": {
+    "at": "2026-09-25T08:01:54.745Z",
+    "query": "Ascension codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "beebom.com",
+      "game.guide",
+      "tryhardguides.com",
+      "linegames.org",
+      "robloxden.com",
+      "urgametips.com",
+      "mrguider.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "four blues": {
+    "at": "2026-09-25T08:01:55.275Z",
+    "query": "Four Blues codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "tryhardguides.com",
+      "beebom.com",
+      "ign.com",
+      "eurogamer.net",
+      "grandblue.wiki",
+      "deltiasgaming.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "slayers 2": {
+    "at": "2026-09-25T08:09:14.102Z",
+    "query": "Slayers 2 codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "beebom.com",
+      "gamepur.com",
+      "gamerant.com",
+      "ign.com",
+      "rocodes.gg",
+      "tryhardguides.com",
+      "pockettactics.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "gravebound": {
+    "at": "2026-09-25T08:09:14.645Z",
+    "query": "GRAVEBOUND codes",
+    "domains": 8,
+    "hosts": [
+      "chaptercheats.com",
+      "robipedia.com",
+      "cheats.co",
+      "steamcommunity.com",
+      "gravebound.gg",
+      "showgamer.com",
+      "progameguides.com",
+      "wowhead.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "gravebound.gg"
+    ],
+    "open": 4
+  },
+  "_v": 2,
+  "steal an egg": {
+    "at": "2026-09-25T11:20:53.058Z",
+    "query": "Steal An Egg codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "pcgamesn.com",
+      "lolga.com",
+      "gameboost.com",
+      "bloxswaps.com",
+      "dexerto.com",
+      "gamertweak.com",
+      "urgametips.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "animal hospital": {
+    "at": "2026-09-25T11:20:58.622Z",
+    "query": "Animal Hospital codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "animalhospital-wiki.com",
+      "urgametips.com",
+      "animalhospitalanomaly.org",
+      "techwiser.com",
+      "supercheats.com",
+      "nerdschalk.com",
+      "animal-hospital-wiki.wiki",
+      "destructoid.com"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "animalhospital-wiki.com",
+      "animalhospitalanomaly.org",
+      "animal-hospital-wiki.wiki"
+    ],
+    "open": 3
+  },
+  "kick a lucky block": {
+    "at": "2026-09-25T11:22:04.295Z",
+    "query": "Kick a Lucky Block codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "supercheats.com",
+      "techwiser.com",
+      "destructoid.com",
+      "bloxron.com",
+      "guidespot.com",
+      "game8.co",
+      "nerdschalk.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "1 speed monkey escape": {
+    "at": "2026-09-25T11:22:09.908Z",
+    "query": "1 Speed Monkey Escape codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "pockettactics.com",
+      "ign.com",
+      "gamerant.com",
+      "dexerto.com",
+      "thegamer.com",
+      "supercheats.com",
+      "showgamer.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "mukbang game [testing !": {
+    "at": "2026-09-25T11:22:15.436Z",
+    "query": "Mukbang Game [Testing ! codes",
+    "domains": 8,
+    "hosts": [
+      "robipedia.com",
+      "supercheats.com",
+      "urgametips.com",
+      "raretip.com",
+      "mukbanggame.com",
+      "progameguides.com",
+      "mxblox.com",
+      "robloxgames.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "merge a nuke!": {
+    "at": "2026-09-25T11:22:21.235Z",
+    "query": "Merge a Nuke! codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "supercheats.com",
+      "beebom.com",
+      "destructoid.com",
+      "dexerto.com",
+      "game.guide",
+      "robloxden.com",
+      "bloxrant.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "ride a pet": {
+    "at": "2026-09-25T11:22:26.840Z",
+    "query": "Ride A Pet codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "rideapet.com",
+      "gamegeekfusion.com",
+      "urgametips.com",
+      "rideapetguide.com",
+      "gamewave.fr",
+      "rideapetwiki.wiki",
+      "supercheats.com"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "rideapet.com",
+      "rideapetguide.com",
+      "rideapetwiki.wiki"
+    ],
+    "open": 3,
+    "competitorFirstSeen": "2026-09-19",
+    "competitorSeenList": [
+      {
+        "domain": "rideapetguide.com",
+        "at": "2026-09-19"
+      }
+    ]
+  },
+  "grow a chicken fighter": {
+    "at": "2026-09-25T11:23:22.584Z",
+    "query": "Grow a Chicken Fighter codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "rocodes.gg",
+      "beebom.com",
+      "destructoid.com",
+      "games.gg",
+      "game.guide",
+      "ign.com",
+      "tryhardguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "anime astral simulator": {
+    "at": "2026-09-25T11:23:28.301Z",
+    "query": "Anime Astral Simulator codes",
+    "domains": 9,
+    "hosts": [
+      "ign.com",
+      "progameguides.com",
+      "beebom.com",
+      "destructoid.com",
+      "mrguider.org",
+      "tryhardguides.com",
+      "game.guide",
+      "gamerant.com",
+      "urgametips.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "scream and run": {
+    "at": "2026-09-25T11:23:33.861Z",
+    "query": "Scream And Run codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "screamandruncodes.com",
+      "screamandrun.wiki",
+      "supercheats.com",
+      "aprasi.com",
+      "gachapocket.com",
+      "deltiasgaming.com",
+      "screamandrun.org"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "screamandruncodes.com",
+      "screamandrun.wiki",
+      "screamandrun.org"
+    ],
+    "open": 3,
+    "competitorFirstSeen": "2026-09-12",
+    "competitorSeenList": [
+      {
+        "domain": "screamandrun.org",
+        "at": "2026-09-12"
+      }
+    ]
+  },
+  "ability arena": {
+    "at": "2026-09-25T11:24:41.132Z",
+    "query": "Ability Arena codes",
+    "domains": 8,
+    "hosts": [
+      "rouniverse.com",
+      "urgametips.com",
+      "ability-arena.wiki",
+      "gobloxy.com",
+      "rblx.news",
+      "ndangira.net",
+      "officialcodezone.com",
+      "earnaldo.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "ability-arena.wiki"
+    ],
+    "open": 4
+  },
+  "anime ability arena": {
+    "at": "2026-09-25T11:25:03.518Z",
+    "query": "Anime Ability Arena codes",
+    "domains": 9,
+    "hosts": [
+      "rblx.news",
+      "dropnite.com",
+      "axeetech.com",
+      "urgametips.com",
+      "mxblox.com",
+      "rouniverse.com",
+      "beebom.com",
+      "animeabilityarenawiki.wiki",
+      "cinoz.kr"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "animeabilityarenawiki.wiki"
+    ],
+    "open": 4
+  },
+  "jump for animals!": {
+    "at": "2026-09-25T12:19:14.426Z",
+    "query": "Jump for Animals! codes",
+    "domains": 9,
+    "hosts": [
+      "dexerto.com",
+      "destructoid.com",
+      "progameguides.com",
+      "tryhardguides.com",
+      "gamerant.com",
+      "pcgamesn.com",
+      "lolga.com",
+      "pockettactics.com",
+      "gachapocket.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "monochrome": {
+    "at": "2026-09-25T12:19:20.248Z",
+    "query": "MONOCHROME codes",
+    "domains": 5,
+    "hosts": [
+      "aprasi.com",
+      "tposegaming.com",
+      "urgametips.com",
+      "monochromegame.org",
+      "color-hex.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "monochromegame.org"
+    ],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-13",
+    "competitorSeenList": [
+      {
+        "domain": "monochromegame.org",
+        "at": "2026-09-13"
+      }
+    ]
+  },
+  "illegal soccer": {
+    "at": "2026-09-25T12:19:30.724Z",
+    "query": "Illegal Soccer codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "pcgamesn.com",
+      "techwiser.com",
+      "urgametips.com",
+      "supercheats.com",
+      "github.io",
+      "gameboost.com",
+      "earnaldo.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "finish the word!": {
+    "at": "2026-09-25T12:19:36.351Z",
+    "query": "Finish The Word! codes",
+    "domains": 8,
+    "hosts": [
+      "rouniverse.com",
+      "mxblox.com",
+      "gobloxy.com",
+      "finishtheword.wiki",
+      "robloxtutorial.com",
+      "earnaldo.com",
+      "rblx.news",
+      "baamboozle.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "finishtheword.wiki"
+    ],
+    "open": 4
+  },
+  "ghost driver": {
+    "at": "2026-09-25T12:19:54.239Z",
+    "query": "Ghost Driver codes",
+    "domains": 9,
+    "hosts": [
+      "rocodes.gg",
+      "progameguides.com",
+      "ign.com",
+      "beebom.com",
+      "twinfinite.net",
+      "game.guide",
+      "tryhardguides.com",
+      "gamepur.com",
+      "gamerant.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "chameleon!": {
+    "at": "2026-09-25T12:19:59.840Z",
+    "query": "Chameleon! codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "beebom.com",
+      "game.guide",
+      "rocodes.gg",
+      "bloxrant.com",
+      "insider-gaming.com",
+      "urgametips.com",
+      "mxblox.com",
+      "gamerant.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "search for the needle": {
+    "at": "2026-09-25T12:20:05.580Z",
+    "query": "Search For The Needle codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "rocodes.gg",
+      "tryhardguides.com",
+      "pockettactics.com",
+      "destructoid.com",
+      "ign.com",
+      "game.guide",
+      "techwiser.com",
+      "eurogamer.net"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "1 tongue escape": {
+    "at": "2026-09-25T12:20:11.231Z",
+    "query": "1 Tongue Escape codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "tryhardguides.com",
+      "urgametips.com",
+      "supercheats.com",
+      "gamerant.com",
+      "gamertweak.com",
+      "games.gg",
+      "eurogamer.net"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "clash of clans": {
+    "at": "2026-09-25T12:20:16.877Z",
+    "query": "Clash of Clans codes",
+    "domains": 9,
+    "hosts": [
+      "ldshop.gg",
+      "ign.com",
+      "gamsgo.com",
+      "eurogamer.net",
+      "claude-gaming.com",
+      "gameboost.com",
+      "linegames.org",
+      "brawlnetwork.com",
+      "clashloot.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "karinderya!": {
+    "at": "2026-09-25T12:20:22.475Z",
+    "query": "Karinderya! codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "ign.com",
+      "pockettactics.com",
+      "destructoid.com",
+      "beebom.com",
+      "robloxden.com",
+      "games.gg",
+      "eurogamer.net"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "open": 5
+  },
+  "roblox": {
+    "at": "2026-09-25T12:20:28.239Z",
+    "query": "Roblox codes",
+    "domains": 8,
+    "hosts": [
+      "roblox.com",
+      "progameguides.com",
+      "pockettactics.com",
+      "gamesradar.com",
+      "rocodes.gg",
+      "sportskeeda.com",
+      "pocketgamer.com",
+      "beebom.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "roblox.com"
+    ],
+    "open": 4
+  },
+  "50 player bingo!": {
+    "at": "2026-09-25T12:21:09.403Z",
+    "query": "50 Player BINGO! codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "dexerto.com",
+      "gamerant.com",
+      "rouniverse.com",
+      "vaultedvaluesx.com",
+      "50playerbingo.wiki",
+      "mxblox.com",
+      "lawod.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "50playerbingo.wiki"
+    ],
+    "open": 4
+  },
+  "town": {
+    "at": "2026-09-25T13:07:04.522Z",
+    "query": "town codes",
+    "domains": 9,
+    "hosts": [
+      "fandom.com",
+      "townoffairfaxca.gov",
+      "losgatosca.gov",
+      "municode.com",
+      "game.guide",
+      "robloxden.com",
+      "icccodesolutions.org",
+      "tryhardguides.com",
+      "mrguider.org"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "townoffairfaxca.gov"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "decaying winter": {
+    "at": "2026-09-25T13:07:45.610Z",
+    "query": "Decaying Winter codes",
+    "domains": 9,
+    "hosts": [
+      "destructoid.com",
+      "progameguides.com",
+      "robloxden.com",
+      "pockettactics.com",
+      "games.gg",
+      "pcgamesn.com",
+      "mrguider.org",
+      "gamerant.com",
+      "lawod.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "anime fighting simulator": {
+    "at": "2026-09-25T13:07:51.235Z",
+    "query": "Anime Fighting Simulator codes",
+    "domains": 8,
+    "hosts": [
+      "destructoid.com",
+      "progameguides.com",
+      "game.guide",
+      "beebom.com",
+      "twinfinite.net",
+      "gamegeekfusion.com",
+      "urgametips.com",
+      "gamesradar.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "pull a lucky fish": {
+    "at": "2026-09-25T13:07:56.892Z",
+    "query": "Pull a Lucky Fish codes",
+    "domains": 9,
+    "hosts": [
+      "pocketgamer.com",
+      "progameguides.com",
+      "beebom.com",
+      "destructoid.com",
+      "supercheats.com",
+      "nerdschalk.com",
+      "game.guide",
+      "urgametips.com",
+      "pcgamesn.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "drive a kukirin!": {
+    "at": "2026-09-25T13:08:02.500Z",
+    "query": "Drive A Kukirin! codes",
+    "domains": 7,
+    "hosts": [
+      "urgametips.com",
+      "drive-a-kukirin.wiki",
+      "robloxgo.com",
+      "earnaldo.com",
+      "game.guide",
+      "hotdeals.com",
+      "dontpayfull.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "drive-a-kukirin.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "cold war": {
+    "at": "2026-09-25T13:08:43.670Z",
+    "query": "Cold War codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "techwiser.com",
+      "destructoid.com",
+      "robloxgo.com",
+      "gamepur.com",
+      "urgametips.com",
+      "loaded.com",
+      "rblx.news",
+      "fandom.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "command an army": {
+    "at": "2026-09-25T13:08:49.280Z",
+    "query": "Command An Army codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "rocodes.gg",
+      "destructoid.com",
+      "beebom.com",
+      "tryhardguides.com",
+      "bloxrant.com",
+      "gamerant.com",
+      "pcgamesn.com",
+      "deltiasgaming.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "backrooms company": {
+    "at": "2026-09-25T13:08:54.937Z",
+    "query": "Backrooms Company codes",
+    "domains": 9,
+    "hosts": [
+      "tryhardguides.com",
+      "gotocodes.com",
+      "game.guide",
+      "escapebackrooms.wiki",
+      "backroomscompany.wiki",
+      "escapethebackrooms.org",
+      "earnaldo.com",
+      "robloxden.com",
+      "gamerant.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "backroomscompany.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "ball vs ball": {
+    "at": "2026-09-25T13:09:27.021Z",
+    "query": "Ball VS Ball codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "gamesradar.com",
+      "ball-vs-ball.wiki",
+      "vaultedvaluesx.com",
+      "16bitworld.com",
+      "game.guide",
+      "ballvsball.sbs",
+      "ballvsballwiki.wiki",
+      "rouniverse.com"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "ball-vs-ball.wiki",
+      "ballvsball.sbs",
+      "ballvsballwiki.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 3
+  },
+  "pull an egg": {
+    "at": "2026-09-25T13:10:52.321Z",
+    "query": "Pull An Egg codes",
+    "domains": 9,
+    "hosts": [
+      "urgametips.com",
+      "dropnite.com",
+      "robloxgo.com",
+      "destructoid.com",
+      "pullaneggwiki.wiki",
+      "pcgamesn.com",
+      "dexerto.com",
+      "lolga.com",
+      "gameboost.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "pullaneggwiki.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "global anarchy": {
+    "at": "2026-09-25T13:11:24.480Z",
+    "query": "Global Anarchy codes",
+    "domains": 8,
+    "hosts": [
+      "lawod.com",
+      "earnaldo.com",
+      "mxblox.com",
+      "robloxgo.com",
+      "cinoz.kr",
+      "progameguides.com",
+      "fandom.com",
+      "robipedia.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "heroes rng": {
+    "at": "2026-09-25T13:11:30.170Z",
+    "query": "Heroes RNG codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "pcgamesn.com",
+      "tryhardguides.com",
+      "robloxden.com",
+      "beebom.com",
+      "pockettactics.com",
+      "game.guide",
+      "eurogamer.net"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "anime dice": {
+    "at": "2026-09-25T13:51:14.193Z",
+    "query": "Anime Dice codes",
+    "domains": 9,
+    "hosts": [
+      "destructoid.com",
+      "progameguides.com",
+      "beebom.com",
+      "insider-gaming.com",
+      "pcgamesn.com",
+      "tryhardguides.com",
+      "animedice.org",
+      "pockettactics.com",
+      "bo3.gg"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "animedice.org"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "kaizen": {
+    "at": "2026-09-25T13:51:45.427Z",
+    "query": "Kaizen codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "beebom.com",
+      "destructoid.com",
+      "game.guide",
+      "twinfinite.net",
+      "mrguider.org",
+      "supercheats.com",
+      "robloxden.com",
+      "mmoculture.com",
+      "tryhardguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "catalog avatar runway": {
+    "at": "2026-09-25T13:51:51.078Z",
+    "query": "Catalog Avatar Runway codes",
+    "domains": 7,
+    "hosts": [
+      "urgametips.com",
+      "catalogavatarrunway.wiki",
+      "catalogavatarrunwayguide.wiki",
+      "robloxden.com",
+      "robloxdatabase.com",
+      "robloxgo.com",
+      "progameguides.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "catalogavatarrunway.wiki",
+      "catalogavatarrunwayguide.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "2 player evolution tycoon": {
+    "at": "2026-09-25T13:53:07.755Z",
+    "query": "2 PLAYER Evolution Tycoon codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "pockettactics.com",
+      "destructoid.com",
+      "beebom.com",
+      "urgametips.com",
+      "game.guide",
+      "bloxrant.com",
+      "dexerto.com",
+      "supercheats.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "build a +1 obby": {
+    "at": "2026-09-25T13:53:13.453Z",
+    "query": "Build a +1 Obby codes",
+    "domains": 7,
+    "hosts": [
+      "builda1obby.wiki",
+      "urgametips.com",
+      "dropnite.com",
+      "robipedia.com",
+      "progameguides.com",
+      "bloxodes.com",
+      "game.guide"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "builda1obby.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "last stop": {
+    "at": "2026-09-25T13:53:45.651Z",
+    "query": "Last Stop codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "laststopwiki.com",
+      "destructoid.com",
+      "tryhardguides.com",
+      "insider-gaming.com",
+      "ign.com",
+      "kodegg.com",
+      "pockettactics.com",
+      "dexerto.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "laststopwiki.com"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "1 strength to grow your arm！": {
+    "at": "2026-09-25T13:54:18.057Z",
+    "query": "1 Strength to Grow Your Arm！ codes",
+    "domains": 8,
+    "hosts": [
+      "1strengthtogrowyourarm.wiki",
+      "cinoz.kr",
+      "rolimons.com",
+      "dexerto.com",
+      "progameguides.com",
+      "robipedia.com",
+      "dropnite.com",
+      "scriptblox.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "1strengthtogrowyourarm.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "[w2 +1 mog evolution": {
+    "at": "2026-09-25T13:54:50.214Z",
+    "query": "[W2 +1 Mog Evolution codes",
+    "domains": 9,
+    "hosts": [
+      "rblx.news",
+      "dropnite.com",
+      "urgametips.com",
+      "scriptblox.com",
+      "beebom.com",
+      "rolimons.com",
+      "dexerto.com",
+      "robipedia.com",
+      "progameguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "1 mog evolution": {
+    "at": "2026-09-25T13:54:55.897Z",
+    "query": "1 Mog Evolution codes",
+    "domains": 8,
+    "hosts": [
+      "beebom.com",
+      "dexerto.com",
+      "progameguides.com",
+      "gamerant.com",
+      "urgametips.com",
+      "game.guide",
+      "bloxrant.com",
+      "rocodes.gg"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "kaiju alpha": {
+    "at": "2026-09-25T13:55:01.570Z",
+    "query": "Kaiju Alpha codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "robloxden.com",
+      "dexerto.com",
+      "gamerant.com",
+      "techwiser.com",
+      "pockettactics.com",
+      "gamertweak.com",
+      "deltiasgaming.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "military army tycoon": {
+    "at": "2026-09-25T13:55:07.285Z",
+    "query": "Military Army Tycoon codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "game.guide",
+      "tryhardguides.com",
+      "urgametips.com",
+      "gamerant.com",
+      "pcgamesn.com",
+      "pockettactics.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "build and kill zombies": {
+    "at": "2026-09-25T13:55:13.015Z",
+    "query": "Build and Kill Zombies codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "pockettactics.com",
+      "gamertweak.com",
+      "tryhardguides.com",
+      "eurogamer.net",
+      "urgametips.com",
+      "kodegg.com",
+      "pcgamesn.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "legacy piece": {
+    "at": "2026-09-25T14:03:59.534Z",
+    "query": "Legacy Piece codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "gamerant.com",
+      "beebom.com",
+      "destructoid.com",
+      "robloxden.com",
+      "game.guide",
+      "mrguider.org",
+      "gamerurge.com",
+      "theclick.gg"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "lift a cube": {
+    "at": "2026-09-25T14:04:05.189Z",
+    "query": "Lift a Cube codes",
+    "domains": 8,
+    "hosts": [
+      "urgametips.com",
+      "dropnite.com",
+      "lift-a-cube-roblox.wiki",
+      "rouniverse.com",
+      "lift-a-cube-game.wiki",
+      "robipedia.com",
+      "robloxgo.com",
+      "lift-a-cube-wiki.wiki"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "lift-a-cube-roblox.wiki",
+      "lift-a-cube-game.wiki",
+      "lift-a-cube-wiki.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 3,
+    "competitorFirstSeen": "2026-09-11",
+    "competitorSeenList": [
+      {
+        "domain": "lift-a-cube-game.wiki",
+        "at": "2026-09-11"
+      }
+    ]
+  },
+  "1 loot to forge": {
+    "at": "2026-09-25T14:05:50.937Z",
+    "query": "1 Loot To Forge codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "pockettactics.com",
+      "rocodes.gg",
+      "beebom.com",
+      "tryhardguides.com",
+      "pcgamesn.com",
+      "gamerant.com",
+      "destructoid.com",
+      "gamesradar.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "survive simulator": {
+    "at": "2026-09-25T14:05:56.542Z",
+    "query": "survive simulator codes",
+    "domains": 8,
+    "hosts": [
+      "survive-simulator.wiki",
+      "rblx.news",
+      "progameguides.com",
+      "dropnite.com",
+      "sportskeeda.com",
+      "rocodes.gg",
+      "game.edu.kg",
+      "pocketgamer.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "survive-simulator.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "jump to steal an egg": {
+    "at": "2026-09-25T14:06:28.635Z",
+    "query": "Jump To Steal An Egg codes",
+    "domains": 10,
+    "hosts": [
+      "tryhardguides.com",
+      "dexerto.com",
+      "progameguides.com",
+      "techwiser.com",
+      "destructoid.com",
+      "gamingpile.com",
+      "gamerant.com",
+      "supercheats.com",
+      "aprasi.com",
+      "roonby.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "the cosalazo 2": {
+    "at": "2026-09-25T14:06:34.223Z",
+    "query": "The Cosalazo 2 codes",
+    "domains": 7,
+    "hosts": [
+      "urgametips.com",
+      "gamerant.com",
+      "robloxden.com",
+      "gachapocket.com",
+      "spawnscope.com",
+      "creatorexchange.io",
+      "bloxdrip.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "carry the glass together!": {
+    "at": "2026-09-25T14:06:39.890Z",
+    "query": "Carry the Glass Together! codes",
+    "domains": 8,
+    "hosts": [
+      "carrytheglasstogether.wiki",
+      "urgametips.com",
+      "robipedia.com",
+      "carrytheglasstoogether.wiki",
+      "dropnite.com",
+      "steamcommunity.com",
+      "progameguides.com",
+      "newgame.co.jp"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "carrytheglasstogether.wiki"
+    ],
+    "ownExcluded": [
+      "steamcommunity.com"
+    ],
+    "open": 4
+  },
+  "steal a chicken": {
+    "at": "2026-09-25T14:07:12.000Z",
+    "query": "Steal a Chicken codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "pockettactics.com",
+      "gamerant.com",
+      "supercheats.com",
+      "destructoid.com",
+      "gamertweak.com",
+      "urgametips.com",
+      "gachapocket.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "flip a house!": {
+    "at": "2026-09-25T14:07:17.610Z",
+    "query": "Flip a House! codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "supercheats.com",
+      "gamertweak.com",
+      "flipahouse.wiki",
+      "dropnite.com",
+      "robipedia.com",
+      "rblx.news"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "flipahouse.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "mall game": {
+    "at": "2026-09-25T14:07:49.720Z",
+    "query": "mall game codes",
+    "domains": 10,
+    "hosts": [
+      "game.guide",
+      "tryhardguides.com",
+      "robloxden.com",
+      "urgametips.com",
+      "gamertweak.com",
+      "beebom.com",
+      "progameguides.com",
+      "rocodes.gg",
+      "kodegg.com",
+      "bloxrant.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "huss rooms": {
+    "at": "2026-09-25T14:07:55.344Z",
+    "query": "Huss Rooms codes",
+    "domains": 8,
+    "hosts": [
+      "gamerant.com",
+      "rocodes.gg",
+      "hussrooms.com",
+      "progameguides.com",
+      "urgametips.com",
+      "mrguider.org",
+      "beebom.com",
+      "hussroomswiki.wiki"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "hussrooms.com",
+      "hussroomswiki.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "swing for eggs": {
+    "at": "2026-09-25T14:08:53.955Z",
+    "query": "Swing For Eggs codes",
+    "domains": 8,
+    "hosts": [
+      "dropnite.com",
+      "swingforeggs.org",
+      "urgametips.com",
+      "earnaldo.com",
+      "swingforeggs.wiki",
+      "gamerant.com",
+      "aprasi.com",
+      "gachapocket.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "swingforeggs.org",
+      "swingforeggs.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-16",
+    "competitorSeenList": [
+      {
+        "domain": "swingforeggs.wiki",
+        "at": "2026-09-16"
+      }
+    ]
+  },
+  "nethros": {
+    "at": "2026-09-25T14:17:44.279Z",
+    "query": "Nethros codes",
+    "domains": 6,
+    "hosts": [
+      "nethros.wiki",
+      "bloxinformer.com",
+      "progameguides.com",
+      "game.guide",
+      "findingdulcinea.com",
+      "destructoid.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "nethros.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "tokyo: re": {
+    "at": "2026-09-25T14:18:10.577Z",
+    "query": "Tokyo: RE codes",
+    "domains": 7,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "beebom.com",
+      "tryhardguides.com",
+      "game.guide",
+      "mrguider.org",
+      "roonby.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "vox seas": {
+    "at": "2026-09-25T14:18:11.097Z",
+    "query": "Vox Seas codes",
+    "domains": 10,
+    "hosts": [
+      "game.guide",
+      "tryhardguides.com",
+      "beebom.com",
+      "progameguides.com",
+      "fandom.com",
+      "mrguider.org",
+      "findingdulcinea.com",
+      "pcgamesn.com",
+      "showgamer.com",
+      "thegamer.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "1 speed snow keyboard escape": {
+    "at": "2026-09-25T14:49:31.802Z",
+    "query": "1 Speed Snow Keyboard Escape codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "1speedsnowkeyboardescape.wiki",
+      "pcgamesn.com",
+      "game.guide",
+      "eldorado.gg",
+      "urgametips.com",
+      "beebom.com",
+      "gotocodes.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "1speedsnowkeyboardescape.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-12",
+    "competitorSeenList": [
+      {
+        "domain": "1speedsnowkeyboardescape.wiki",
+        "at": "2026-09-12"
+      }
+    ]
+  },
+  "verity's game": {
+    "at": "2026-09-25T14:49:41.066Z",
+    "query": "Verity's Game codes",
+    "domains": 8,
+    "hosts": [
+      "urgametips.com",
+      "tryhardguides.com",
+      "dropnite.com",
+      "verity.wiki",
+      "gotocodes.com",
+      "progameguides.com",
+      "mxblox.com",
+      "robipedia.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "slop tower defense!": {
+    "at": "2026-09-25T14:49:46.740Z",
+    "query": "Slop Tower Defense! codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "twinfinite.net",
+      "gamerant.com",
+      "tryhardguides.com",
+      "pockettactics.com",
+      "urgametips.com",
+      "kodegg.com",
+      "deltiasgaming.com",
+      "pcgamesn.com",
+      "theclick.gg"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "aura dance battles": {
+    "at": "2026-09-25T14:49:52.370Z",
+    "query": "Aura Dance Battles codes",
+    "domains": 6,
+    "hosts": [
+      "tryhardguides.com",
+      "gotocodes.com",
+      "game.guide",
+      "rocodes.gg",
+      "urgametips.com",
+      "robloxden.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "murder arena": {
+    "at": "2026-09-25T14:49:58.045Z",
+    "query": "Murder Arena codes",
+    "domains": 9,
+    "hosts": [
+      "urgametips.com",
+      "beebom.com",
+      "game.guide",
+      "progameguides.com",
+      "robipedia.com",
+      "dropnite.com",
+      "robloxgo.com",
+      "cardgamebase.com",
+      "aprasi.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "slime out fish": {
+    "at": "2026-09-25T14:50:03.700Z",
+    "query": "Slime Out Fish codes",
+    "domains": 6,
+    "hosts": [
+      "slimeoutfish.wiki",
+      "slime-out-fish.wiki",
+      "robipedia.com",
+      "robloxgo.com",
+      "game.guide",
+      "mrguider.org"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "slimeoutfish.wiki",
+      "slime-out-fish.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-17",
+    "competitorSeenList": [
+      {
+        "domain": "slime-out-fish.wiki",
+        "at": "2026-09-17"
+      }
+    ]
+  },
+  "1 tnt mining": {
+    "at": "2026-09-25T14:50:54.447Z",
+    "query": "1 TNT Mining codes",
+    "domains": 8,
+    "hosts": [
+      "aprasi.com",
+      "tnt-mining.wiki",
+      "robipedia.com",
+      "robloxgo.com",
+      "urgametips.com",
+      "rouniverse.com",
+      "dropnite.com",
+      "robloxden.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "temple run 2": {
+    "at": "2026-09-25T14:51:00.080Z",
+    "query": "Temple Run 2 codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "game.edu.kg",
+      "deliventura.com",
+      "gamespot.com",
+      "androidfit.com",
+      "templerun.org",
+      "gameapparent.com",
+      "templerunonline.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "how to fisch!": {
+    "at": "2026-09-25T14:51:05.854Z",
+    "query": "How to Fisch! codes",
+    "domains": 9,
+    "hosts": [
+      "tryhardguides.com",
+      "progameguides.com",
+      "fischipedia.org",
+      "gamerant.com",
+      "beebom.com",
+      "rocodes.gg",
+      "urgametips.com",
+      "game.guide",
+      "mrguider.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "that freekick challenge": {
+    "at": "2026-09-25T14:51:11.474Z",
+    "query": "That Freekick Challenge codes",
+    "domains": 7,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "gamerant.com",
+      "supercheats.com",
+      "dropnite.com",
+      "rocodes.gg",
+      "pclabs.com.br"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "keyboard slide +1 speed": {
+    "at": "2026-09-25T14:51:17.189Z",
+    "query": "Keyboard Slide +1 Speed codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "keyboardslide1speed.wiki",
+      "destructoid.com",
+      "eldorado.gg",
+      "game.guide",
+      "ign.com",
+      "kodegg.com",
+      "beebom.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "keyboardslide1speed.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "1 wings for eggs": {
+    "at": "2026-09-25T14:51:49.436Z",
+    "query": "1 Wings For Eggs codes",
+    "domains": 7,
+    "hosts": [
+      "urgametips.com",
+      "rblx.news",
+      "progameguides.com",
+      "robipedia.com",
+      "dropnite.com",
+      "gamerant.com",
+      "sportskeeda.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "bombanana!": {
+    "at": "2026-09-25T18:50:47.073Z",
+    "query": "BOMBANANA! codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "gamerant.com",
+      "destructoid.com",
+      "supercheats.com",
+      "urgametips.com",
+      "deltiasgaming.com",
+      "gachapocket.com",
+      "bombanana.online",
+      "whisperofthehouse.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "bombanana.online"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "plants vs zombies™ 2": {
+    "at": "2026-09-25T18:51:28.201Z",
+    "query": "Plants vs Zombies™ 2 codes",
+    "domains": 8,
+    "hosts": [
+      "bluestacks.com",
+      "linegames.org",
+      "fandom.com",
+      "appgamer.com",
+      "deliventura.com",
+      "gamespot.com",
+      "supercheats.com",
+      "timrim.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "animal daycare": {
+    "at": "2026-09-25T18:51:33.831Z",
+    "query": "Animal Daycare codes",
+    "domains": 9,
+    "hosts": [
+      "animal-daycare.wiki",
+      "fandom.com",
+      "animaldaycare.wiki",
+      "siccode.com",
+      "osha.gov",
+      "robloxgo.com",
+      "robipedia.com",
+      "govtribe.com",
+      "generalliabilityinsure.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "animal-daycare.wiki",
+      "animaldaycare.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-19",
+    "competitorSeenList": [
+      {
+        "domain": "animaldaycare.wiki",
+        "at": "2026-09-19"
+      }
+    ]
+  },
+  "slither.io": {
+    "at": "2026-09-25T18:52:16.941Z",
+    "query": "slither.io codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "pockettactics.com",
+      "fandom.com",
+      "gamepur.com",
+      "ucngame.com",
+      "bestforandroid.com",
+      "dexerto.com",
+      "lolvvv.com",
+      "appgamer.com",
+      "bo3.gg"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "race for eggs": {
+    "at": "2026-09-25T18:52:22.575Z",
+    "query": "Race for Eggs codes",
+    "domains": 9,
+    "hosts": [
+      "sportskeeda.com",
+      "gamerant.com",
+      "raceforeggs.wiki",
+      "urgametips.com",
+      "gachapocket.com",
+      "raceforegg.wiki",
+      "nedese.com",
+      "dexerto.fr",
+      "progameguides.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "raceforeggs.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-19",
+    "competitorSeenList": [
+      {
+        "domain": "raceforeggs.wiki",
+        "at": "2026-09-19"
+      }
+    ]
+  },
+  "build the pyramid!": {
+    "at": "2026-09-25T18:52:51.148Z",
+    "query": "Build the Pyramid! codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "dexerto.com",
+      "tryhardguides.com",
+      "pockettactics.com",
+      "urgametips.com",
+      "sportskeeda.com",
+      "destructoid.com",
+      "games.gg",
+      "gamerant.com",
+      "techwiser.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "survive the swarm": {
+    "at": "2026-09-25T18:52:56.815Z",
+    "query": "Survive The Swarm codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "beebom.com",
+      "rocodes.gg",
+      "pockettactics.com",
+      "urgametips.com",
+      "dexerto.com",
+      "pcgamesn.com",
+      "games.gg"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "the veil": {
+    "at": "2026-09-25T18:53:02.375Z",
+    "query": "The Veil codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "tryhardguides.com",
+      "beebom.com",
+      "pockettactics.com",
+      "rocodes.gg",
+      "bloxrant.com",
+      "dexerto.com",
+      "igeeksblog.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "be the city’s villain": {
+    "at": "2026-09-25T18:53:08.033Z",
+    "query": "Be the City’s Villain codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "rocodes.gg",
+      "robipedia.com",
+      "tryhardguides.com",
+      "beebom.com",
+      "creatorexchange.io",
+      "newgame.co.jp",
+      "pockettactics.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "roll a pack!": {
+    "at": "2026-09-25T18:53:13.595Z",
+    "query": "Roll A Pack! codes",
+    "domains": 8,
+    "hosts": [
+      "rocodes.gg",
+      "tryhardguides.com",
+      "progameguides.com",
+      "game.guide",
+      "gamerant.com",
+      "beebom.com",
+      "urgametips.com",
+      "robloxden.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "house 13": {
+    "at": "2026-09-25T18:53:19.163Z",
+    "query": "HOUSE 13 codes",
+    "domains": 8,
+    "hosts": [
+      "house13.wiki",
+      "game.guide",
+      "urgametips.com",
+      "cinoz.kr",
+      "house13wiki.wiki",
+      "tryhardguides.com",
+      "robipedia.com",
+      "destructoid.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "house13.wiki",
+      "house13wiki.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-13",
+    "competitorSeenList": [
+      {
+        "domain": "house13wiki.wiki",
+        "at": "2026-09-13"
+      }
+    ]
+  },
+  "genshin impact 6th anniversary": {
+    "at": "2026-09-25T18:54:25.669Z",
+    "query": "Genshin Impact 6th Anniversary codes",
+    "domains": 7,
+    "hosts": [
+      "game8.co",
+      "dotesports.com",
+      "gametrader.sg",
+      "gamevika.com",
+      "hoyo.codes",
+      "apkpure.com",
+      "progameguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "rogueblox": {
+    "at": "2026-09-25T22:31:24.592Z",
+    "query": "Rogueblox codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "game.guide",
+      "ign.com",
+      "destructoid.com",
+      "beebom.com",
+      "pockettactics.com",
+      "rocodes.gg",
+      "twinfinite.net",
+      "gamerant.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "hekmatyar": {
+    "at": "2026-09-25T22:31:25.157Z",
+    "query": "Hekmatyar codes",
+    "domains": 7,
+    "hosts": [
+      "mrguider.org",
+      "destructoid.com",
+      "tryhardguides.com",
+      "backyarddrunkard.com",
+      "progameguides.com",
+      "coderadar.net",
+      "officialcodezone.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "steal a verity!": {
+    "at": "2026-09-26T01:49:26.513Z",
+    "query": "Steal A Verity! codes",
+    "domains": 8,
+    "hosts": [
+      "robipedia.com",
+      "progameguides.com",
+      "gotocodes.com",
+      "rolimons.com",
+      "rocodes.gg",
+      "urgametips.com",
+      "roblox.com",
+      "destructoid.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "roblox.com"
+    ],
+    "open": 5
+  },
+  "grapple cart obby": {
+    "at": "2026-09-26T01:49:32.123Z",
+    "query": "Grapple Cart Obby codes",
+    "domains": 10,
+    "hosts": [
+      "cinoz.kr",
+      "dropnite.com",
+      "progameguides.com",
+      "tryhardguides.com",
+      "bloxodes.com",
+      "game.edu.kg",
+      "creatorexchange.io",
+      "sportskeeda.com",
+      "rocodes.gg",
+      "game.guide"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "make that sound!": {
+    "at": "2026-09-26T01:49:37.687Z",
+    "query": "Make That Sound! codes",
+    "domains": 7,
+    "hosts": [
+      "makethatsound.help",
+      "makethatsound.wiki",
+      "creatorexchange.io",
+      "bloxodes.com",
+      "robloxsong.com",
+      "theclick.gg",
+      "gamertweak.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "makethatsound.help",
+      "makethatsound.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "anomaly detected": {
+    "at": "2026-09-26T01:50:24.555Z",
+    "query": "Anomaly Detected codes",
+    "domains": 8,
+    "hosts": [
+      "anomaly-detected.wiki",
+      "urgametips.com",
+      "gotocodes.com",
+      "robipedia.com",
+      "gamezebo.com",
+      "gamerant.com",
+      "wikirealm.com",
+      "microsoft.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "anomaly-detected.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "race horses": {
+    "at": "2026-09-26T01:50:55.835Z",
+    "query": "Race Horses codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "gamerant.com",
+      "destructoid.com",
+      "sportskeeda.com",
+      "dexerto.com",
+      "beebom.com",
+      "pockettactics.com",
+      "supercheats.com",
+      "urgametips.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "project bikelife": {
+    "at": "2026-09-26T01:51:01.400Z",
+    "query": "Project Bikelife codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "urgametips.com",
+      "robloxden.com",
+      "beebom.com",
+      "robloxgo.com",
+      "robipedia.com",
+      "linegames.org",
+      "mxblox.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "anime breaker": {
+    "at": "2026-09-26T01:51:06.931Z",
+    "query": "Anime Breaker codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "urgametips.com",
+      "gamepur.com",
+      "tryhardguides.com",
+      "sportskeeda.com",
+      "mobilematters.gg",
+      "gamertweak.com",
+      "pockettactics.com",
+      "theclick.gg"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "tbod^2": {
+    "at": "2026-09-26T01:51:12.482Z",
+    "query": "TBOD^2 codes",
+    "domains": 7,
+    "hosts": [
+      "tbod-2.wiki",
+      "roonby.com",
+      "mxblox.com",
+      "rouniverse.com",
+      "tbod2wiki.wiki",
+      "fandom.com",
+      "tbod2.wiki"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "tbod-2.wiki",
+      "tbod2wiki.wiki",
+      "tbod2.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 3
+  },
+  "who farted?": {
+    "at": "2026-09-26T01:52:20.486Z",
+    "query": "WHO FARTED? codes",
+    "domains": 9,
+    "hosts": [
+      "whofarted.wiki",
+      "urgametips.com",
+      "earnaldo.com",
+      "robipedia.com",
+      "tryhardguides.com",
+      "beebom.com",
+      "progameguides.com",
+      "game.guide",
+      "robloxgo.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "whofarted.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "toon blast": {
+    "at": "2026-09-26T01:52:52.451Z",
+    "query": "Toon Blast codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "cheatcc.com",
+      "gameapparent.com",
+      "timrim.com",
+      "earnne.com",
+      "appgamer.com",
+      "reddit.com",
+      "player.one"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "smash hit": {
+    "at": "2026-09-26T01:52:57.966Z",
+    "query": "Smash Hit codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "gamespot.com",
+      "gamerant.com",
+      "fandom.com",
+      "progameguides.com",
+      "chaptercheats.com",
+      "cheats.co",
+      "rocodes.gg"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "spot the fake for anime!": {
+    "at": "2026-09-26T01:53:03.512Z",
+    "query": "Spot the Fake For Anime! codes",
+    "domains": 9,
+    "hosts": [
+      "robipedia.com",
+      "creatorexchange.io",
+      "indiatimes.com",
+      "roblox-jp.com",
+      "spotthefakeforanime.wiki",
+      "teachstarter.com",
+      "ggaid.com",
+      "bloxodes.com",
+      "pcgamesn.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "spotthefakeforanime.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "build your voxel coaster": {
+    "at": "2026-09-26T02:19:28.434Z",
+    "query": "Build Your Voxel Coaster codes",
+    "domains": 7,
+    "hosts": [
+      "cinoz.kr",
+      "progameguides.com",
+      "tryhardguides.com",
+      "rocodes.gg",
+      "robloxden.com",
+      "urgametips.com",
+      "rorizz.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "chiidoku": {
+    "at": "2026-09-26T02:19:34.050Z",
+    "query": "Chiidoku codes",
+    "domains": 7,
+    "hosts": [
+      "robloxden.com",
+      "lawod.com",
+      "gotocodes.com",
+      "gamertweak.com",
+      "gamerant.com",
+      "chiidokuwiki.wiki",
+      "progameguides.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "chiidokuwiki.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "shadow fight 3 - rpg fighting": {
+    "at": "2026-09-26T02:20:05.388Z",
+    "query": "Shadow Fight 3 - RPG fighting codes",
+    "domains": 9,
+    "hosts": [
+      "bluestacks.com",
+      "ucngame.com",
+      "appgamer.com",
+      "deliventura.com",
+      "gameapparent.com",
+      "gamevoyant.com",
+      "shadowfight3.com",
+      "mrguider.org",
+      "gamermovil.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "hour 12": {
+    "at": "2026-09-26T02:20:11.002Z",
+    "query": "HOUR 12 codes",
+    "domains": 10,
+    "hosts": [
+      "gotocodes.com",
+      "robipedia.com",
+      "progameguides.com",
+      "code.org",
+      "nalcbranch2902.org",
+      "csforall.org",
+      "fandom.com",
+      "ilms.academy",
+      "techwiser.com",
+      "tiptaxcalc.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "happy color®: color by number": {
+    "at": "2026-09-26T02:20:16.605Z",
+    "query": "Happy Color®: Color by Number codes",
+    "domains": 8,
+    "hosts": [
+      "deliventura.com",
+      "appgamer.com",
+      "superstarworksheets.com",
+      "happycolor.app",
+      "fandom.com",
+      "androidrank.org",
+      "appbrain.com",
+      "happycolorapp.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "1 dmg fps": {
+    "at": "2026-09-26T02:20:22.243Z",
+    "query": "1 DMG FPS codes",
+    "domains": 7,
+    "hosts": [
+      "gamerant.com",
+      "theclick.gg",
+      "dmgfps.wiki",
+      "dmg-fps.wiki",
+      "gachapocket.com",
+      "rocodes.gg",
+      "earnaldo.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "deep fishing": {
+    "at": "2026-09-26T02:20:27.809Z",
+    "query": "Deep Fishing codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "gamertweak.com",
+      "urgametips.com",
+      "gamerant.com",
+      "sportskeeda.com",
+      "deltiasgaming.com",
+      "gamepur.com",
+      "deep-fishing.wiki"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "deep-fishing.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "needle in a haystack": {
+    "at": "2026-09-26T02:21:04.377Z",
+    "query": "Needle In A Haystack codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "destructoid.com",
+      "ign.com",
+      "eurogamer.net",
+      "fandomwire.com",
+      "pockettactics.com",
+      "gamespot.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "bug fixes": {
+    "at": "2026-09-26T02:21:10.073Z",
+    "query": "bug fixes codes",
+    "domains": 8,
+    "hosts": [
+      "musely.ai",
+      "bug-fixes.wiki",
+      "onecompiler.com",
+      "codeconvert.ai",
+      "codepal.ai",
+      "swapcode.ai",
+      "github.com",
+      "marker.io"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "bug-fixes.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "the cat": {
+    "at": "2026-09-26T02:21:26.271Z",
+    "query": "The CAT codes",
+    "domains": 6,
+    "hosts": [
+      "thecat.wiki",
+      "game.guide",
+      "bluestacks.com",
+      "progameguides.com",
+      "rocodes.gg",
+      "ign.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "thecat.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "deltarune fight": {
+    "at": "2026-09-26T02:21:58.370Z",
+    "query": "DELTARUNE Fight codes",
+    "domains": 9,
+    "hosts": [
+      "deltaduel.com",
+      "gamesfuze.com",
+      "gotocodes.com",
+      "itch.io",
+      "pockettactics.com",
+      "makecode.com",
+      "kristal.cc",
+      "deltarune.wiki",
+      "robipedia.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "itch.io"
+    ],
+    "open": 5
+  },
+  "wikirace!": {
+    "at": "2026-09-26T02:22:03.960Z",
+    "query": "WikiRace! codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "urgametips.com",
+      "destructoid.com",
+      "gamerant.com",
+      "wikirace.games",
+      "wiki-race.com",
+      "rouniverse.com",
+      "wikirace.io"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "wikirace.games",
+      "wiki-race.com",
+      "wikirace.io"
+    ],
+    "ownExcluded": [],
+    "open": 3,
+    "competitorFirstSeen": "2022-09-27",
+    "competitorSeenList": [
+      {
+        "domain": "wiki-race.com",
+        "at": "2022-09-27"
+      },
+      {
+        "domain": "wikirace.games",
+        "at": "2026-04-27"
+      }
+    ]
+  },
+  "stumble guys": {
+    "at": "2026-09-26T02:37:52.703Z",
+    "query": "Stumble Guys codes",
+    "domains": 8,
+    "hosts": [
+      "bluestacks.com",
+      "beebom.com",
+      "supercheats.com",
+      "mobilematters.gg",
+      "pockettactics.com",
+      "stumbleguys.com",
+      "findingdulcinea.com",
+      "techyhigher.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "stumbleguys.com"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2021-01-28",
+    "competitorSeenList": [
+      {
+        "domain": "stumbleguys.com",
+        "at": "2021-01-28"
+      }
+    ]
+  },
+  "roblox stock exchange 2": {
+    "at": "2026-09-26T02:38:15.710Z",
+    "query": "Roblox Stock Exchange 2 codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "tryhardguides.com",
+      "twinfinite.net",
+      "gamerant.com",
+      "kodegg.com",
+      "deltiasgaming.com",
+      "gachapocket.com",
+      "creatorexchange.io"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "choose the stronger anime!": {
+    "at": "2026-09-26T02:38:21.264Z",
+    "query": "Choose the Stronger Anime! codes",
+    "domains": 8,
+    "hosts": [
+      "robipedia.com",
+      "earnaldo.com",
+      "progameguides.com",
+      "rotrends.com",
+      "creatorexchange.io",
+      "robloxgo.com",
+      "game.guide",
+      "robloxden.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "timeless": {
+    "at": "2026-09-26T02:38:26.825Z",
+    "query": "TIMELESS codes",
+    "domains": 9,
+    "hosts": [
+      "retailmenot.com",
+      "hotdeals.com",
+      "simplycodes.com",
+      "dealrated.com",
+      "dealdrop.com",
+      "dontpayfull.com",
+      "timeless.codes",
+      "daily-codes.com",
+      "worthepenny.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "timeless.codes"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2021-12-19",
+    "competitorSeenList": [
+      {
+        "domain": "timeless.codes",
+        "at": "2021-12-19"
+      }
+    ]
+  },
+  "marvel contest of champions": {
+    "at": "2026-09-26T02:38:43.096Z",
+    "query": "Marvel Contest of Champions codes",
+    "domains": 9,
+    "hosts": [
+      "pocketgamer.com",
+      "pcgamesn.com",
+      "tryhardguides.com",
+      "bluestacks.com",
+      "urgametips.com",
+      "thepopverse.com",
+      "claude-gaming.com",
+      "mobilematters.gg",
+      "wethrift.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "re://adventures": {
+    "at": "2026-09-26T02:38:48.683Z",
+    "query": "Re://Adventures codes",
+    "domains": 10,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "supercheats.com",
+      "sportskeeda.com",
+      "theclick.gg",
+      "roonby.com",
+      "gamersaur.com",
+      "readventureswiki.wiki",
+      "readventures.wiki",
+      "techwiser.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "readventureswiki.wiki",
+      "readventures.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-22",
+    "competitorSeenList": [
+      {
+        "domain": "readventures.wiki",
+        "at": "2026-09-22"
+      }
+    ]
+  },
+  "car parking multiplayer": {
+    "at": "2026-09-26T02:39:56.390Z",
+    "query": "Car Parking Multiplayer codes",
+    "domains": 10,
+    "hosts": [
+      "linegames.org",
+      "carmultiplayergame.com",
+      "carsparkingmultiplayers.com",
+      "carparkingplayers.com",
+      "carapkmultiiparking.com",
+      "reddit.com",
+      "carparkingmultimodi.com",
+      "carparkingmulti.com",
+      "gameapparent.com",
+      "scribd.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "monopoly go!": {
+    "at": "2026-09-26T02:40:01.990Z",
+    "query": "MONOPOLY GO! codes",
+    "domains": 10,
+    "hosts": [
+      "supercheats.com",
+      "pcgamesn.com",
+      "monopolygo.wiki",
+      "vg247.com",
+      "monopolygo.game",
+      "monopolygo.com",
+      "linegames.org",
+      "pockettactics.com",
+      "gamingonphone.com",
+      "buffhub.com"
+    ],
+    "dedicated": 3,
+    "dedicatedHosts": [
+      "monopolygo.wiki",
+      "monopolygo.game",
+      "monopolygo.com"
+    ],
+    "ownExcluded": [],
+    "open": 3
+  },
+  "shogun's reign": {
+    "at": "2026-09-26T02:41:27.105Z",
+    "query": "Shogun's Reign codes",
+    "domains": 7,
+    "hosts": [
+      "shogunsreign.online",
+      "tryhardguides.com",
+      "beebom.com",
+      "cinoz.kr",
+      "progameguides.com",
+      "wordplays.com",
+      "roblox.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "shogunsreign.online"
+    ],
+    "ownExcluded": [
+      "roblox.com"
+    ],
+    "open": 4
+  },
+  "sudoku - classic sudoku puzzle": {
+    "at": "2026-09-26T02:41:59.135Z",
+    "query": "Sudoku - Classic Sudoku Puzzle codes",
+    "domains": 6,
+    "hosts": [
+      "sudoku.today",
+      "linegames.org",
+      "funwithpuzzles.com",
+      "gridpuzzle.com",
+      "aayyy.com",
+      "sudokubliss.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "rat lab": {
+    "at": "2026-09-26T02:42:04.708Z",
+    "query": "Rat Lab codes",
+    "domains": 10,
+    "hosts": [
+      "rat-lab.wiki",
+      "rolimons.com",
+      "earnaldo.com",
+      "robloxgo.com",
+      "progameguides.com",
+      "jax.org",
+      "roblox.com",
+      "fandom.com",
+      "cheatbook.de",
+      "gamepretty.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "rat-lab.wiki"
+    ],
+    "ownExcluded": [
+      "roblox.com"
+    ],
+    "open": 4
+  },
+  "doomsday:the seven deadly sins": {
+    "at": "2026-09-26T02:42:17.988Z",
+    "query": "Doomsday:The Seven Deadly Sins codes",
+    "domains": 7,
+    "hosts": [
+      "apkpure.com",
+      "linegames.org",
+      "game.edu.kg",
+      "game8.co",
+      "pocketgamer.com",
+      "ucngame.com",
+      "sports.ru"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "windbound": {
+    "at": "2026-09-26T07:51:46.375Z",
+    "query": "Windbound codes",
+    "domains": 10,
+    "hosts": [
+      "cyberly.org",
+      "supercheats.com",
+      "cheatbook.de",
+      "trainerscity.com",
+      "cheatslips.com",
+      "apocanow.com",
+      "cheatinfo.de",
+      "plitch.com",
+      "cheathappens.com",
+      "gamespot.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "mashle academy": {
+    "at": "2026-09-26T07:51:46.989Z",
+    "query": "Mashle Academy codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "mrguider.org",
+      "igeeksblog.com",
+      "beebom.com",
+      "pockettactics.com",
+      "destructoid.com",
+      "droidgamers.com",
+      "pcgamesn.com",
+      "indiatimes.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "eyes of diamond": {
+    "at": "2026-09-26T07:51:47.579Z",
+    "query": "Eyes of Diamond codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "techgamesnews.com",
+      "gachapocket.com",
+      "bloxrant.com",
+      "roblox.com",
+      "rocodes.gg",
+      "beebom.com",
+      "sportskeeda.com",
+      "happygamer.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "roblox.com"
+    ],
+    "open": 5
+  },
+  "meow madness": {
+    "at": "2026-09-26T09:21:06.530Z",
+    "query": "Meow Madness codes",
+    "domains": 8,
+    "hosts": [
+      "creatorexchange.io",
+      "game.guide",
+      "tryhardguides.com",
+      "robloxgo.com",
+      "robloxden.com",
+      "mrguider.org",
+      "progameguides.com",
+      "meowplayground.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "dream car collection": {
+    "at": "2026-09-26T09:21:12.039Z",
+    "query": "Dream Car Collection codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "gamerant.com",
+      "destructoid.com",
+      "techwiser.com",
+      "gamespot.com",
+      "earnaldo.com",
+      "minenest.com",
+      "tryhardguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "strikeborn": {
+    "at": "2026-09-26T09:21:17.674Z",
+    "query": "Strikeborn codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "beebom.com",
+      "urgametips.com",
+      "robloxgamewiki.com",
+      "destructoid.com",
+      "igeeksblog.com",
+      "gamingdose.com",
+      "dexerto.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "tomb of the mask: old maze": {
+    "at": "2026-09-26T09:21:23.225Z",
+    "query": "Tomb of the Mask: Old Maze codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "gamespot.com",
+      "appsgames.net",
+      "mit.edu",
+      "x1mods.com",
+      "apkpure.com",
+      "apkmirror.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "2 player raid tycoon": {
+    "at": "2026-09-26T09:21:28.733Z",
+    "query": "2 Player Raid Tycoon codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "gamerant.com",
+      "supercheats.com",
+      "earnaldo.com",
+      "urgametips.com",
+      "dexerto.com",
+      "gamegpu.com",
+      "gotocodes.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "mahjong blast": {
+    "at": "2026-09-26T09:21:34.237Z",
+    "query": "Mahjong Blast codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "aayyy.com",
+      "mahjongblast.com",
+      "game.edu.kg",
+      "progameguides.com",
+      "sportskeeda.com",
+      "uptodown.com",
+      "beebom.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "mahjongblast.com"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2008-08-13",
+    "competitorSeenList": [
+      {
+        "domain": "mahjongblast.com",
+        "at": "2008-08-13"
+      }
+    ]
+  },
+  "mahjong blast-tile puzzle game": {
+    "at": "2026-09-26T09:21:45.387Z",
+    "query": "Mahjong Blast-Tile Puzzle Game codes",
+    "domains": 9,
+    "hosts": [
+      "linegames.org",
+      "mahjongblast.com",
+      "onlinegameworlds.com",
+      "gameanswers.com",
+      "apkpure.com",
+      "plix.gg",
+      "freejoy.games",
+      "apple.com",
+      "playvitamahjong.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "roll a fisherman": {
+    "at": "2026-09-26T09:21:50.923Z",
+    "query": "Roll a Fisherman codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "destructoid.com",
+      "tryhardguides.com",
+      "gachapocket.com",
+      "gamerant.com",
+      "gotocodes.com",
+      "worldplace.ai",
+      "sportskeeda.com",
+      "robipedia.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "open sea for animals!": {
+    "at": "2026-09-26T09:21:56.510Z",
+    "query": "Open Sea For Animals! codes",
+    "domains": 8,
+    "hosts": [
+      "gamerant.com",
+      "gachapocket.com",
+      "progameguides.com",
+      "creatorexchange.io",
+      "robipedia.com",
+      "wordplays.com",
+      "tryhardguides.com",
+      "robloxden.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "mine antarctica": {
+    "at": "2026-09-26T09:22:02.104Z",
+    "query": "Mine Antarctica codes",
+    "domains": 7,
+    "hosts": [
+      "urgametips.com",
+      "progameguides.com",
+      "game.guide",
+      "robipedia.com",
+      "mineantarctica.wiki",
+      "creatorexchange.io",
+      "robloxden.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "mineantarctica.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "bloxnote": {
+    "at": "2026-09-26T09:22:20.906Z",
+    "query": "BloxNote codes",
+    "domains": 9,
+    "hosts": [
+      "progameguides.com",
+      "robloxden.com",
+      "destructoid.com",
+      "gamesradar.com",
+      "thebasedotaku.com",
+      "bloxnote.wiki",
+      "gamerant.com",
+      "gachapocket.com",
+      "supercheats.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "bloxnote.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-13",
+    "competitorSeenList": [
+      {
+        "domain": "bloxnote.wiki",
+        "at": "2026-09-13"
+      }
+    ]
+  },
+  "sae but f2p admin panel": {
+    "at": "2026-09-26T09:22:32.762Z",
+    "query": "SAE but F2P ADMIN PANEL codes",
+    "domains": 6,
+    "hosts": [
+      "robipedia.com",
+      "creatorexchange.io",
+      "roblox.com",
+      "rotrends.com",
+      "newgame.co.jp",
+      "intelbricks.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "roblox.com"
+    ],
+    "open": 5
+  },
+  "blitz fps": {
+    "at": "2026-09-26T09:30:40.192Z",
+    "query": "BLITZ FPS codes",
+    "domains": 8,
+    "hosts": [
+      "progamepilot.com",
+      "mrguider.org",
+      "robipedia.com",
+      "robloxdatabase.com",
+      "progameguides.com",
+      "linegames.org",
+      "wethrift.com",
+      "couponupto.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "hamster village": {
+    "at": "2026-09-26T09:30:45.725Z",
+    "query": "Hamster Village codes",
+    "domains": 8,
+    "hosts": [
+      "gotocodes.com",
+      "gameapparent.com",
+      "linegames.org",
+      "cinoz.kr",
+      "robipedia.com",
+      "gamespot.com",
+      "chaptercheats.com",
+      "creatorexchange.io"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "dragon ball legends": {
+    "at": "2026-09-26T09:30:51.354Z",
+    "query": "DRAGON BALL LEGENDS codes",
+    "domains": 9,
+    "hosts": [
+      "gamesradar.com",
+      "progameguides.com",
+      "pockettactics.com",
+      "bandainamcoentwebstore.com",
+      "levelgeeks.net",
+      "destructoid.com",
+      "game.guide",
+      "mobilematters.gg",
+      "dudcode.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "steal from the rich!": {
+    "at": "2026-09-26T09:30:56.890Z",
+    "query": "Steal From The Rich! codes",
+    "domains": 8,
+    "hosts": [
+      "robloxden.com",
+      "urgametips.com",
+      "bloxdrip.com",
+      "robloxgo.com",
+      "thegamer.com",
+      "progameguides.com",
+      "rosenberryrooms.com",
+      "techwiser.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "mini race": {
+    "at": "2026-09-26T09:31:02.426Z",
+    "query": "Mini Race codes",
+    "domains": 7,
+    "hosts": [
+      "progameguides.com",
+      "gamerant.com",
+      "destructoid.com",
+      "gachapocket.com",
+      "minirace.wiki",
+      "vaultedvaluesx.com",
+      "lootcue.gg"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "minirace.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-21",
+    "competitorSeenList": [
+      {
+        "domain": "minirace.wiki",
+        "at": "2026-09-21"
+      }
+    ]
+  },
+  "ski": {
+    "at": "2026-09-26T09:31:11.611Z",
+    "query": "SKI codes",
+    "domains": 7,
+    "hosts": [
+      "robloxden.com",
+      "progameguides.com",
+      "game.guide",
+      "simplycodes.com",
+      "linegames.org",
+      "skierdeals.com",
+      "nsaa.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "art puzzle - puzzle games": {
+    "at": "2026-09-26T09:31:17.206Z",
+    "query": "Art Puzzle - Puzzle Games codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "aayyy.com",
+      "epicgames.com",
+      "supercheats.com",
+      "appgamer.com",
+      "puzzlefactory.com",
+      "pocketgamer.com",
+      "gamespot.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "epicgames.com"
+    ],
+    "open": 5
+  },
+  "surf and rescue": {
+    "at": "2026-09-26T09:31:22.793Z",
+    "query": "Surf And Rescue codes",
+    "domains": 7,
+    "hosts": [
+      "rocodes.gg",
+      "otechworld.com",
+      "progameguides.com",
+      "robloxden.com",
+      "game.guide",
+      "microsoft.com",
+      "tryhardguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "host a rideout!": {
+    "at": "2026-09-26T09:31:28.340Z",
+    "query": "Host A Rideout! codes",
+    "domains": 8,
+    "hosts": [
+      "gamerant.com",
+      "gachapocket.com",
+      "tryhardguides.com",
+      "robipedia.com",
+      "mrguider.org",
+      "wordplays.com",
+      "roblox.com",
+      "progameguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "roblox.com"
+    ],
+    "open": 5
+  },
+  "super mario run": {
+    "at": "2026-09-26T09:31:34.201Z",
+    "query": "Super Mario Run codes",
+    "domains": 8,
+    "hosts": [
+      "gamespot.com",
+      "gamerant.com",
+      "fcswap.com",
+      "reddit.com",
+      "mariorunfriends.com",
+      "linegames.org",
+      "cheathappens.com",
+      "ign.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "collect 1 million items": {
+    "at": "2026-09-26T09:31:39.719Z",
+    "query": "Collect 1 Million Items codes",
+    "domains": 8,
+    "hosts": [
+      "gamerant.com",
+      "rolimons.com",
+      "gachapocket.com",
+      "progameguides.com",
+      "bloxodes.com",
+      "creatorexchange.io",
+      "sportskeeda.com",
+      "tryhardguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "sae with f2p admin panel x9999m": {
+    "at": "2026-09-26T09:31:45.246Z",
+    "query": "SAE with F2P ADMIN PANEL X9999M codes",
+    "domains": 8,
+    "hosts": [
+      "creatorexchange.io",
+      "kouryakuhan.com",
+      "robipedia.com",
+      "newgame.co.jp",
+      "bloxscout.net",
+      "rorizz.com",
+      "progameguides.com",
+      "gotocodes.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "1 strength for eggs": {
+    "at": "2026-09-26T09:58:55.936Z",
+    "query": "1 Strength for Eggs codes",
+    "domains": 8,
+    "hosts": [
+      "robipedia.com",
+      "progameguides.com",
+      "gamerant.com",
+      "robloxden.com",
+      "creatorexchange.io",
+      "strengthperclick.wiki",
+      "raceforeggs.wiki",
+      "urgametips.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "cut it out!": {
+    "at": "2026-09-26T09:59:01.508Z",
+    "query": "Cut it Out! codes",
+    "domains": 8,
+    "hosts": [
+      "wethrift.com",
+      "goodsearch.com",
+      "joincheckmate.com",
+      "retailmenot.com",
+      "progameguides.com",
+      "beebom.com",
+      "game.guide",
+      "tryhardguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "build a boss": {
+    "at": "2026-09-26T09:59:07.062Z",
+    "query": "Build a Boss codes",
+    "domains": 7,
+    "hosts": [
+      "buildaboss.wiki",
+      "workshop.codes",
+      "progameguides.com",
+      "tryhardguides.com",
+      "beebom.com",
+      "sportskeeda.com",
+      "rocodes.gg"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "buildaboss.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-17",
+    "competitorSeenList": [
+      {
+        "domain": "buildaboss.wiki",
+        "at": "2026-09-17"
+      }
+    ]
+  },
+  "pets universe!": {
+    "at": "2026-09-26T09:59:35.998Z",
+    "query": "Pets Universe! codes",
+    "domains": 9,
+    "hosts": [
+      "tryhardguides.com",
+      "progameguides.com",
+      "gamerant.com",
+      "destructoid.com",
+      "urgametips.com",
+      "gachapocket.com",
+      "game.guide",
+      "sportskeeda.com",
+      "fukgames.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "wordscapes: word puzzle game": {
+    "at": "2026-09-26T09:59:41.619Z",
+    "query": "Wordscapes: Word puzzle game codes",
+    "domains": 10,
+    "hosts": [
+      "wordscapeshelp.com",
+      "wordunscrambler.net",
+      "yourdictionary.com",
+      "braingames.net",
+      "thewordfinder.com",
+      "wordscapescheat.com",
+      "puzzleanswers.net",
+      "gameanswers.net",
+      "linegames.org",
+      "wordcheats.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "wordscapes": {
+    "at": "2026-09-26T09:59:47.230Z",
+    "query": "Wordscapes codes",
+    "domains": 8,
+    "hosts": [
+      "wordscapeshelp.com",
+      "linegames.org",
+      "game.edu.kg",
+      "wordscapescheat.com",
+      "yourdictionary.com",
+      "wordunscrambler.net",
+      "dcode.fr",
+      "gamehow24.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "wordscapeshelp.com",
+      "wordscapescheat.com"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2018-08-04",
+    "competitorSeenList": [
+      {
+        "domain": "wordscapeshelp.com",
+        "at": "2018-08-04"
+      }
+    ]
+  },
+  "2 3 4 player mini games": {
+    "at": "2026-09-26T10:00:49.697Z",
+    "query": "2 3 4 Player Mini Games codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "game.edu.kg",
+      "gameapparent.com",
+      "aayyy.com",
+      "softonic.com",
+      "plix.gg",
+      "apkpure.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "mafia city": {
+    "at": "2026-09-26T10:00:55.325Z",
+    "query": "Mafia City codes",
+    "domains": 10,
+    "hosts": [
+      "pocketgamer.com",
+      "ucngame.com",
+      "mobilematters.gg",
+      "codesboard.com",
+      "progameguides.com",
+      "linegames.org",
+      "talkandroid.com",
+      "appgamer.com",
+      "claude-gaming.com",
+      "gamevoyant.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "larp your character!": {
+    "at": "2026-09-26T10:01:01.632Z",
+    "query": "Larp Your Character! codes",
+    "domains": 7,
+    "hosts": [
+      "progameguides.com",
+      "twinfinite.net",
+      "gamerant.com",
+      "gamertweak.com",
+      "roonby.com",
+      "larpyourcharacter.wiki",
+      "larp-your-character.wiki"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "larpyourcharacter.wiki",
+      "larp-your-character.wiki"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-22",
+    "competitorSeenList": [
+      {
+        "domain": "larp-your-character.wiki",
+        "at": "2026-09-22"
+      }
+    ]
+  },
+  "yalla ludo - ludo&jackaroo": {
+    "at": "2026-09-26T10:01:50.718Z",
+    "query": "Yalla Ludo - Ludo&Jackaroo codes",
+    "domains": 7,
+    "hosts": [
+      "timrim.com",
+      "linegames.org",
+      "apkpure.com",
+      "apkpure.net",
+      "game.edu.kg",
+      "yallaludo.com",
+      "lootbar.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "word search explorer": {
+    "at": "2026-09-26T10:01:56.843Z",
+    "query": "Word Search Explorer codes",
+    "domains": 6,
+    "hosts": [
+      "linegames.org",
+      "game-solver.com",
+      "winitcode.com",
+      "aayyy.com",
+      "realqunb.com",
+      "chaptercheats.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "barbie dreamhouse adventures": {
+    "at": "2026-09-26T10:02:02.582Z",
+    "query": "Barbie Dreamhouse Adventures codes",
+    "domains": 9,
+    "hosts": [
+      "linegames.org",
+      "game.edu.kg",
+      "aayyy.com",
+      "gamespot.com",
+      "gameapparent.com",
+      "apocanow.com",
+      "gamelinkexchange.com",
+      "allroblox.com",
+      "nickelodeongame.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "hero wars: alliance rpg legend": {
+    "at": "2026-09-26T10:17:42.268Z",
+    "query": "Hero Wars: Alliance RPG Legend codes",
+    "domains": 8,
+    "hosts": [
+      "game.edu.kg",
+      "ucngame.com",
+      "mobi.gg",
+      "claude-gaming.com",
+      "herowarsonline.com",
+      "ldplayer.net",
+      "driffle.com",
+      "linegames.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "my talking hank: islands": {
+    "at": "2026-09-26T10:17:47.910Z",
+    "query": "My Talking Hank: Islands codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "deliventura.com",
+      "game.edu.kg",
+      "hellomagazine.com",
+      "apkpure.net",
+      "talkingtomandfriends.com",
+      "fandom.com",
+      "aayyy.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "bed wars": {
+    "at": "2026-09-26T10:17:53.543Z",
+    "query": "Bed Wars codes",
+    "domains": 6,
+    "hosts": [
+      "techwiser.com",
+      "progameguides.com",
+      "gamermovil.com",
+      "playpatch.org",
+      "gamerant.com",
+      "tryhardguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "is it verity?": {
+    "at": "2026-09-26T10:17:59.275Z",
+    "query": "Is It Verity? codes",
+    "domains": 7,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "lawod.com",
+      "urgametips.com",
+      "verity.wiki",
+      "dexerto.com",
+      "gotocodes.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "chinaside tycoon": {
+    "at": "2026-09-26T10:18:04.894Z",
+    "query": "ChinaSide Tycoon codes",
+    "domains": 8,
+    "hosts": [
+      "progameguides.com",
+      "gamerant.com",
+      "twinfinite.net",
+      "deltiasgaming.com",
+      "gachapocket.com",
+      "roonby.com",
+      "earnaldo.com",
+      "insider-gaming.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "the ants: underground kingdom": {
+    "at": "2026-09-26T10:18:10.575Z",
+    "query": "The Ants: Underground Kingdom codes",
+    "domains": 10,
+    "hosts": [
+      "progamepilot.com",
+      "levelgeeks.net",
+      "game.guide",
+      "progameguides.com",
+      "robloxden.com",
+      "urgametips.com",
+      "techfornerd.com",
+      "bluestacks.com",
+      "pillarofgaming.com",
+      "earlygame.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "the best drafts win!": {
+    "at": "2026-09-26T10:18:16.198Z",
+    "query": "The Best Drafts Win! codes",
+    "domains": 9,
+    "hosts": [
+      "creatorexchange.io",
+      "draftkings.com",
+      "sportsline.com",
+      "foxsports.com",
+      "sportsbettingdime.com",
+      "drf.com",
+      "sportytrader.com",
+      "cbssports.com",
+      "fantasyfootballers.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "eyes - the horror game": {
+    "at": "2026-09-26T10:18:21.802Z",
+    "query": "Eyes - The Horror Game codes",
+    "domains": 6,
+    "hosts": [
+      "gamespot.com",
+      "chaptercheats.com",
+      "fandom.com",
+      "robipedia.com",
+      "linegames.org",
+      "aayyy.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "moy 7 - virtual pet game": {
+    "at": "2026-09-26T10:18:27.429Z",
+    "query": "Moy 7 - Virtual Pet Game codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "gameapparent.com",
+      "aayyy.com",
+      "game.edu.kg",
+      "apocanow.com",
+      "chaptercheats.com",
+      "gamelinkexchange.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "among us!": {
+    "at": "2026-09-26T10:18:33.045Z",
+    "query": "Among Us! codes",
+    "domains": 8,
+    "hosts": [
+      "bluestacks.com",
+      "tryhardguides.com",
+      "game.guide",
+      "linegames.org",
+      "appgamer.com",
+      "innersloth.com",
+      "reddit.com",
+      "robloxden.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "dark war survival": {
+    "at": "2026-09-26T10:18:38.706Z",
+    "query": "Dark War Survival codes",
+    "domains": 10,
+    "hosts": [
+      "ucngame.com",
+      "pocketgamer.com",
+      "levelgeeks.net",
+      "progamepilot.com",
+      "linegames.org",
+      "minutetactics.com",
+      "theclick.gg",
+      "packsify.com",
+      "ldshop.gg",
+      "boostbot.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "magic rampage": {
+    "at": "2026-09-26T10:18:44.316Z",
+    "query": "Magic Rampage codes",
+    "domains": 9,
+    "hosts": [
+      "game.edu.kg",
+      "deliventura.com",
+      "gameapparent.com",
+      "robloxden.com",
+      "cheatbook.de",
+      "linegames.org",
+      "gamespot.com",
+      "cheatinfo.de",
+      "cyberly.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "words of wonders: crossword": {
+    "at": "2026-09-26T11:08:35.063Z",
+    "query": "Words of Wonders: Crossword codes",
+    "domains": 9,
+    "hosts": [
+      "wordunscrambler.net",
+      "linegames.org",
+      "wordcheats.com",
+      "wordsofwonders-answers.com",
+      "wordsofwonders.net",
+      "crazygames.com",
+      "answersgame.com",
+      "word.tips",
+      "wordsofwonders.app"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "crazygames.com"
+    ],
+    "open": 5
+  },
+  "hero wars: alliance": {
+    "at": "2026-09-26T11:08:40.717Z",
+    "query": "Hero Wars: Alliance codes",
+    "domains": 10,
+    "hosts": [
+      "alexandregames.com",
+      "claude-gaming.com",
+      "ucngame.com",
+      "mobi.gg",
+      "driffle.com",
+      "herowarsonline.com",
+      "levvvel.com",
+      "solfors.com",
+      "hero-wars-alliance.com",
+      "scrambly.io"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "hero-wars-alliance.com"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-04-16",
+    "competitorSeenList": [
+      {
+        "domain": "hero-wars-alliance.com",
+        "at": "2026-04-16"
+      }
+    ]
+  },
+  "guardian tales": {
+    "at": "2026-09-26T11:08:50.459Z",
+    "query": "Guardian Tales codes",
+    "domains": 9,
+    "hosts": [
+      "pocketgamer.com",
+      "pockettactics.com",
+      "ucngame.com",
+      "nerdschalk.com",
+      "techwiser.com",
+      "mobilematters.gg",
+      "progameguides.com",
+      "linegames.org",
+      "cofregamers.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "truckers of europe 3": {
+    "at": "2026-09-26T11:08:56.161Z",
+    "query": "Truckers of Europe 3 codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "gameapparent.com",
+      "game.edu.kg",
+      "appgamer.com",
+      "timrim.com",
+      "deliventura.com",
+      "chaptercheats.com",
+      "aayyy.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "marvel strike force: squad rpg": {
+    "at": "2026-09-26T11:09:01.830Z",
+    "query": "MARVEL Strike Force: Squad RPG codes",
+    "domains": 9,
+    "hosts": [
+      "mmoculture.com",
+      "progameguides.com",
+      "destructoid.com",
+      "bluestacks.com",
+      "pockettactics.com",
+      "linegames.org",
+      "dexerto.com",
+      "eurogamer.net",
+      "ucngame.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "squad busters": {
+    "at": "2026-09-26T11:09:07.469Z",
+    "query": "Squad Busters codes",
+    "domains": 8,
+    "hosts": [
+      "beebom.com",
+      "mobi.gg",
+      "linegames.org",
+      "mobilematters.gg",
+      "deliventura.com",
+      "progameguides.com",
+      "pockettactics.com",
+      "timrim.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "solo leveling:arise": {
+    "at": "2026-09-26T11:09:13.132Z",
+    "query": "Solo Leveling:Arise codes",
+    "domains": 9,
+    "hosts": [
+      "ucngame.com",
+      "eurogamer.net",
+      "pocketgamer.com",
+      "pockettactics.com",
+      "vg247.com",
+      "urgametips.com",
+      "progameguides.com",
+      "dexerto.com",
+      "tryhardguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "block crush: block blast fun": {
+    "at": "2026-09-26T11:09:18.790Z",
+    "query": "Block Crush: Block Blast Fun codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "blockcrush.net",
+      "progameguides.com",
+      "crushblocks.com",
+      "tryhardguides.com",
+      "apple.com",
+      "blockblast.free"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "block crush!": {
+    "at": "2026-09-26T11:09:24.407Z",
+    "query": "Block Crush! codes",
+    "domains": 8,
+    "hosts": [
+      "game.edu.kg",
+      "linegames.org",
+      "blockcrush.net",
+      "gamersunite.com",
+      "robloxden.com",
+      "tryhardguides.com",
+      "dexerto.com",
+      "aayyy.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "blockcrush.net"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-01-18",
+    "competitorSeenList": [
+      {
+        "domain": "blockcrush.net",
+        "at": "2026-01-18"
+      }
+    ]
+  },
+  "block crush - block blast wood": {
+    "at": "2026-09-26T11:09:43.520Z",
+    "query": "Block Crush - Block Blast Wood codes",
+    "domains": 5,
+    "hosts": [
+      "linegames.org",
+      "blockcrush.net",
+      "apkpure.com",
+      "apkpure.net",
+      "appbrain.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "point out: color escape puzzle": {
+    "at": "2026-09-26T11:09:49.123Z",
+    "query": "Point Out: Color Escape Puzzle codes",
+    "domains": 7,
+    "hosts": [
+      "game.edu.kg",
+      "beebom.com",
+      "appbrain.com",
+      "playables.games",
+      "apple.com",
+      "rocodes.gg",
+      "game.guide"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "airline commander: flight game": {
+    "at": "2026-09-26T11:09:54.775Z",
+    "query": "Airline Commander: Flight Game codes",
+    "domains": 9,
+    "hosts": [
+      "linegames.org",
+      "timrim.com",
+      "gameapparent.com",
+      "salenhanh.com",
+      "deliventura.com",
+      "axeetech.com",
+      "gamespot.com",
+      "aayyy.com",
+      "reddit.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "hay day": {
+    "at": "2026-09-26T11:56:52.628Z",
+    "query": "Hay Day codes",
+    "domains": 10,
+    "hosts": [
+      "mobilematters.gg",
+      "gamsgo.com",
+      "levelgeeks.net",
+      "earlygame.com",
+      "game.edu.kg",
+      "memuplay.com",
+      "clashloot.com",
+      "supercell.com",
+      "360-reader.com",
+      "ldshop.gg"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "war thunder mobile": {
+    "at": "2026-09-26T11:56:58.242Z",
+    "query": "War Thunder Mobile codes",
+    "domains": 9,
+    "hosts": [
+      "pocketgamer.com",
+      "supercheats.com",
+      "mobilematters.gg",
+      "ucngame.com",
+      "tankscodes.com",
+      "cofregamers.com",
+      "redeemcodestoday.com",
+      "deliventura.com",
+      "gamerant.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "knives out": {
+    "at": "2026-09-26T11:57:03.866Z",
+    "query": "Knives Out codes",
+    "domains": 9,
+    "hosts": [
+      "pocketgamer.com",
+      "gamerant.com",
+      "timrim.com",
+      "escapistmagazine.com",
+      "redeemcodestoday.com",
+      "deliventura.com",
+      "gameapparent.com",
+      "linegames.org",
+      "progameguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "chess online & offline": {
+    "at": "2026-09-26T11:57:09.365Z",
+    "query": "Chess Online & Offline codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "plychess.com",
+      "chessmars.com",
+      "chess-offline.com",
+      "worthepenny.com",
+      "timwoelfle.de",
+      "multiplayer-chess.net",
+      "localchess.online"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "word search": {
+    "at": "2026-09-26T11:57:14.899Z",
+    "query": "Word Search codes",
+    "domains": 8,
+    "hosts": [
+      "wordmint.com",
+      "leetcode.com",
+      "linegames.org",
+      "gobloxy.com",
+      "rosettacode.org",
+      "richardsonpuzzlesandgames.com",
+      "puzzles-to-print.com",
+      "codewordsolver.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "cryptogram: word logic puzzles": {
+    "at": "2026-09-26T11:57:20.448Z",
+    "query": "Cryptogram: Word Logic Puzzles codes",
+    "domains": 8,
+    "hosts": [
+      "cityparkgames.com",
+      "playgama.com",
+      "kbhgames.com",
+      "webcryptogram.com",
+      "appbrain.com",
+      "game-solver.com",
+      "apple.com",
+      "connectionsgame.io"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "dislyte": {
+    "at": "2026-09-26T11:57:25.991Z",
+    "query": "Dislyte codes",
+    "domains": 10,
+    "hosts": [
+      "pocketgamer.com",
+      "mobilematters.gg",
+      "ucngame.com",
+      "progameguides.com",
+      "dudcode.com",
+      "esports.gg",
+      "claude-gaming.com",
+      "playdislyte.com",
+      "bluestacks.com",
+      "igametips.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "playdislyte.com"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2021-09-16",
+    "competitorSeenList": [
+      {
+        "domain": "playdislyte.com",
+        "at": "2021-09-16"
+      }
+    ]
+  },
+  "dynamons world": {
+    "at": "2026-09-26T11:57:55.503Z",
+    "query": "Dynamons World codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "gameapparent.com",
+      "deliventura.com",
+      "timrim.com",
+      "dynamonsworld.com",
+      "phanmem360.com",
+      "progameguides.com",
+      "rocodes.gg"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "dynamonsworld.com"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2022-11-13",
+    "competitorSeenList": [
+      {
+        "domain": "dynamonsworld.com",
+        "at": "2022-11-13"
+      }
+    ]
+  },
+  "double tile!": {
+    "at": "2026-09-26T11:58:14.810Z",
+    "query": "Double Tile! codes",
+    "domains": 6,
+    "hosts": [
+      "progameguides.com",
+      "apkpure.com",
+      "linegames.org",
+      "apple.com",
+      "scribd.com",
+      "appbrain.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "double tile! - mahjong puzzle": {
+    "at": "2026-09-26T11:58:20.351Z",
+    "query": "Double Tile! - Mahjong Puzzle codes",
+    "domains": 6,
+    "hosts": [
+      "apple.com",
+      "cityparkgames.com",
+      "iosgames.net",
+      "apkpure.com",
+      "appbrain.com",
+      "softlaunch.games"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "last asylum: plague": {
+    "at": "2026-09-26T11:58:25.911Z",
+    "query": "Last Asylum: Plague codes",
+    "domains": 10,
+    "hosts": [
+      "pocketgamer.com",
+      "ucngame.com",
+      "last-asylum.com",
+      "levelgeeks.net",
+      "gamestaunch.com",
+      "lota.games",
+      "lastasylumplague.com",
+      "progamepilot.com",
+      "ldshop.gg",
+      "minutetactics.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "lastasylumplague.com"
+    ],
+    "ownExcluded": [],
+    "open": 4,
+    "competitorFirstSeen": "2026-07-29",
+    "competitorSeenList": [
+      {
+        "domain": "lastasylumplague.com",
+        "at": "2026-07-29"
+      }
+    ]
+  },
+  "meowdoku: brain puzzle games": {
+    "at": "2026-09-26T11:58:50.074Z",
+    "query": "Meowdoku: Brain Puzzle Games codes",
+    "domains": 7,
+    "hosts": [
+      "codester.com",
+      "sellanycode.com",
+      "codecanyon.net",
+      "github.com",
+      "meowdoku.games",
+      "meowdoku.app",
+      "meowdoku.us"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "spider fighter 3: action game": {
+    "at": "2026-09-26T12:15:51.318Z",
+    "query": "Spider Fighter 3: Action Game codes",
+    "domains": 6,
+    "hosts": [
+      "minutetactics.com",
+      "linegames.org",
+      "timrim.com",
+      "deliventura.com",
+      "progameguides.com",
+      "gamersunite.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "screwdom 3d": {
+    "at": "2026-09-26T12:15:56.942Z",
+    "query": "Screwdom 3D codes",
+    "domains": 6,
+    "hosts": [
+      "game.edu.kg",
+      "linegames.org",
+      "screwdom.org",
+      "fancymod.top",
+      "aetherhub.com",
+      "segwise.ai"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "hangman words:two player games": {
+    "at": "2026-09-26T12:16:02.642Z",
+    "query": "Hangman Words:Two Player Games codes",
+    "domains": 5,
+    "hosts": [
+      "twoplayergames.org",
+      "github.com",
+      "geeksforgeeks.org",
+      "playboardgames.org",
+      "brainplay.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "hidden object games: seek it": {
+    "at": "2026-09-26T12:16:08.314Z",
+    "query": "Hidden Object Games: Seek It codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "crazygames.com",
+      "apkpure.com",
+      "apple.com",
+      "hiddenobjectgames.club",
+      "gurugame.ai",
+      "appbrain.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "crazygames.com",
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "geometry dash": {
+    "at": "2026-09-26T12:16:13.944Z",
+    "query": "Geometry Dash codes",
+    "domains": 9,
+    "hosts": [
+      "gamerant.com",
+      "dexerto.com",
+      "progameguides.com",
+      "insider-gaming.com",
+      "urgametips.com",
+      "linegames.org",
+      "keengamer.com",
+      "fandom.com",
+      "geometrydash.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "geometrydash.com"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "geometry dash lite": {
+    "at": "2026-09-26T12:16:35.226Z",
+    "query": "Geometry Dash Lite codes",
+    "domains": 9,
+    "hosts": [
+      "gamerant.com",
+      "bluestacks.com",
+      "game.edu.kg",
+      "dexerto.com",
+      "deliventura.com",
+      "insider-gaming.com",
+      "geometry.games",
+      "gameapparent.com",
+      "urgametips.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "official millionaire game": {
+    "at": "2026-09-26T12:16:40.954Z",
+    "query": "Official Millionaire Game codes",
+    "domains": 7,
+    "hosts": [
+      "progameguides.com",
+      "tryhardguides.com",
+      "linegames.org",
+      "robloxden.com",
+      "aayyy.com",
+      "gamerant.com",
+      "powerupgamer.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "meowdoku!": {
+    "at": "2026-09-26T12:16:46.601Z",
+    "query": "Meowdoku! codes",
+    "domains": 8,
+    "hosts": [
+      "aayyy.com",
+      "meowdoku.run",
+      "drop-the-cat.com",
+      "meowdoku.app",
+      "codester.com",
+      "meowdokugame.org",
+      "meowdokuonline.net",
+      "github.com"
+    ],
+    "dedicated": 4,
+    "dedicatedHosts": [
+      "meowdoku.run",
+      "meowdoku.app",
+      "meowdokugame.org",
+      "meowdokuonline.net"
+    ],
+    "ownExcluded": [],
+    "open": 3
+  },
+  "install": {
+    "at": "2026-09-26T12:18:24.504Z",
+    "query": "Install codes",
+    "domains": 8,
+    "hosts": [
+      "visualstudio.com",
+      "ppg.com",
+      "firesticktricks.com",
+      "oaksill.com",
+      "toptvtips.com",
+      "troypoint.com",
+      "elevenforum.com",
+      "microsoft.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "xp hero": {
+    "at": "2026-09-26T12:18:30.189Z",
+    "query": "XP Hero codes",
+    "domains": 6,
+    "hosts": [
+      "game.edu.kg",
+      "chaptercheats.com",
+      "fandom.com",
+      "ucngame.com",
+      "linegames.org",
+      "appgamer.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "stickman dragon fight": {
+    "at": "2026-09-26T12:18:35.868Z",
+    "query": "Stickman Dragon Fight codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "timrim.com",
+      "game.edu.kg",
+      "gameapparent.com",
+      "poki.com",
+      "y9freegames.com",
+      "github.com",
+      "chaptercheats.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "poki.com"
+    ],
+    "open": 5
+  },
+  "wardogs": {
+    "at": "2026-09-26T12:18:41.500Z",
+    "query": "WARDOGS codes",
+    "domains": 8,
+    "hosts": [
+      "wardogs.im",
+      "wardogshub.gg",
+      "wardogshandbook.com",
+      "cheats.co",
+      "wardogservers.com",
+      "wardogs-game.com",
+      "cdkeysforgames.com",
+      "wardogsgame.net"
+    ],
+    "dedicated": 6,
+    "dedicatedHosts": [
+      "wardogs.im",
+      "wardogshub.gg",
+      "wardogshandbook.com",
+      "wardogservers.com",
+      "wardogs-game.com",
+      "wardogsgame.net"
+    ],
+    "ownExcluded": [],
+    "open": 2
+  },
+  "frost world - snow survival": {
+    "at": "2026-09-26T12:42:35.371Z",
+    "query": "Frost World - Snow Survival codes",
+    "domains": 8,
+    "hosts": [
+      "iofreeonline.com",
+      "linegames.org",
+      "chaptercheats.com",
+      "apkpure.com",
+      "timrim.com",
+      "centurygame.com",
+      "progameguides.com",
+      "topgames.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "charades & headbands game": {
+    "at": "2026-09-26T12:42:40.891Z",
+    "query": "Charades & Headbands Game codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "game.edu.kg",
+      "headbands.app",
+      "happygamer.com",
+      "aayyy.com",
+      "cosmicode.games",
+      "microbit.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "nte: neverness to everness": {
+    "at": "2026-09-26T12:42:46.553Z",
+    "query": "NTE: Neverness to Everness codes",
+    "domains": 9,
+    "hosts": [
+      "game8.co",
+      "gamewith.net",
+      "beebom.com",
+      "urgametips.com",
+      "neverness.gg",
+      "icy-veins.com",
+      "nte.wiki",
+      "keengamer.com",
+      "eurogamer.net"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "dye hard - color war": {
+    "at": "2026-09-26T12:42:52.101Z",
+    "query": "Dye Hard - Color War codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "game.edu.kg",
+      "play-games.com",
+      "aayyy.com",
+      "appgamer.com",
+      "apkpure.com",
+      "crazygames.com",
+      "mimic-party.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "crazygames.com"
+    ],
+    "open": 5
+  },
+  "melon: sandbox": {
+    "at": "2026-09-26T12:42:57.692Z",
+    "query": "Melon: Sandbox codes",
+    "domains": 6,
+    "hosts": [
+      "linegames.org",
+      "aayyy.com",
+      "fandom.com",
+      "melonsandbox.com",
+      "gamebanana.com",
+      "safemod.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "melonsandbox.com"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "heartopia": {
+    "at": "2026-09-26T12:43:19.083Z",
+    "query": "Heartopia codes",
+    "domains": 8,
+    "hosts": [
+      "tryhardguides.com",
+      "heartopia.life",
+      "polygon.com",
+      "supercheats.com",
+      "beebom.com",
+      "g2a.com",
+      "heartodex.com",
+      "linegames.org"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "heartopia.life"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "art color: color by number": {
+    "at": "2026-09-26T12:43:40.535Z",
+    "query": "Art Color: Color by Number codes",
+    "domains": 10,
+    "hosts": [
+      "sergewhitehillart.com",
+      "superstarworksheets.com",
+      "snapxam.com",
+      "coloringpagesonly.com",
+      "rockyourhomeschool.net",
+      "caydo.com",
+      "preschoolplayandlearn.com",
+      "artiscreation.com",
+      "online-coloring.com",
+      "worksheets4free.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "rainbow six mobile": {
+    "at": "2026-09-26T12:43:46.162Z",
+    "query": "Rainbow Six Mobile codes",
+    "domains": 9,
+    "hosts": [
+      "ubisoft.com",
+      "mobilematters.gg",
+      "playhub.com",
+      "gamingonphone.com",
+      "timrim.com",
+      "bluestacks.com",
+      "gamsgo.com",
+      "boundbyflame.com",
+      "mumuplayer.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "cubecrafter": {
+    "at": "2026-09-26T12:43:51.785Z",
+    "query": "CubeCrafter codes",
+    "domains": 9,
+    "hosts": [
+      "linegames.org",
+      "tenereteam.com",
+      "couponwcode.com",
+      "cubecraft.net",
+      "blockpatch.org",
+      "progameguides.com",
+      "couponupto.com",
+      "github.com",
+      "aayyy.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "sword x staff": {
+    "at": "2026-09-26T12:43:57.345Z",
+    "query": "Sword x Staff codes",
+    "domains": 9,
+    "hosts": [
+      "pockettactics.com",
+      "gamesradar.com",
+      "urgametips.com",
+      "pocketgamer.com",
+      "ucngame.com",
+      "progamepilot.com",
+      "bluestacks.com",
+      "topuplive.com",
+      "beebom.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "wordaily ®-with no daily limit": {
+    "at": "2026-09-26T12:44:02.909Z",
+    "query": "Wordaily ®-With No Daily Limit codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "game.edu.kg",
+      "aayyy.com",
+      "cityparkgames.com",
+      "worldsapps.com",
+      "apkmirror.com",
+      "appbrain.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "my sticker room - decor game": {
+    "at": "2026-09-26T12:44:08.592Z",
+    "query": "My Sticker Room - Decor Game codes",
+    "domains": 6,
+    "hosts": [
+      "playgama.com",
+      "apkpure.com",
+      "mystickerroomdecor.org",
+      "mystickerroom.com",
+      "linktr.ee",
+      "mystickerroom.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "football league 2026": {
+    "at": "2026-09-26T13:21:39.160Z",
+    "query": "Football League 2026 codes",
+    "domains": 8,
+    "hosts": [
+      "ucngame.com",
+      "gamingonphone.com",
+      "aayyy.com",
+      "linegames.org",
+      "timrim.com",
+      "progameguides.com",
+      "tryhardguides.com",
+      "game.guide"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "efootball": {
+    "at": "2026-09-26T13:21:44.797Z",
+    "query": "eFootball codes",
+    "domains": 9,
+    "hosts": [
+      "sportsdunia.com",
+      "progameguides.com",
+      "gamingonphone.com",
+      "vg247.com",
+      "ucngame.com",
+      "destructoid.com",
+      "gamsgo.com",
+      "konami.net",
+      "9to5gaming.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "rollance : adventure balls": {
+    "at": "2026-09-26T13:21:50.383Z",
+    "query": "Rollance : Adventure Balls codes",
+    "domains": 8,
+    "hosts": [
+      "linegames.org",
+      "aayyy.com",
+      "gamelinkexchange.com",
+      "jumpyx.com",
+      "chaptercheats.com",
+      "appgamer.com",
+      "progameguides.com",
+      "8games.net"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "geoguessr": {
+    "at": "2026-09-26T13:21:55.909Z",
+    "query": "GeoGuessr codes",
+    "domains": 8,
+    "hosts": [
+      "hotdeals.com",
+      "linegames.org",
+      "wethrift.com",
+      "game.edu.kg",
+      "couponlief.com",
+      "worldguessr.com",
+      "geoguessr.com",
+      "yellss.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "geoguessr.com"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "dragon traveler": {
+    "at": "2026-09-26T13:22:27.236Z",
+    "query": "Dragon Traveler codes",
+    "domains": 10,
+    "hosts": [
+      "mrguider.org",
+      "levelgeeks.net",
+      "urgametips.com",
+      "tryhardguides.com",
+      "dtwiki.org",
+      "minutetactics.com",
+      "pocketgamer.com",
+      "mobi.gg",
+      "pockettactics.com",
+      "dexerto.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "incredibox": {
+    "at": "2026-09-26T13:22:32.830Z",
+    "query": "Incredibox codes",
+    "domains": 6,
+    "hosts": [
+      "game.edu.kg",
+      "linegames.org",
+      "fandom.com",
+      "incredibox.com",
+      "github.io",
+      "itch.io"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "incredibox.com"
+    ],
+    "ownExcluded": [
+      "itch.io"
+    ],
+    "open": 4
+  },
+  "overgeared hero: merge rpg": {
+    "at": "2026-09-26T13:23:04.026Z",
+    "query": "Overgeared Hero: Merge RPG codes",
+    "domains": 9,
+    "hosts": [
+      "ucngame.com",
+      "linegames.org",
+      "mrguider.org",
+      "progamepilot.com",
+      "levelnerds.com",
+      "redeem-code-tracker.com",
+      "pocketgamer.com",
+      "progameguides.com",
+      "gamingonphone.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "goose goose duck": {
+    "at": "2026-09-26T13:23:09.592Z",
+    "query": "Goose Goose Duck codes",
+    "domains": 9,
+    "hosts": [
+      "destructoid.com",
+      "linegames.org",
+      "levelgeeks.net",
+      "progameguides.com",
+      "technerdiness.com",
+      "gamerant.com",
+      "deliventura.com",
+      "twinfinite.net",
+      "quantrimang.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "goods sort match - sorting fun": {
+    "at": "2026-09-26T13:23:15.112Z",
+    "query": "Goods Sort Match - Sorting Fun codes",
+    "domains": 8,
+    "hosts": [
+      "rocketgames.io",
+      "linegames.org",
+      "aayyy.com",
+      "github.com",
+      "apkheute.com",
+      "apple.com",
+      "deliventura.com",
+      "chaptercheats.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "stardew valley": {
+    "at": "2026-09-26T13:23:20.661Z",
+    "query": "Stardew Valley codes",
+    "domains": 10,
+    "hosts": [
+      "github.io",
+      "progameguides.com",
+      "ign.com",
+      "stardewvalleyids.com",
+      "linegames.org",
+      "hotdeals.com",
+      "stardewguide.com",
+      "stardewvalley.net",
+      "pcgamer.com",
+      "pockettactics.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "stardewvalleyids.com",
+      "stardewvalley.net"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "where winds meet": {
+    "at": "2026-09-26T13:24:28.223Z",
+    "query": "Where Winds Meet codes",
+    "domains": 8,
+    "hosts": [
+      "game8.co",
+      "yar.gg",
+      "pocketgamer.com",
+      "supercheats.com",
+      "beebom.com",
+      "pcgamer.com",
+      "wherewindsmeet.org",
+      "urgametips.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "wherewindsmeet.org"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "negamon lite: monster battle": {
+    "at": "2026-09-26T13:25:00.317Z",
+    "query": "Negamon Lite: Monster Battle codes",
+    "domains": 7,
+    "hosts": [
+      "timrim.com",
+      "linegames.org",
+      "gamevna.com",
+      "apkpure.com",
+      "appbrain.com",
+      "game.guide",
+      "uptodown.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "a bizarre race": {
+    "at": "2026-09-26T17:18:07.445Z",
+    "query": "A Bizarre Race codes",
+    "domains": 6,
+    "hosts": [
+      "game.guide",
+      "progameguides.com",
+      "rocodes.gg",
+      "beebom.com",
+      "tryhardguides.com",
+      "discadia.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "baby panda's school bus": {
+    "at": "2026-09-26T17:26:32.772Z",
+    "query": "Baby Panda's School Bus codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "fandom.com",
+      "game.guide",
+      "uptodown.com",
+      "rocodes.gg",
+      "pandafests.com",
+      "progameguides.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "baldur's gate 3": {
+    "at": "2026-09-26T17:26:38.354Z",
+    "query": "Baldur's Gate 3 codes",
+    "domains": 9,
+    "hosts": [
+      "xmodhub.com",
+      "videogamer.com",
+      "gamesradar.com",
+      "pcgamesn.com",
+      "progameguides.com",
+      "supercheats.com",
+      "mejoress.com",
+      "gamertagzero.com",
+      "gamespot.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "graveyard keeper 2": {
+    "at": "2026-09-26T17:26:43.962Z",
+    "query": "Graveyard Keeper 2 codes",
+    "domains": 8,
+    "hosts": [
+      "graveyardkeeper2-wiki.wiki",
+      "xmodhub.com",
+      "opencheattables.com",
+      "nexusmods.com",
+      "wemod.com",
+      "chaptercheats.com",
+      "steamcommunity.com",
+      "graveyardkeeper2.io"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "graveyardkeeper2-wiki.wiki",
+      "graveyardkeeper2.io"
+    ],
+    "ownExcluded": [
+      "steamcommunity.com"
+    ],
+    "open": 4,
+    "competitorFirstSeen": "2026-09-15",
+    "competitorSeenList": [
+      {
+        "domain": "graveyardkeeper2-wiki.wiki",
+        "at": "2026-09-15"
+      }
+    ]
+  },
+  "classic solitaire": {
+    "at": "2026-09-26T17:27:50.551Z",
+    "query": "Classic Solitaire codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "aayyy.com",
+      "gameapparent.com",
+      "solitaireclassic.org",
+      "solitaired.com",
+      "aarp.org",
+      "coin-hunter.net"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "word game | crossword": {
+    "at": "2026-09-26T17:27:56.110Z",
+    "query": "Word Game | Crossword codes",
+    "domains": 9,
+    "hosts": [
+      "wordgames.com",
+      "nytimes.com",
+      "closeword.org",
+      "contexto.me",
+      "crazygames.com",
+      "mindgames.com",
+      "arkadium.com",
+      "puzzlist.com",
+      "merriam-webster.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "crazygames.com"
+    ],
+    "open": 5
+  },
+  "solitaire deluxe® 2: card game": {
+    "at": "2026-09-26T17:28:01.638Z",
+    "query": "Solitaire Deluxe® 2: Card Game codes",
+    "domains": 6,
+    "hosts": [
+      "linegames.org",
+      "solitairedeluxe.com",
+      "aayyy.com",
+      "cheats.co",
+      "game-solver.com",
+      "gamersunite.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "crossword puzzle explorer": {
+    "at": "2026-09-26T17:28:07.170Z",
+    "query": "Crossword Puzzle Explorer codes",
+    "domains": 6,
+    "hosts": [
+      "game.edu.kg",
+      "crossword-explorer.net",
+      "linegames.org",
+      "aayyy.com",
+      "apple.com",
+      "aarp.org"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [
+      "apple.com"
+    ],
+    "open": 5
+  },
+  "rap star:idle clicker": {
+    "at": "2026-09-26T17:28:12.757Z",
+    "query": "Rap Star:Idle Clicker codes",
+    "domains": 5,
+    "hosts": [
+      "aayyy.com",
+      "game.edu.kg",
+      "screenstart.net",
+      "apkpure.com",
+      "iofreeonline.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "wittle defender": {
+    "at": "2026-09-26T17:28:18.489Z",
+    "query": "Wittle Defender codes",
+    "domains": 10,
+    "hosts": [
+      "pocketgamer.com",
+      "ucngame.com",
+      "levelgeeks.net",
+      "linegames.org",
+      "wittle-defender.com",
+      "wittledefender.com",
+      "gamerant.com",
+      "progameguides.com",
+      "mobi.gg",
+      "bluestacks.com"
+    ],
+    "dedicated": 2,
+    "dedicatedHosts": [
+      "wittle-defender.com",
+      "wittledefender.com"
+    ],
+    "ownExcluded": [],
+    "open": 4
+  },
+  "control resonant": {
+    "at": "2026-09-26T17:29:17.177Z",
+    "query": "control resonant codes",
+    "domains": 9,
+    "hosts": [
+      "sportskeeda.com",
+      "gamerant.com",
+      "g2a.com",
+      "showgamer.com",
+      "gamesradar.com",
+      "theclick.gg",
+      "indiatimes.com",
+      "games.gg",
+      "destructoid.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "fun mahjong match": {
+    "at": "2026-09-26T17:29:22.808Z",
+    "query": "Fun Mahjong Match codes",
+    "domains": 7,
+    "hosts": [
+      "linegames.org",
+      "1001games.com",
+      "apkpure.com",
+      "game.edu.kg",
+      "freegame.com",
+      "mahjong.com",
+      "mahjongg4fun.com"
+    ],
+    "dedicated": 0,
+    "dedicatedHosts": [],
+    "ownExcluded": [],
+    "open": 5
+  },
+  "no man's sky": {
+    "at": "2026-09-26T17:29:28.372Z",
+    "query": "No Man's Sky codes",
+    "domains": 9,
+    "hosts": [
+      "gosunoob.com",
+      "reddit.com",
+      "nomanssky.wiki",
+      "steamcommunity.com",
+      "fandom.com",
+      "checkcharm.com",
+      "miraheze.org",
+      "xmodhub.com",
+      "cheatcc.com"
+    ],
+    "dedicated": 1,
+    "dedicatedHosts": [
+      "nomanssky.wiki"
+    ],
+    "ownExcluded": [
+      "steamcommunity.com"
+    ],
+    "open": 4
+  }
+}
