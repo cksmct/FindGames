@@ -143,7 +143,10 @@ log("info", `载入历史留档 ${hist.items.length} 条`);
   const peakOf = new Map();
   for (const it of hist.items) {
     if (!it || !it.q || !it.geo) continue;
-    peakOf.set((it.geo + "|" + it.q).toLowerCase(), it.vol_peak == null ? (it.vol == null ? 0 : it.vol) : it.vol_peak);
+    // 同时存 vol 与 growth 的峰值（两者是同一类问题：本轮采样桶值偏低）
+    const pv = it.vol_peak == null ? (it.vol == null ? 0 : it.vol) : it.vol_peak;
+    const pg = it.growth_peak == null ? (it.growth == null ? 0 : it.growth) : it.growth_peak;
+    peakOf.set((it.geo + "|" + it.q).toLowerCase(), { v: pv, g: pg });
   }
 
 let newKeys = new Set();
@@ -242,7 +245,10 @@ if (cfg.games.enabled) {
     // 搜索量 = max(本轮桶值, 7 天峰值)（见 peakOf 的注释）；volRound 留本轮原值，给页面明细显示
     const volRound = vol;
     const peakHit = peakOf.get((it.geo + "|" + it.q).toLowerCase());
-    const volPeak = Math.max(vol, peakHit == null ? 0 : peakHit);
+    const peakV = peakHit == null ? 0 : peakHit.v;
+    const peakG = peakHit == null ? 0 : peakHit.g;
+    const volPeak = Math.max(vol, peakV);
+    const growthPeak = Math.max(it.growth == null ? 0 : it.growth, peakG);
     const gc = gameCandidate(it, { latinOnly, excludeAAA, englishOnly, trendTerm: true });
     if (!gc.ok) continue;
     // 低量区（刚冒头的新游戏就在这里）只放行"强信号"候选：
@@ -265,6 +271,8 @@ if (cfg.games.enabled) {
       ...it,
       vol: volPeak,
       volRound: volRound,
+      growth: growthPeak,
+      growthRound: it.growth == null ? 0 : it.growth,
       weight: gc.weight,
       reason: gc.reason,
       tracked: !!cur,
@@ -521,7 +529,8 @@ if (cfg.games.enabled) {
     //   识别权重与人工加分已去掉；官方量级在这里通常还拿不到（来源型条目的官方数据在下面 enrich 阶段才补齐）
     //   → 补齐后会**重算一次**（见官方数据阶段末尾），所以不是缺陷，只是时序。
     const scoreParts = scoreBreakdown({
-      vol: c.vol, volRound: c.volRound == null ? c.vol : c.volRound, growth: c.growth, hype,
+      vol: c.vol, volRound: c.volRound == null ? c.vol : c.volRound,
+      growth: c.growth, growthRound: c.growthRound == null ? c.growth : c.growthRound, hype,
       official: officialDemandScore(prev && prev.stats ? prev.stats : null),
     });
     const score = scoreParts.total;

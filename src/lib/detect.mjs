@@ -285,7 +285,7 @@ export function gameCandidate(item, opts = {}) {
  * 🛑 公式只有这一份：`scoreKeyword` 就是 `scoreBreakdown().total`，前端只渲染不重算（铁律 7）。
  * 返回值同时带上**原始输入**（vol/growth/hype/weight/feedbackBoost）—— 否则页面只能显示得分、看不到依据。
  */
-export function scoreBreakdown({ vol = 0, volRound = null, growth = 0, hype = 0, official = null } = {}) {
+export function scoreBreakdown({ vol = 0, volRound = null, growth = 0, growthRound = null, hype = 0, official = null } = {}) {
   // 低量不倒扣：log₂ 尺度在 vol<1000 时为负，钳到 0（低量真游戏不该被扣分）
   const volScore = vol > 0 ? Math.min(TRAFFIC_MAX, Math.max(0, Math.log2(vol / 1000) * 2) * (TRAFFIC_MAX / 22)) : 0;
   const officialScore = official == null ? 0 : Math.min(TRAFFIC_MAX, (official / 100) * TRAFFIC_MAX);
@@ -297,7 +297,7 @@ export function scoreBreakdown({ vol = 0, volRound = null, growth = 0, hype = 0,
   const momentumRatio = Math.max(hypeRatio, growthRatio);
   const momentumScore = Math.round(MOMENTUM_MAX * momentumRatio);
   return {
-    vol, volRound, growth, hype, official,
+    vol, volRound, growth, growthRound, hype, official,
     volScore, officialScore, traffic, hypeRatio, growthRatio, momentumRatio, momentumScore,
     total: Math.round(traffic + momentumScore),
   };
