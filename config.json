@@ -79,6 +79,8 @@
     ],
     "latinOnly": true,
     "englishOnly": true,
+    "backfillShare": 0.25,
+    "backfillPool": 40,
     "maxCurvesPerRun": 120,
     "minCurvesPerRun": 24,
     "sources": {

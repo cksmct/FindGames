@@ -20,7 +20,7 @@ import { recordRound } from "./lib/verdict-history.mjs";
 import { createSession, collectGeo } from "./lib/trends.mjs";
 import { fetchInterest, hypeRatio, enrichCompare, enrichCurveRefresh, enrichBaseline } from "./lib/interest.mjs";
 import {
-  noiseLabel, gameCandidate, scoreKeyword, scoreBreakdown, officialDemandScore, matchWatch, tokensOf, relevantTo,
+  noiseLabel, gameCandidate, scoreKeyword, scoreBreakdown, officialDemandScore, matchWatch, tokensOf, SCORE_VERSION, relevantTo,
   feedbackVerdict, SCORE_RULES, AAA_FRANCHISES, looksNonEnglish,
 } from "./lib/detect.mjs";
 import { judgeCandidates } from "./lib/judge.mjs";
@@ -213,6 +213,44 @@ if (cfg.games.enabled) {
     if (nm !== g.name) g.name = nm;
     return [nm.toLowerCase(), g];
   }));
+
+/**
+ * 🆕 2026-09-26 曲线配额优先度（用户要求：配额花在「可做性高」的条目上，而不是先进先出）。
+ *
+ * 背景：曲线是**最贵、限流最严**的资源。实测线上 3000 条里 2034 条没有曲线，其中 **968 条已有官方量级** ——
+ *   那批补上曲线直接得到「动能 + 攻略词 + 图表」，性价比最高；而此前它们进不了候选（来源目录早就不报它们了），
+ *   于是**永远测不到**。这里给每个条目算一个 0~100 的优先度，一处定义、两处使用（候选排序 / 补测选样）。
+ *
+ * 🛑 只用「取曲线之前就已有」的数据（曲线本身不参与，否则是自我实现的循环）：
+ *   ① 来源可测性 0~30：该来源的作品是否「会被搜索 / 有公开计数」—— Roblox / Steam / App Store 是真发行游戏，
+ *      itch / poki / crazygames 是网页小游戏，多数根本没有搜索量（实测这三家 0% 有官方计数）
+ *   ② 官方量级 0~32：已有真实量级 = 值得花配额，且补上曲线能真正加分
+ *   ③ 新鲜度 0~18：上线 ≤30 天 / ≤90 天 / ≤365 天 / 更久 / 未知
+ *   ④ 已有攻略词 0~12：攻略词被验证过，说明内容面真实存在
+ *   ⑤ 从未有曲线 +8：信息增量更大（「从没测过」>「只是过期」）
+ */
+const SRC_SEARCHABILITY = { steam: 30, roblox: 28, appstore: 26, googleplay: 22, itch: 10, poki: 6, crazygames: 6 };
+function curvePriority(g) {
+  const it = g == null ? {} : g;
+  let p = 12;
+  const s = SRC_SEARCHABILITY[it.src];
+  if (s != null) p = s;
+  const off = officialDemandScore(it.stats);
+  if (off != null) p += Math.round((off / 100) * 32);
+  const when = it.stats == null ? it.srcCreated : (it.stats.created == null ? it.srcCreated : it.stats.created);
+  const ts = when == null ? 0 : new Date(when).getTime();
+  if (ts > 0) {
+    const ageDays = (Date.now() - ts) / 86400000;
+    p += ageDays <= 30 ? 18 : ageDays <= 90 ? 12 : ageDays <= 365 ? 6 : 2;
+  } else {
+    p += 6;
+  }
+  const words = it.words == null ? [] : it.words;
+  p += Math.min(12, words.length);
+  if ((it.series == null ? [] : it.series).length === 0) p += 8;
+  return p;
+}
+
   const prefGeos = new Set(cfg.games.geos || []);
   // 🆕 英文闸：默认开。`latinOnly` 拦不住西/德/法/葡/土 —— 它们都是拉丁字母（见 detect.mjs 的 NON_EN_* 段）
   const englishOnly = cfg.games.englishOnly !== false;
@@ -397,12 +435,53 @@ if (cfg.games.enabled) {
       growth: _pool == null ? 0 : _pool.g,
       cats: [],
       weight: 3,
+      // 🆕 2026-09-26：带上曲线优先度（排序用；已追踪条目用**库里那条**的数据 —— 它有官方量级/攻略词）
+      priority: curvePriority(cur == null ? { src: it.source, srcCreated: it.created, name: it.name } : cur),
       reason: "来源:" + it.source + (it.kind ? ":" + it.kind : ""),
       trusted: true,
       tracked: !!cur,
       needRelated: !cur,
       srcInfo: it,
     });
+  }
+
+  // 🆕 2026-09-26 补测通道（用户：曲线配额要花在「可做性高」的条目上，而不是先进先出）：
+  //   库里**没有曲线**的条目此前永远进不了候选（来源目录早就不报它们了）→ 永远测不到 → 分数只剩官方量级那一半。
+  //   这里按 curvePriority 挑最值得的一批送验；真正花多少配额由下面的补测份额（backfillShare）决定。
+  const backPool = [];
+  for (const g of known.values()) {
+    if ((g.series == null ? [] : g.series).length) continue;
+    if (String(g.name).length > 48) continue;   // 离谱长名（obby 拼接名）趋势查不到，别浪费配额
+    const keyB = String(g.name).toLowerCase();
+    if (candMap.has(keyB)) continue;
+    if (feedbackVerdict(g.name, cfg.feedback) === "block") continue;
+    // 🛑 注意这里是 && 不是 ||：英文闸默认是**开**的，写成 || 会把全部条目拦掉
+    //   （实测：写成 || 时 1289 条无曲线条目被跳掉 1287 条 → 补测通道等于不存在）
+    if (englishOnly && looksNonEnglish(g.name)) continue;
+    if (excludeAAA) { if (AAA_FRANCHISES.test(String(g.name).trim())) continue; }
+    backPool.push(g);
+  }
+  backPool.sort((a, b) => curvePriority(b) - curvePriority(a));
+  const backCap = cfg.games.backfillPool == null ? 40 : cfg.games.backfillPool;
+  for (const g of backPool.slice(0, backCap)) {
+    const keyB = String(g.name).toLowerCase();
+    const geoB = g.chart_geo == null ? (cfg.games.geos || ["US"])[0] : g.chart_geo;
+    const pkB = peakOf.get((geoB + "|" + g.name).toLowerCase());
+    candMap.set(keyB, {
+      q: g.name,
+      geo: geoB,
+      vol: pkB == null ? 0 : pkB.v,
+      growth: pkB == null ? 0 : pkB.g,
+      cats: g.cats == null ? [] : g.cats,
+      weight: 3,
+      priority: curvePriority(g),
+      reason: "补测:无曲线",
+      trusted: true, tracked: true, needRelated: false, backfill: true,
+      srcInfo: { source: g.src, url: g.srcUrl, kind: g.srcList, created: g.srcCreated, name: g.name },
+    });
+  }
+  if (backPool.length) {
+    log("dim", `  补测池（库内无曲线，按可做性排序）：${backPool.length} 条 → 本轮进候选 ${Math.min(backCap, backPool.length)} 条`);
   }
 
   const cands = Array.from(candMap.values());
@@ -457,11 +536,28 @@ if (cfg.games.enabled) {
     log("dim", `  曲线预算：积压 ${backlogForBudget} → 本轮 ${cap}（空闲档 ${capMin} / 上限 ${capMax}，随积压自适应）`);
   }
   const capSrc = Math.max(1, Math.round(cap * (cfg.games.sourceShare ?? 0.7)));
-  const srcOk = candsOk.filter((c) => c.trusted).sort((a, b) => prio(a) - prio(b));
+  // 🆕 2026-09-26 两个改动：
+  //   ① 来源候选**按可做性优先度**排序（原来同级是 Map 插入顺序 = 随机）
+  //   ② 给「库内无曲线」的补测候选留一份份额（backfillShare 默认 25%）—— 它们是 prio=2（已追踪），
+  //      不单独留份额就永远抢不过新条目 → 永远补不上（正是这批条目此前测不到的原因）
+  const capBack = Math.max(1, Math.round(cap * (cfg.games.backfillShare ?? 0.25)));
+  const prioOf = (c) => (c.priority == null ? 0 : c.priority);
+  const srcOk = candsOk.filter((c) => c.trusted).sort((a, b) => (prio(a) - prio(b)) || (prioOf(b) - prioOf(a)));
   const trendOk = candsOk.filter((c) => !c.trusted).sort(byTrend);
-  const todoSrc = srcOk.slice(0, capSrc);
-  const todo = [...todoSrc, ...trendOk.slice(0, Math.max(0, cap - todoSrc.length))];
-  log("info", `游戏雷达：候选 ${candsOk.length} 个（来源 ${srcOk.length} / 热搜 ${trendOk.length}），本轮取曲线 ${todo.length} 个（其中来源 ${todoSrc.length}）`);
+  const todoBack = srcOk.filter((c) => c.backfill).slice(0, Math.min(capBack, capSrc));
+  const todoSrc = srcOk.filter((c) => !c.backfill).slice(0, Math.max(0, capSrc - todoBack.length));
+  const trendPick = trendOk.slice(0, Math.max(0, cap - todoSrc.length - todoBack.length));
+  // 🆕 2026-09-26：热搜候选不够时（如 --only-games 模式），把剩余名额补给**按优先度排下来**的可信候选 ——
+  //   否则预算会空着（实测 --max-curves 4 只用了 3 个），而补测池里明明有待测条目。
+  const restTrusted = srcOk.filter((c) => !c.backfill && todoSrc.indexOf(c) < 0);
+  const room = Math.max(0, cap - todoSrc.length - todoBack.length - trendPick.length);
+  const extra = restTrusted.slice(0, room);
+  const todo = [...todoSrc, ...todoBack, ...trendPick, ...extra];
+  if (extra.length) log("dim", `  预算未用满 → 追加可信候选 ${extra.length} 个（按可做性）`);
+  if (todoBack.length) {
+    log("dim", `  本轮补测（库内无曲线，按可做性）：${todoBack.slice(0, 8).map((c) => c.q + "[" + prioOf(c) + "]").join(" · ")}${todoBack.length > 8 ? " …" : ""}`);
+  }
+  log("info", `游戏雷达：候选 ${candsOk.length} 个（来源 ${srcOk.length}（含补测 ${todoBack.length}）/ 热搜 ${trendOk.length}），本轮取曲线 ${todo.length} 个（正常来源 ${todoSrc.length} · 补测 ${todoBack.length} · 热搜 ${todo.length - todoSrc.length - todoBack.length}）`);
 
   let added = 0;
   let kwAdded = 0;
@@ -739,9 +835,12 @@ if (cfg.games.enabled) {
   // 🆕 2026-09-26：官方数据补齐后**重算雷达分**（雷达分的主项是"流量"，而来源型条目的流量来自官方计数 ——
   //   算分那一刻它还没有 stats，若不重算这批条目永远停在"只有动能"的低分区）。
   //   只对"官方量级变了"的条目重算（幂等、便宜），并且必须在 writeGames 之前。
-  let rescored = 0, backfilled = 0;
+  let rescored = 0, backfilled = 0, migrated = 0;
   for (const g of list) {
     const official = officialDemandScore(g.stats);
+    // 🆕 2026-09-26 **公式版本迁移**：`v` 对不上（含没字段的老条目）→ 本轮重算，全库一轮到位。
+    //   为什么必须显式做：旧逻辑只看「官方量级变没变」，改公式之后存量就永远停在旧版 ——
+    //   用户两次问「存量改不了」都是这个病根（实测 2483/3000 条没有 scoreParts）。
     if (!g.scoreParts) {
       // 🆕 2026-09-26 **存量补分**（用户问「是存量还没来得及改吗」→ 是，而且以前**永远**改不了）：
       //   老条目没有 scoreParts 字段，而旧代码第一句就是 `if (!g.scoreParts) continue;` —— 每轮都跳过，
@@ -757,13 +856,23 @@ if (cfg.games.enabled) {
       backfilled++;
       continue;
     }
+    // 有字段但**版本旧**（例如缺 measured / volRound）→ 用原有输入重算一次补齐（不覆盖已测到的 vol/growth）
+    if (g.scoreParts.v !== SCORE_VERSION) {
+      g.scoreParts = scoreBreakdown({
+        vol: g.scoreParts.vol, volRound: g.scoreParts.volRound, growth: g.scoreParts.growth, growthRound: g.scoreParts.growthRound,
+        hype: g.scoreParts.hype, official: official,
+      });
+      g.score = g.scoreParts.total;
+      migrated++;
+      continue;
+    }
     if (official == null) continue;
     if (g.scoreParts.official === official) continue;
     g.scoreParts = scoreBreakdown({ vol: g.scoreParts.vol, growth: g.scoreParts.growth, hype: g.scoreParts.hype, official: official });
     g.score = g.scoreParts.total;
     rescored++;
   }
-  if (rescored || backfilled) log("dim", `  雷达分：重算（官方量级变化）${rescored} 条 · **存量补分** ${backfilled} 条（此前每轮都跳过）`);
+  if (rescored || backfilled || migrated) log("dim", `  雷达分：重算 ${rescored} 条 · 存量补分 ${backfilled} 条 · **公式迁移 v${SCORE_VERSION}** ${migrated} 条`);
 
   // ── 曲线保鲜（2026-09-24 新增）──
   // 卡片的曲线是**发现那一刻的快照**，之后从不更新 → 一个几天前爆过、现在已经没人搜的游戏，

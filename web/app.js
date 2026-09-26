@@ -474,7 +474,8 @@
           }).join("") + "</div>"
         : "";
       return '<div class="gcard"><div class="ghead"><h3>' + esc(g.name) + "</h3>" +
-        '<span class="score">score ' + (g.score || 0) + "</span></div>" +
+        // 🆕 2026-09-26：四个输入全空 → 显示「未测」（0 分读起来像结论，实际是缺证据）
+'<span class="score">' + scoreText(g) + "</span></div>" +
         '<div class="gmeta">' + times + (g.reason ? " · " + esc(g.reason) : "") +
         (g.geos && g.geos.length ? " · 热于 " + esc(g.geos.slice(0, 4).join("/")) : "") +
         (g.chart_geo ? " · 曲线地区 " + esc(g.chart_geo) : "") +
@@ -1386,10 +1387,18 @@
    */
   var r1 = function (v) { return v == null || !isFinite(v) ? "—" : String(Math.round(Number(v) * 10) / 10); };
   function hypeWord(h) { return h >= 99 ? "爆发 ≥99" : h >= 3 ? "起飞 ≥3" : h >= 1.5 ? "微升 ≥1.5" : "平 <1.5"; }
+  /**
+   * 🆕 2026-09-26 雷达分的**显示口径**（判定在后端 scoreBreakdown 里，这里只渲染 —— 铁律 7）。
+   *   `measured === false`（四项输入全空）→ 「未测」；否则给数字。
+   *   为什么要区分：0 分读起来像「评估结论：差」，而事实是「我们没测到」—— 实测线上 2047/3000 条属于这类。
+   */
+  function isUnmeasured(g) { var p = g.scoreParts; return !!(p && p.measured === false); }
+  function scoreText(g) { return isUnmeasured(g) ? "未测" : "score " + (g.score || 0); }
+  function scoreNum(g) { return isUnmeasured(g) ? "未测" : (g.score || 0); }
   function scoreDetail(g) {
     var p = g.scoreParts;
     if (!p) {
-      return '<details class="sdetail"><summary>分数明细（score ' + (g.score || 0) + "）</summary>" +
+      return '<details class="sdetail"><summary>分数明细（' + scoreNum(g) + "）</summary>" +
         '<div class="sd-note">明细字段是 2026-09-25 之后才随条目下发的，这条还没回填 —— 下一轮采集（每条 6 小时一轮）会带上。</div></details>';
     }
     // 2026-09-26 新口径：流量 = max(搜索量, 官方量级)；动能 = max(起飞档, 涨幅档)。
@@ -1410,12 +1419,15 @@
           ["动能·涨幅", (p.growth ? "+" + p.growth + "%" : "无") + (p.growthRound != null && p.growthRound !== p.growth ? "（峰值；本轮 " + p.growthRound + "%）" : "") + " → ÷1000（无曲线时的兜底）", r1(p.growthRatio * 12)],
           ["动能小计", "取两者<b>最大</b>，不叠加（都在说「在涨」）", p.momentumScore],
         ];
-    return '<details class="sdetail"><summary>分数明细（score ' + (g.score || 0) + " 怎么来的）</summary>" +
+    return '<details class="sdetail"><summary>分数明细（' + scoreNum(g) + " 怎么来的）</summary>" +
       '<table class="sd"><thead><tr><th>项</th><th>依据</th><th class="num">得分</th></tr></thead><tbody>' +
       rows.map(function (x) {
         return "<tr><td>" + x[0] + "</td><td>" + x[1] + '</td><td class="num">' + r1(x[2]) + "</td></tr>";
       }).join("") +
-      '<tr class="sd-total"><td>合计</td><td>雷达分 = 验证优先级，不是可做性</td><td class="num">' + (g.score || 0) + "</td></tr>" +
+      '<tr class="sd-total"><td>合计</td><td>雷达分 = 验证优先级，不是可做性</td><td class="num">' + scoreNum(g) + "</td></tr>" +
+      (isUnmeasured(g)
+        ? '<tr><td colspan="3" class="sd-note">🛑 <b>未测</b>：四项输入全空（没有 Trends 搜索量 / 没有平台官方计数 / 没有曲线起飞档 / 没有涨幅）—— 这不是「评得差」，是<b>我们没测到</b>。要让它有分只能补数据：取曲线 / 等它上 Steam·手游（有公开计数）/ 等它成为搜索词。</td></tr>'
+        : "") +
       '<tr><td colspan="3" class="sd-note">🆕 2026-09-26：<b>识别权重</b>不再计分（仍作准入闸：低量候选必须权重>=3）、<b>人工加分</b>已去掉（feedback.block 的否决仍有效）；涨幅与起飞改为<b>取最大</b>，不再叠加</td></tr>' +
       "</tbody></table></details>";
   }

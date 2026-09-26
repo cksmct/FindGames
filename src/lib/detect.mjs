@@ -285,6 +285,14 @@ export function gameCandidate(item, opts = {}) {
  * 🛑 公式只有这一份：`scoreKeyword` 就是 `scoreBreakdown().total`，前端只渲染不重算（铁律 7）。
  * 返回值同时带上**原始输入**（vol/growth/hype/weight/feedbackBoost）—— 否则页面只能显示得分、看不到依据。
  */
+/**
+ * 🆕 2026-09-26 雷达分的**公式版本号**：改公式/加字段时**必须 +1**。
+ * 为什么需要（用户两次问「存量改不了」都是同一个病根）：采集侧只在「官方量级变了」或「条目重新成为候选」时才重算分数 ——
+ *   于是**公式改了、存量却停在旧版**：实测 2483/3000 条没有 scoreParts 字段、另有条目缺 measured/volRound 等新字段。
+ *   有了版本号，采集侧一句 `g.scoreParts.v !== SCORE_VERSION` 就能把全库在一轮内迁移到最新公式（幂等、不花任何配额）。
+ */
+export const SCORE_VERSION = 2;
+
 export function scoreBreakdown({ vol = 0, volRound = null, growth = 0, growthRound = null, hype = 0, official = null } = {}) {
   // 低量不倒扣：log₂ 尺度在 vol<1000 时为负，钳到 0（低量真游戏不该被扣分）
   const volScore = vol > 0 ? Math.min(TRAFFIC_MAX, Math.max(0, Math.log2(vol / 1000) * 2) * (TRAFFIC_MAX / 22)) : 0;
@@ -296,9 +304,20 @@ export function scoreBreakdown({ vol = 0, volRound = null, growth = 0, growthRou
   const growthRatio = Math.min(1, (growth || 0) / 1000);
   const momentumRatio = Math.max(hypeRatio, growthRatio);
   const momentumScore = Math.round(MOMENTUM_MAX * momentumRatio);
+  // 🆕 2026-09-26 「未测」标记（用户口径：数据缺失要标明，不能假装是 0 分）：
+  //   四项输入（Trends 搜索量 / 平台官方量级 / 起飞档 / 涨幅）**全空** = 我们**没测到**，不是「评得差」。
+  //   页面据此显示「未测」；total 仍是 0（排序上自然沉底，与「未测」语义一致）。
+  //   实测线上：3000 条里 2047 条属于这类（无曲线 1788 · 无官方计数 1939 · 名字不在搜索词留档 2047）。
+  let measured = false;
+  if (vol > 0) measured = true;
+  if (official != null) measured = true;
+  if (hype > 0) measured = true;
+  if ((growth || 0) > 0) measured = true;
   return {
     vol, volRound, growth, growthRound, hype, official,
     volScore, officialScore, traffic, hypeRatio, growthRatio, momentumRatio, momentumScore,
+    measured,
+    v: SCORE_VERSION,
     total: Math.round(traffic + momentumScore),
   };
 }
