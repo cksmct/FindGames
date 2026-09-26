@@ -96,7 +96,7 @@
   // ── 状态 ──
   var state = {
     tab: "hot", geo: "ALL", cat: "all", vol: 0, growth: 0,
-    noise: false, watch: false, q: "", rowsShown: 200, poolQ: "", gameSort: "first", pick: "all", pickSort: "verdict",
+    noise: false, watch: false, q: "", rowsShown: 200, poolQ: "", gameSort: "first", pick: "all", pickSort: "verdict", pickQ: "",
     gsrc: "all",
     watchSort: "date", watchSrc: "all", watchQ: "", watchTba: false,
   };
@@ -1476,7 +1476,12 @@
     var el = $("pick-cards");
     if (!games) { el.innerHTML = '<p class="empty">加载中…</p>'; return; }
     // 与「新游戏雷达」共用同一个平台筛选（同一批数据、两种视图）
-    var all = (games.items || []).filter(gsrcMatch).map(function (g) {
+    var pq = state.pickQ.toLowerCase();
+    var all = (games.items == null ? [] : games.items).filter(function (g) {
+      if (!gsrcMatch(g)) return false;
+      if (pq && String(g.name).toLowerCase().indexOf(pq) < 0) return false;
+      return true;
+    }).map(function (g) {
       var r = rankability(g);
       return { g: g, r: r, v: pickVerdict(g, r) };
     });
@@ -1662,19 +1667,31 @@
   }
 
   /** 评估列：分数 + 分档，鼠标悬停看四个分项的理由（让人能一眼反驳） */
+  /**
+   * 评估列：Roblox 未发售 → 潜伏评分；其它来源没有潜伏评分 → **给出可操作的去处**。
+   * 🆕 2026-09-26（用户反馈）：旧版对 App Store / Steam 一律写「走建站推荐评估」，但常常兑现不了 ——
+   *   Steam 清单只显示距发售 ≥7 天的条目（<7 天那轮就转正、从清单消失），
+   *   所以清单里看到的 Steam 条目此刻**必然不在雷达里**。现在分三种情况如实说。
+   */
   function assessCell(it) {
     var a = it.assess;
-    if (!a) {
-      // 🆕 该来源不做潜伏评分：说清楚去哪看，而不是静默画"—"（94 条里 71 条原先无解释）
-      var where = it.source === "appstore"
-        ? (it.preorder ? "预购条目：上架后走「🎯 建站推荐」评估" : "已上架：走「🎯 建站推荐」评估")
-        : "走「🎯 建站推荐」评估";
-      return '<span class="dim" title="潜伏评分只评 Roblox 未发售条目（发布确定性/日期/内容面/社区/竞争五维）">' + esc(where) + "</span>";
+    if (a) {
+      var tip = "评分 " + a.score + " · " + a.band.t + "\n" + a.reasons.join("\n") +
+        (a.missing.length ? "\n缺：" + a.missing.join(" / ") : "") +
+        (it.serp && it.serp.at ? "\nSERP 测于 " + String(it.serp.at).slice(0, 10) : "");
+      return '<span class="wk-band wk-' + a.band.k + '" title="' + esc(tip) + '">' + a.score + " " + esc(a.band.t) + "</span>";
     }
-    var tip = "评分 " + a.score + " · " + a.band.t + "\n" + a.reasons.join("\n") +
-      (a.missing.length ? "\n缺：" + a.missing.join(" / ") : "") +
-      (it.serp && it.serp.at ? "\nSERP 测于 " + String(it.serp.at).slice(0, 10) : "");
-    return '<span class="wk-band wk-' + a.band.k + '" title="' + esc(tip) + '">' + a.score + " " + esc(a.band.t) + "</span>";
+    if (gameByName(it.name)) {
+      return '<a href="#" class="wk-goto" data-pick-name="' + esc(it.name) + '" title="切到「🎯 建站推荐」并按名字筛出这一条">在「🎯 建站推荐」里看 →</a>';
+    }
+    var d = it.releaseInDays;
+    var why;
+    if (d == null) why = "尚未定档 → 暂不评估（定档后临门 <7 天那轮会转正进雷达）";
+    else if (d >= 7) why = "未进雷达（还有 " + d + " 天发售：清单只收 ≥7 天的条目，临门那一轮才转正）";
+    else if (d >= 0) why = "未进雷达（临门 " + d + " 天：本轮已推入雷达队列，下一轮采集后出现）";
+    else if (d >= -14) why = "未进雷达（已发售 " + Math.abs(d) + " 天：在转正窗口内，下一轮出现）";
+    else why = "未进雷达（已发售 " + Math.abs(d) + " 天，超出 14 天转正窗口 → 不会自动补入；可在建站推荐按名字搜）";
+    return '<span class="dim" title="潜伏评分只评 Roblox 未发售条目（发布确定性/日期/内容面/社区/竞争五维）">' + esc(why) + "</span>";
   }
 
   function watchRowHtml(it, i) {
@@ -1688,6 +1705,20 @@
       bits.push(it.ratings ? "评分 " + (it.rating == null ? "—" : it.rating + "★") + "（" + fmtCount(it.ratings) + " 人）" : "评分 未取得（刚上架还没人评）");
     }
     if (it.status) bits.push(esc(it.status));
+    // 🆕 2026-09-26：Steam 潜伏条目也补官方数据（评价数 / 好评率 / 在线）—— 与雷达侧同一份缓存与限额。
+    // 🛑 **只在有值时才显示**：实测潜伏清单里 39 条 Steam 条目全是未发售，评价数/在线本来就是 0（抓成功、真没有），
+    //    打出「评分 — · 评价 0」只是噪音。这批数据的直接价值是**预填雷达侧的缓存**（下一轮少发约百次请求）。
+    if (it.source === "steam" && it.stats) {
+      var s2 = it.stats;
+      var rev2 = s2.reviews == null ? 0 : s2.reviews;
+      var play2 = s2.playing == null ? 0 : s2.playing;
+      if (rev2 > 0) {
+        bits.push("评分 " + (s2.approval == null ? "—" : s2.approval + "%") + " · 评价 " + fmtCount(rev2) +
+          (play2 > 0 ? " · 在线 " + fmtCount(play2) : ""));
+      } else if (play2 > 0) {
+        bits.push("在线 " + fmtCount(play2));
+      }
+    }
     // 官方关联结果（搜索/来源页解析出来的）：把置信度与拒绝原因如实显示，别让人以为都是确认过的
     var CONF = { high: "高", medium: "中", low: "低" };
     if (it.universeId) bits.push("官方关联" + (CONF[it.matchConfidence] || "?"));
@@ -1697,13 +1728,14 @@
       ? "Roblox · " + esc(it.list || "BloxInformer") + (it.dataAt ? "（数据 " + String(it.dataAt).slice(0, 16).replace("T", " ") + "）" : "")
       : it.source === "appstore"
         ? "iOS · " + esc(it.list || "新上架") + (it.rank ? " #" + it.rank : "") + (it.geo ? " · " + esc(it.geo) : "")
-        : "Steam" + (it.list ? " · " + esc(it.list) : "") + (it.rank ? " 愿望单#" + it.rank : "");
+        : "Steam" + (it.list ? " · " + esc(it.list) : "") + (it.rank ? " 愿望单#" + it.rank : "") +
+          (sourceUrl("steam") ? " · <a target=\"_blank\" rel=\"noopener\" href=\"" + esc(sourceUrl("steam")) + "\" title=\"愿望单榜原始页面（我们读的就是这个榜）\">愿望单榜↗</a>" : "");
     var pr = PRECISION_LABEL[it.releasePrecision] || "";
     // 已经能玩的 → 窗口一律显示「已上线」（它的"还有几天"已经没有意义了）
     var win = it.live ? "live" : it.window;
     return "<tr>" +
       '<td class="num dim">' + (i + 1) + "</td>" +
-      "<td><b>" + esc(it.name) + "</b>" + (bits.length ? '<div class="sub">' + bits.join(" · ") + "</div>" : "") + "</td>" +
+      "<td><b>" + storeLinkHtml(it) + "</b>" + (bits.length ? '<div class="sub">' + bits.join(" · ") + "</div>" : "") + "</td>" +
       '<td class="hide-sm">' + assessCell(it) + "</td>" +
       '<td class="dim hide-sm">' + src + "</td>" +
       "<td>" + esc(it.released || "—") + (pr ? ' <span class="tag">' + pr + "</span>" : "") + "</td>" +
@@ -1830,6 +1862,61 @@
   }
 
   // ── 切换 ──
+  /** 潜伏 → 建站推荐 深链（用户反馈：说走建站推荐评估，可我在建站推荐里根本看不到） */
+  function gameByName(name) {
+    if (!games) return null;
+    var k = String(name).toLowerCase();
+    var hit = null;
+    (games.items == null ? [] : games.items).some(function (g) {
+      if (String(g.name).toLowerCase() === k) { hit = g; return true; }
+      return false;
+    });
+    return hit;
+  }
+  function gotoPick(name) {
+    state.pickQ = String(name).toLowerCase();
+    state.rowsShown = 200;
+    switchTab("pick");
+    var el = $("pick-q");
+    if (el) el.value = name;
+    renderPick();
+  }
+  /** 原始榜单页 URL（后端 stats.sourceUrls 下发，前端不手抄 —— 铁律 7） */
+  function sourceUrl(k) {
+    if (!watch) return "";
+    var ws = watch.stats;
+    if (!ws) return "";
+    if (!ws.sourceUrls) return "";
+    var u = ws.sourceUrls[k];
+    return u == null ? "" : String(u);
+  }
+  /** 商店页链接挂到游戏名上（置顶）：Steam 商店 / App Store / Roblox 游戏页 */
+  function storeLinkHtml(it) {
+    var u = it.links == null ? "" : (it.links.page == null ? "" : it.links.page);
+    if (!u) u = it.url == null ? "" : it.url;
+    if (!u) return esc(it.name);
+    return '<a target="_blank" rel="noopener" href="' + esc(u) + '" title="打开商店页 / 游戏页（愿望单、公告、评论都在这）">' + esc(it.name) + "</a>";
+  }
+  document.addEventListener("click", function (ev) {
+    var t = ev.target;
+    var a = t == null ? null : (t.closest ? t.closest("[data-pick-name]") : null);
+    if (!a) return;
+    ev.preventDefault();
+    gotoPick(a.getAttribute("data-pick-name"));
+  });
+  // 🛑 不能在这里用 debounce()：它是文件后面才定义的 `var`（1981 行）—— 顶层直接调用会 TypeError。
+  //    实测踩到：vm 里加载 app.js 直接抛 'debounce is not a function'（页面会白屏）。改自管定时器。
+  var pickQEl = $("pick-q");
+  var pickQTimer = 0;
+  if (pickQEl) pickQEl.addEventListener("input", function (e) {
+    var v = e.target.value;
+    if (pickQTimer) clearTimeout(pickQTimer);
+    pickQTimer = setTimeout(function () {
+      state.pickQ = String(v == null ? "" : v).trim();
+      state.rowsShown = 200;
+      renderPick();
+    }, 180);
+  });
   function switchTab(tab) {
     state.tab = tab;
     state.rowsShown = 200;

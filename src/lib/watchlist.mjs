@@ -24,6 +24,7 @@ import { fetchIosBatch } from "./mobile.mjs";
 import { pushQueue } from "./queue.mjs";
 // 潜伏评分第五维「竞争饱和度」用的单条 SERP 核查（与建站推荐共用同一份实现 + 同一份缓存）
 import { checkOneSerp, isCurrentSerpRecord, deriveComp, SERP_CACHE_VERSION } from "./serp.mjs";
+import { enrichSteamStats } from "./steam.mjs";
 import { fetchInterest, hypeRatio } from "./interest.mjs";
 
 const STEAM = "https://store.steampowered.com";
@@ -249,6 +250,14 @@ export async function buildWatchlist(cfg, session) {
   const now = Date.now();
   const notes = [];
   const stats = { steam: 0, roblox: 0, total: 0, trendsChecked: 0, trendsFailed: 0, trendsMode: "off", windows: {} };
+  // 🆕 2026-09-26：把「原始榜单页」URL 随产物下发 —— 前端那些「愿望单榜 / 新上架 / BloxInformer」链接
+  //   必须引用后端这一份（前端手抄 URL 会漂移：铁律 7）。蒸汽/Blox 是**人看的页面**；
+  //   App Store 给的是我们实际读的 RSS（同名榜单页会变，RSS 才是原始数据）。
+  stats.sourceUrls = {
+    steam: "https://store.steampowered.com/search/?filter=popularcomingsoon",
+    roblox: "https://bloxinformer.com/upcoming-roblox-games/",
+    appstore: "https://itunes.apple.com/us/rss/topfreeapplications/limit=200/json",
+  };
 
   // ── 🆕 2026-09-25：潜伏条目的「首次发现时间」持久化 ──────────────────────────
   // 为什么必须持久化：`lead`（发现提前量）= 官方上线日 − **我们最早看到它的时间**。
@@ -379,6 +388,31 @@ export async function buildWatchlist(cfg, session) {
     });
   }
 
+  // 🆕 2026-09-26：给 Steam 潜伏条目补**官方数据**（评价数 / 好评率 / 当前在线）。
+  //   为什么：这张表 Steam 行此前只有「愿望单序位」，评分/评论恒为空（用户反馈「想补全其他数据」）。
+  //   做法：把潜伏条目映射成 enrichSteamStats 认识的形状（它靠 srcUrl 取 appid；src=steam 防止按名字误关联别的平台），
+  //   跑完把 stats 搬回条目本体 —— 复用**同一个** .steam-stats-cache.json 与 TTL/限额，不新增任何抓取代码。
+  const steamWatch = items.filter((x) => x.source === "steam");
+  if (steamWatch.length) {
+    const shims = steamWatch.map((x) => ({
+      name: x.name, src: "steam", appid: x.appid,
+      srcUrl: x.links == null ? "" : (x.links.page == null ? "" : x.links.page),
+      stats: x.stats, statsAt: x.statsAt,
+    }));
+    try {
+      const res = await enrichSteamStats(shims, cfg);
+      for (let i = 0; i < steamWatch.length; i++) {
+        const st = shims[i].stats;
+        if (!st) continue;
+        steamWatch[i].stats = st;
+        steamWatch[i].statsAt = shims[i].statsAt == null ? iso() : shims[i].statsAt;
+      }
+      notes.push("Steam 潜伏条目官方数据：补 " + res.fetched + " 条（跳过 " + res.skipped + " · 失败 " + res.failed +
+        "）—— 评价数 / 好评率 / 在线，复用雷达侧同一缓存与限额");
+    } catch (e) {
+      notes.push("Steam 潜伏条目官方数据失败：" + e.message);
+    }
+  }
   // ── Steam 发售即转正：推进雷达队列（与 Roblox 的 watchlist-live 共用同一套下游链路）──
   let steamPromoted = 0;
   if (steamPromote.length) {

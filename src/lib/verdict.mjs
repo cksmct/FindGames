@@ -47,6 +47,12 @@ const HOOK = `
     PRE_W: __auditPick("PRE_W"),
     COMP_LABEL: __auditPick("COMP_LABEL"),
     PICK_LABEL: __auditPick("PICK_LABEL"),
+    // 潜伏列表的两行渲染（2026-09-26）：验收"走建站推荐评估"改成可操作后到底长什么样
+    assessCell: __auditPick("assessCell"),
+    watchRowHtml: __auditPick("watchRowHtml"),
+    storeLinkHtml: __auditPick("storeLinkHtml"),
+    gameByName: __auditPick("gameByName"),
+    get watch() { return __auditPick("watch"); },
     // 口径常量（2026-09-25）：缺项按中性值计入固定分母 —— 工具直接取，别自己写一份
     PICK_NEUTRAL: __auditPick("PICK_NEUTRAL"),
     PICK_W_TOTAL: __auditPick("PICK_W_TOTAL"),
