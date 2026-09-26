@@ -1395,6 +1395,25 @@
   function isUnmeasured(g) { var p = g.scoreParts; return !!(p && p.measured === false); }
   function scoreText(g) { return isUnmeasured(g) ? "未测" : "score " + (g.score || 0); }
   function scoreNum(g) { return isUnmeasured(g) ? "未测" : (g.score || 0); }
+  /**
+   * 🆕 2026-09-26「流量·搜索量」这一行的口径（用户看到 0 以为坏了 —— 其实是**不适用**）：
+   *   · 搜索量 > 0 → 正常显示量与得分
+   *   · 搜索量 = 0 且是**来源型**条目（Steam / 手游 / Roblox / itch…）→「不适用」：
+   *     我们的搜索量只来自 **Google Trends 的上升/相关词榜**，目录型游戏名从不上榜；它的流量证据在下一行「官方量级」。
+   *     实测：线上这类有 **865 条**（如 DARK SOULS III / FF VII REMAKE 官方量级 100/100 → 流量满分 30）。
+   *   · 搜索量 = 0 且没有官方量级 → 整条会被标「未测」（上一版已处理，1746 条）。
+   * 🛑 判定在后端（scoreBreakdown 的 measured / vol / official），这里只负责把「不适用」与「缺数据」区分开显示。
+   */
+  function volRowFor(g, p) {
+    if (p.vol > 0) {
+      return [fmtVol(p.vol) + (p.volRound == null ? "" : (p.volRound === p.vol ? "" : "（7 天峰值；本轮采样 " + fmtVol(p.volRound) + "）")) + " → log₂(量/1000)×2（<1 千不倒扣）", p.volScore];
+    }
+    if (g.src) {
+      return ["不适用：名字不在 Trends 上升/相关词榜（我们的搜索量只从那来）→ 流量由下一行「官方量级」承担", 0];
+    }
+    return ["本轮没取到（热搜型条目却没有量：该词这轮没进榜）", 0];
+  }
+
   function scoreDetail(g) {
     var p = g.scoreParts;
     if (!p) {
@@ -1403,6 +1422,7 @@
     }
     // 2026-09-26 新口径：流量 = max(搜索量, 官方量级)；动能 = max(起飞档, 涨幅档)。
     // 老条目（改动之前算的分）没有 traffic 字段 → 如实标成旧口径并列旧口径四项，不假装是新口径。
+    var volRow = volRowFor(g, p);
     var rows = p.traffic == null
       ? [
           ["搜索量", fmtVol(p.vol) + "（旧口径 log₂）", p.volScore],
@@ -1412,7 +1432,7 @@
           ["人工加分", "已于 2026-09-26 去掉", p.feedbackBoost == null ? 0 : p.feedbackBoost],
         ]
       : [
-          ["流量·搜索量(Trends)", fmtVol(p.vol) + (p.volRound == null ? "" : (p.volRound === p.vol ? "" : "（7 天峰值；本轮采样 " + fmtVol(p.volRound) + "）")) + " → log₂(量/1000)×2（<1 千不倒扣）", p.volScore],
+          ["流量·搜索量(Trends)", volRow[0], volRow[1]],
           ["流量·官方量级", p.official == null ? "无官方计数（itch/poki 这类来源没有）" : Math.round(p.official) + "/100（Roblox 访问 · Steam 在线 · 手游评分人数）", p.officialScore],
           ["流量小计", "取两者<b>最大</b>，不叠加（同一件事的两种测法）", p.traffic],
           ["动能·起飞档", "hype " + r1(p.hype) + "（7 天曲线后段÷前段，" + hypeWord(p.hype == null ? 0 : p.hype) + "）", r1(p.hypeRatio * 12)],
